@@ -6,12 +6,36 @@
   const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
   // Mullvad VPN (niche toggle): same-origin relays that exit via the tunnel.
   const MV_ON = () => { try { return localStorage.getItem('niche-mullvad') !== '0'; } catch (e) { return true; } };
-  const mvApi = path => { try { if (localStorage.getItem('niche-mullvad') !== '0') return '/api/tmdb' + path; } catch (e) {} return BASE + path; };
+  let __tmdbProxyEnabled = MV_ON();
+  const mvApi = path => __tmdbProxyEnabled ? 'api/tmdb' + path : BASE + path;
   const mvImg = itemPath => {
     if (!itemPath) return '';
-    try { if (localStorage.getItem('niche-mullvad') !== '0') return '/api/tmdb-img/t/p/w342' + itemPath; } catch (e) {}
+    if (__tmdbProxyEnabled) return 'api/tmdb-img/t/p/w342' + itemPath;
     return IMG(itemPath);
   };
+  async function readJsonSafe(res) {
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    if (ct.includes('application/json')) return res.json();
+    const text = await res.text();
+    try { return JSON.parse(text); } catch (e) { return null; }
+  }
+  async function tmdbJson(path) {
+    if (__tmdbProxyEnabled) {
+      try {
+        const proxyRes = await fetch('api/tmdb' + path);
+        if (proxyRes.ok) {
+          const data = await readJsonSafe(proxyRes);
+          if (data && typeof data === 'object') return data;
+        }
+      } catch (e) {}
+      __tmdbProxyEnabled = false;
+    }
+    const directRes = await fetch(BASE + path);
+    if (!directRes.ok) throw new Error(`tmdb-${directRes.status}`);
+    const data = await readJsonSafe(directRes);
+    if (!data || typeof data !== 'object') throw new Error('tmdb-invalid-json');
+    return data;
+  }
   const ANIME_PX = '&with_original_language=ja&with_genres=16';
 
   let __sjPlay = null, __sjPlayReady = false, __barePlay = null;
@@ -21,9 +45,9 @@
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({
         files: {
-          wasm: "/scram/scramjet.wasm.wasm",
-          all: "/scram/scramjet.all.js",
-          sync: "/scram/scramjet.sync.js",
+          wasm: "scram/scramjet.wasm.wasm",
+          all: "scram/scramjet.all.js",
+          sync: "scram/scramjet.sync.js",
         },
       });
       await client.init();
@@ -342,7 +366,7 @@
 
     let tvData;
     try {
-      tvData = await fetch(mvApi(`/tv/${item.id}?api_key=${KEY}`)).then(r => r.json());
+      tvData = await tmdbJson(`/tv/${item.id}?api_key=${KEY}`);
     } catch {
       ctrl.innerHTML = `<span style="color:#dc2626;font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px">Failed to load seasons.</span>`;
       return;
@@ -373,7 +397,7 @@
     async function loadEps(sNum) {
       epSel.innerHTML = '<option>Loading…</option>';
       try {
-        const d = await fetch(mvApi(`/tv/${item.id}/season/${sNum}?api_key=${KEY}`)).then(r => r.json());
+        const d = await tmdbJson(`/tv/${item.id}/season/${sNum}?api_key=${KEY}`);
         const eps = d.episodes || [];
         epSel.innerHTML = '';
         eps.forEach(e => {
@@ -459,9 +483,9 @@
     const { wrap, row } = mkShell(cat.n);
     grid.appendChild(wrap);
     try {
-      let url = mvApi(`/${cat.ep}?api_key=${KEY}&language=en-US&page=1`);
+      let url = `/${cat.ep}?api_key=${KEY}&language=en-US&page=1`;
       if (cat.px) url += cat.px;
-      const d = await fetch(url).then(r => r.json());
+      const d = await tmdbJson(url);
       const items = (d.results || [])
         .filter(i => i.poster_path)
         .map(i => ({ ...i, media_type: i.media_type || cat.t }))
@@ -483,8 +507,8 @@
     grid.appendChild(wrap);
     try {
       const [tvR, movR] = await Promise.all([
-        fetch(mvApi(`/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}&language=en-US`)).then(r => r.json()),
-        fetch(mvApi(`/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}&language=en-US`)).then(r => r.json()),
+        tmdbJson(`/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}&language=en-US`),
+        tmdbJson(`/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}&language=en-US`),
       ]);
       const items = [
         ...(tvR.results  || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'tv'    })),
