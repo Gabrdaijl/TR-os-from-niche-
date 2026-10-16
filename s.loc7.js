@@ -136,9 +136,9 @@ async function initScramjet() {
   const { ScramjetController } = $scramjetLoadController();
   const client = new ScramjetController({
     files: {
-      wasm: "scram/scramjet.wasm.wasm",
-      all: "scram/scramjet.all.js",
-      sync: "scram/scramjet.sync.js",
+      wasm: window.TR_OS.assetUrl("scram/scramjet.wasm.wasm"),
+      all: window.TR_OS.assetUrl("scram/scramjet.all.js"),
+      sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
     },
   });
   await client.init();

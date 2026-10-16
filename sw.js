@@ -1,3 +1,4 @@
+// TR-os proxy assets v4: absolute client paths on every frame.
 /************************
  * swium dev
  * (literally first dev realize, most of the features arent here)

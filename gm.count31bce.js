@@ -166,7 +166,16 @@ class LumiSDK {
             }
         }
 
-        return htmlText;
+        // Strip known ad tags before parsing can start their network requests.
+        const parsed = new DOMParser().parseFromString(htmlText, 'text/html');
+        const adHost = /(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|googleadservices\.com|adnxs\.com|adsterra\.com|profitablecpmrate\.com|profitableratecpm\.com|highperformanceformat\.com|effectivegatecpm\.com|popads\.net|popcash\.net|onclicka\.com|exoclick\.com|adskeeper\.com|mgid\.com)$/i;
+        for (const el of parsed.querySelectorAll('script[src],iframe[src],img[src],link[href]')) {
+            try { if (adHost.test(new URL(el.getAttribute('src') || el.getAttribute('href'), baseUrl).hostname)) el.remove(); } catch {}
+        }
+        const blocker = parsed.createElement('script');
+        blocker.src = window.TR_OS.assetUrl('game-adblock.js');
+        parsed.head.prepend(blocker);
+        return '<!doctype html>\n' + parsed.documentElement.outerHTML;
     }
 
     async warmGame(game) {
@@ -235,7 +244,7 @@ class LumiSDK {
                 targetIframe = document.createElement('iframe');
                 targetIframe.className = 'lumin-player-iframe';
                 targetIframe.style.cssText = 'width:100%;height:100%;border:none;background:#000;';
-                targetIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups allow-modals allow-downloads');
+                targetIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals');
                 targetIframe.setAttribute('allowfullscreen', 'true');
                 
                 const closeBtn = document.createElement('button');
@@ -375,7 +384,6 @@ class LumiSDK {
                 <div class="lumi-game-view">
                     <div class="lumi-toolbar">
                         <button class="lumi-action-btn lumi-back-btn">Back</button>
-                        <button class="lumi-action-btn lumi-download-btn">Download .html</button>
                         <button class="lumi-action-btn lumi-aboutblank-btn">Open in about:blank</button>
                         <button class="lumi-action-btn lumi-fullscreen-btn">Fullscreen</button>
                     </div>
@@ -395,7 +403,6 @@ class LumiSDK {
         this.gameView = this.container.querySelector('.lumi-game-view');
         this.iframe = this.container.querySelector('.lumi-iframe');
         this.backBtn = this.container.querySelector('.lumi-back-btn');
-        this.downloadBtn = this.container.querySelector('.lumi-download-btn');
         this.aboutBlankBtn = this.container.querySelector('.lumi-aboutblank-btn');
         this.fullscreenBtn = this.container.querySelector('.lumi-fullscreen-btn');
 
@@ -410,7 +417,7 @@ class LumiSDK {
         });
 
         this.backBtn.addEventListener('click', () => this.closeGame());
-        this.downloadBtn.addEventListener('click', () => this.downloadGame());
+
 
         this.aboutBlankBtn.addEventListener('click', () => {
             const win = window.open('about:blank', '_blank');

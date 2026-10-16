@@ -173,8 +173,8 @@ function createApp(options = {}) {
     }
     if (route === '/join' || route === '/join/') {
       if (env.JOIN_URL) { res.writeHead(302, { location: configuredUrl(env.JOIN_URL, '').href }); return res.end(); }
-      res.writeHead(503, { 'content-type': 'text/html; charset=utf-8' });
-      return res.end('<!doctype html><title>TR-os</title><body style="background:#111;color:#eee;font:18px system-ui;padding:3rem"><h1>Cheats</h1><p>The learning-game service is not connected yet.</p><a href="/n1chetesting2.html" style="color:#9cf">Open Games</a></body>');
+      res.writeHead(302, { location: '/cheats.html' });
+      return res.end();
     }
     if (!['GET', 'HEAD'].includes(req.method)) return json(res, 405, { error: 'Method is not allowed' });
     let decoded;

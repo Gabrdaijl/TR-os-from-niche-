@@ -45,9 +45,9 @@
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({
         files: {
-          wasm: "scram/scramjet.wasm.wasm",
-          all: "scram/scramjet.all.js",
-          sync: "scram/scramjet.sync.js",
+          wasm: window.TR_OS.assetUrl("scram/scramjet.wasm.wasm"),
+          all: window.TR_OS.assetUrl("scram/scramjet.all.js"),
+          sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
         },
       });
       await client.init();
@@ -308,6 +308,8 @@
           <div id="tros-player-title"></div>
           <div id="tros-player-sub"></div>
         </div>
+        <select id="tros-player-source" class="tros-sel" aria-label="Video source" style="margin-left:auto"><option>VidFast</option><option>VidLink</option><option>VidSrc</option></select>
+        <button id="tros-player-next" class="tros-sel">Next source</button>
       </div>
       <iframe id="tros-frame"
         allowfullscreen
@@ -320,6 +322,15 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     document.getElementById('tros-watch-btn').addEventListener('click', onWatchClick);
     document.getElementById('tros-player-back').addEventListener('click', closeFullscreen);
+    document.getElementById('tros-player-source').addEventListener('change', e => changePlayerSource(e.target.selectedIndex));
+    document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 3));
+    document.getElementById('tros-frame').addEventListener('load', () => {
+      try {
+        const doc = document.getElementById('tros-frame').contentDocument;
+        const text = doc && doc.body && doc.body.innerText || '';
+        if (/This page could not be loaded through TR-os|There was an error loading|Proxy is not ready/.test(text) && playerSource < 2) changePlayerSource(playerSource + 1);
+      } catch (_) {}
+    });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         if (document.getElementById('tros-player').classList.contains('open')) closeFullscreen();
@@ -439,18 +450,38 @@
     launchFullscreen(src, title, sub);
   }
 
+  let playerSource = 0, playerPath = '', playerGeneration = 0;
+  async function changePlayerSource(index) {
+    playerSource = index;
+    const generation = ++playerGeneration;
+    const hosts = ['https://vidfast.vc', 'https://vidlink.pro', 'https://vidsrc.sh/embed'];
+    const names = ['VidFast', 'VidLink', 'VidSrc'];
+    document.getElementById('tros-player-source').selectedIndex = index;
+    document.getElementById('tros-player-sub').textContent = names[index] + ' · Use Next source if playback fails';
+    const src = await proxyPlayerUrl(hosts[index] + playerPath);
+    if (generation !== playerGeneration) return;
+    const frame = document.getElementById('tros-frame');
+    frame.src = src;
+    setTimeout(() => {
+      if (generation !== playerGeneration || index >= 2) return;
+      try {
+        const text = frame.contentDocument?.body?.innerText || '';
+        if (/fetching,? one moment|there was an error loading|this page could not be loaded through TR-os/i.test(text)) changePlayerSource(index + 1);
+      } catch (_) {}
+    }, 25000);
+  }
   async function launchFullscreen(src, title, sub) {
     document.getElementById('tros-player-title').textContent = title;
     document.getElementById('tros-player-sub').textContent   = sub;
-    let finalSrc = src;
-    try { finalSrc = await proxyPlayerUrl(src); } catch (e) {}
-    document.getElementById('tros-frame').src = finalSrc;
+    playerPath = new URL(src).pathname;
+    await changePlayerSource(0);
     document.getElementById('tros-player').classList.add('open');
     closeModal();
     document.body.style.overflow = 'hidden';
   }
 
   function closeFullscreen() {
+    ++playerGeneration;
     document.getElementById('tros-player').classList.remove('open');
     document.getElementById('tros-frame').src = 'about:blank';
     document.body.style.overflow = '';
