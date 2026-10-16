@@ -10,7 +10,7 @@
   const mvApi = path => __tmdbProxyEnabled ? 'api/tmdb' + path : BASE + path;
   const mvImg = itemPath => {
     if (!itemPath) return '';
-    if (__tmdbProxyEnabled) return 'api/tmdb-img/t/p/w342' + itemPath;
+    if (__tmdbProxyEnabled) return window.TR_OS.apiUrl('api/tmdb-img/t/p/w342' + itemPath);
     return IMG(itemPath);
   };
   async function readJsonSafe(res) {
