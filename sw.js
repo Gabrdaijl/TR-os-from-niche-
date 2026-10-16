@@ -173,24 +173,29 @@ function inject(html) {
 async function handleRequest(event) {
   try {
     const url = new URL(event.request.url);
-    if (url.origin === self.location.origin) {
-      if (
-        url.pathname === "/bareworker.js" ||
-        url.pathname.startsWith("baremux/index.html") ||
-        url.pathname.startsWith("cloud/index.html") ||
-        url.pathname.startsWith("stratus/index.html") ||
-        url.pathname.startsWith("wallpaper-api/index.html") ||
-        url.pathname === "/launcher.html" ||
-        url.pathname === "sw.js"
-      ) {
-        return fetch(event.request);
-      }
+    // App pages and assets must never wait for proxy configuration. On a
+    // repeat visit the worker can run before the controller initializes it.
+    const proxyPrefix = new URL("scramjet/", self.registration.scope).pathname;
+    if (url.origin !== self.location.origin || !url.pathname.startsWith(proxyPrefix)) {
+      return fetch(event.request);
     }
   } catch {}
 
   try {
-    await scramjet.loadConfig();
-  } catch {}
+    let configTimer;
+    try {
+      await Promise.race([
+        scramjet.loadConfig(),
+        new Promise((_, reject) => {
+          configTimer = setTimeout(() => reject(new Error("Proxy initialization timed out")), 5000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(configTimer);
+    }
+  } catch {
+    return new Response("Proxy is not ready. Open the TR-os home page and try again.", { status: 503 });
+  }
 
   try {
     if (scramjet.route(event)) {
