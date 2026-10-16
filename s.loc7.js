@@ -11,15 +11,15 @@ const WISP_ROUTES = {
 var RELAY_RE = /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/;
 var RESI_ALIAS = { paloalto: "mullvad-us", boston: "mullvad-us", milan: "mullvad-eu" };
 function mvEnabled() {
-  try { return localStorage.getItem("niche-mullvad") !== "0"; }
+  try { return localStorage.getItem("tros-mullvad") !== "0"; }
   catch (e) { return true; }
 }
-function nicheLoc() {
-  try { return localStorage.getItem("niche-loc") || "mullvad-eu"; }
+function trosLoc() {
+  try { return localStorage.getItem("tros-loc") || "mullvad-eu"; }
   catch (e) { return "mullvad-eu"; }
 }
 function wispUrl() {
-  let loc = nicheLoc();
+  let loc = trosLoc();
   if (RESI_ALIAS[loc]) { loc = RESI_ALIAS[loc]; }
   if (!mvEnabled()) { return "wss://" + location.host + WISP_ROUTES.vps; }
   if (loc === "vps") { return "wss://" + location.host + WISP_ROUTES.vps; }
@@ -28,9 +28,9 @@ function wispUrl() {
   return "wss://" + location.host + WISP_ROUTES.mullvad;
 }
 let __bareConn = null;
-window.nicheSetLocation = async function (loc) {
+window.trosSetLocation = async function (loc) {
   if (!WISP_ROUTES[loc] && !RELAY_RE.test(loc)) return false;
-  try { localStorage.setItem("niche-loc", loc); } catch (e) {}
+  try { localStorage.setItem("tros-loc", loc); } catch (e) {}
   try {
     if (__bareConn) await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: wispUrl() }]);
   } catch (e) { return false; }
@@ -41,7 +41,7 @@ window.nicheSetLocation = async function (loc) {
   try { updateLocLabel(); } catch (e) {}
   return true;
 };
-window.nicheGetLocation = function () { return nicheLoc(); };
+window.trosGetLocation = function () { return trosLoc(); };
 
 const LOC_META = {
   vps: { flag: "🇺🇸", name: "VPS" },
@@ -57,7 +57,7 @@ let locCheckSeq = 0;
 function updateLocLabel() {
   const el = document.getElementById("_ploc");
   if (!el) return;
-  const rawLoc = nicheLoc();
+  const rawLoc = trosLoc();
   const loc = (WISP_ROUTES[rawLoc] || RELAY_RE.test(rawLoc)) ? rawLoc : "vps";
   let meta = LOC_META[loc];
   if (!meta && RELAY_RE.test(loc)) { meta = { flag: "🔒", name: loc.replace(".conf", "") }; }
@@ -87,7 +87,7 @@ let hidx = -1;
 
 const LIGHT = { bar:'#93c5fd', barBorder:'#60a5fa', btn:'#60a5fa', btnHover:'#3b82f6', input:'#bfdbfe', inputBorder:'#60a5fa', inputText:'#0a4f98', stroke:'rgb(10,79,152)' };
 const DARK = { bar:'#111111', barBorder:'#2a2a2a', btn:'#1a1a1a', btnHover:'#2a2a2a', input:'#0a0a0a', inputBorder:'#2a2a2a', inputText:'#e5e5e5', stroke:'#fff' };
-function sIsDark() { try { return localStorage.getItem('niche-dark') !== '0'; } catch (e) { return true; } }
+function sIsDark() { try { return localStorage.getItem('tros-dark') !== '0'; } catch (e) { return true; } }
 function paintBar() {
   const dark = sIsDark();
   const C = dark ? DARK : LIGHT;
@@ -112,14 +112,14 @@ function hookTheme() {
   try {
     if (window._sThemeHooked) return;
     window._sThemeHooked = true;
-    window.addEventListener('storage', function (e) { if (e.key === 'niche-dark') paintBar(); });
-    window.addEventListener('message', function (e) { if (e.data && e.data.nicheTheme) setTimeout(paintBar, 0); });
+    window.addEventListener('storage', function (e) { if (e.key === 'tros-dark') paintBar(); });
+    window.addEventListener('message', function (e) { if (e.data && e.data.trosTheme) setTimeout(paintBar, 0); });
     var wrap = function () {
       if (window._sToggleWrapped) return;
-      if (typeof window.nicheToggleTheme !== 'function') return;
+      if (typeof window.trosToggleTheme !== 'function') return;
       window._sToggleWrapped = true;
-      var o = window.nicheToggleTheme;
-      window.nicheToggleTheme = function () { var r = o.apply(this, arguments); setTimeout(paintBar, 0); return r; };
+      var o = window.trosToggleTheme;
+      window.trosToggleTheme = function () { var r = o.apply(this, arguments); setTimeout(paintBar, 0); return r; };
     };
     wrap();
     var i = 0;

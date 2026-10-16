@@ -1,4 +1,4 @@
-#niche-onboard {
+#tros-onboard {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -10,74 +10,74 @@
   box-sizing: border-box;
 }
 
-#niche-onboard[hidden] {
+#tros-onboard[hidden] {
   display: none;
 }
 
-.niche-ob-card {
+.tros-ob-card {
   width: 440px;
   max-width: 94vw;
   max-height: 92vh;
   overflow-y: auto;
-  background: var(--niche-card, #141110);
-  border: 1px solid var(--niche-border, #241f1a);
+  background: var(--tros-card, #141110);
+  border: 1px solid var(--tros-border, #241f1a);
   border-radius: 20px;
   padding: 28px;
   box-sizing: border-box;
-  color: var(--niche-text, #ece2d4);
+  color: var(--tros-text, #ece2d4);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
   animation: lapis-rise 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-.niche-ob-card h1 {
+.tros-ob-card h1 {
   font-size: 24px;
   font-weight: 800;
   margin: 0 0 6px;
 }
 
-.niche-ob-card p {
+.tros-ob-card p {
   font-size: 14px;
   margin: 0 0 8px;
   opacity: 0.7;
 }
 
-.niche-ob-card h2 {
+.tros-ob-card h2 {
   font-size: 15px;
   font-weight: 700;
   margin: 18px 0 4px;
 }
 
-.niche-ob-dots {
+.tros-ob-dots {
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
 }
 
-.niche-ob-dots span {
+.tros-ob-dots span {
   width: 22px;
   height: 5px;
   border-radius: 999px;
-  background: var(--niche-border, #333);
+  background: var(--tros-border, #333);
 }
 
-.niche-ob-dots span.on {
-  background: var(--niche-accent, #d8c9b8);
+.tros-ob-dots span.on {
+  background: var(--tros-accent, #d8c9b8);
 }
 
-.niche-ob-pills {
+.tros-ob-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
 }
 
-.niche-ob-pill {
+.tros-ob-pill {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--niche-border, #333);
+  border: 1px solid var(--tros-border, #333);
   background: transparent;
-  color: var(--niche-text, #ece2d4);
+  color: var(--tros-text, #ece2d4);
   border-radius: 999px;
   padding: 8px 14px 8px 10px;
   font-size: 13px;
@@ -86,14 +86,14 @@
   opacity: 0.85;
 }
 
-.niche-ob-pill.on {
-  background: var(--niche-accent, #d8c9b8);
-  border-color: var(--niche-accent, #d8c9b8);
-  color: var(--niche-onacc, #0a0a0a);
+.tros-ob-pill.on {
+  background: var(--tros-accent, #d8c9b8);
+  border-color: var(--tros-accent, #d8c9b8);
+  color: var(--tros-onacc, #0a0a0a);
   opacity: 1;
 }
 
-.niche-ob-pill .dot {
+.tros-ob-pill .dot {
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -101,58 +101,58 @@
   border: 1px solid rgba(0, 0, 0, 0.25);
 }
 
-.niche-ob-pill img.dot {
+.tros-ob-pill img.dot {
   object-fit: cover;
 }
 
-.niche-ob-row {
+.tros-ob-row {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 10px;
 }
 
-.niche-ob-row img {
+.tros-ob-row img {
   width: 52px;
   height: 52px;
   border-radius: 12px;
   object-fit: cover;
-  background: var(--niche-border, #333);
+  background: var(--tros-border, #333);
 }
 
-.niche-ob-row .grow {
+.tros-ob-row .grow {
   flex: 1;
   min-width: 0;
   font-size: 13px;
   opacity: 0.75;
 }
 
-.niche-ob-btn {
+.tros-ob-btn {
   border: 0;
   border-radius: 12px;
   padding: 9px 16px;
   font-size: 13px;
   font-weight: 700;
-  background: var(--niche-accent, #d8c9b8);
-  color: var(--niche-onacc, #0a0a0a);
+  background: var(--tros-accent, #d8c9b8);
+  color: var(--tros-onacc, #0a0a0a);
   cursor: pointer;
   flex-shrink: 0;
 }
 
-.niche-ob-btn.ghost {
+.tros-ob-btn.ghost {
   background: transparent;
-  color: var(--niche-text, #ece2d4);
-  border: 1px solid var(--niche-border, #333);
+  color: var(--tros-text, #ece2d4);
+  border: 1px solid var(--tros-border, #333);
 }
 
-.niche-ob-nav {
+.tros-ob-nav {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   margin-top: 22px;
 }
 
-.niche-ob-field {
+.tros-ob-field {
   display: block;
   font-size: 12px;
   font-weight: 700;
@@ -160,12 +160,12 @@
   margin: 12px 0 4px;
 }
 
-.niche-ob-input {
+.tros-ob-input {
   width: 100%;
   box-sizing: border-box;
   background: transparent;
-  border: 1px solid var(--niche-border, #333);
-  color: var(--niche-text, #ece2d4);
+  border: 1px solid var(--tros-border, #333);
+  color: var(--tros-text, #ece2d4);
   border-radius: 12px;
   padding: 9px 12px;
   font-size: 13px;
@@ -173,7 +173,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .niche-ob-card {
+  .tros-ob-card {
     animation: none;
   }
 }

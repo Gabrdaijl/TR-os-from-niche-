@@ -60,8 +60,8 @@
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: var(--niche-card, #141110);
-  border: 1px solid var(--niche-border, #241f1a);
+  background: var(--tros-card, #141110);
+  border: 1px solid var(--tros-border, #241f1a);
   border-radius: 14px;
   overflow: hidden;
   z-index: 70;
@@ -71,14 +71,14 @@
   padding: 9px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: var(--niche-text, #ece2d4);
+  color: var(--tros-text, #ece2d4);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .suggest-row:hover, .suggest-row.hi {
-  background: var(--niche-accent, #d8c9b8);
-  color: var(--niche-onacc, #0a0a0a);
+  background: var(--tros-accent, #d8c9b8);
+  color: var(--tros-onacc, #0a0a0a);
 }
 .suggest-row {
   display: flex;

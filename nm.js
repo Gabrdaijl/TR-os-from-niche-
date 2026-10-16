@@ -4,8 +4,8 @@
   const KEY  = '3a73619bbb8fc6d47742d1b5b2b707b5';
   const BASE = 'https://api.themoviedb.org/3';
   const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
-  // Mullvad VPN (niche toggle): same-origin relays that exit via the tunnel.
-  const MV_ON = () => { try { return localStorage.getItem('niche-mullvad') !== '0'; } catch (e) { return true; } };
+  // Mullvad VPN (tros toggle): same-origin relays that exit via the tunnel.
+  const MV_ON = () => { try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (e) { return true; } };
   let __tmdbProxyEnabled = MV_ON();
   const mvApi = path => __tmdbProxyEnabled ? 'api/tmdb' + path : BASE + path;
   const mvImg = itemPath => {
@@ -63,7 +63,7 @@
   }
   async function proxyPlayerUrl(url) {
     let on = true;
-    try { on = localStorage.getItem('niche-mullvad') !== '0'; } catch (e) {}
+    try { on = localStorage.getItem('tros-mullvad') !== '0'; } catch (e) {}
     if (!on) return url;
     try {
       const ok = await ensurePlayerProxy();
@@ -95,22 +95,22 @@
     @keyframes nfadeIn { from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)} }
     @keyframes nslideUp{ from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)} }
 
-    .niche-row::-webkit-scrollbar{display:none}
-    .niche-row{scrollbar-width:none;-ms-overflow-style:none}
-    .niche-card img{transition:transform .3s ease}
-    .niche-card:hover img{transform:scale(1.04)}
+    .tros-row::-webkit-scrollbar{display:none}
+    .tros-row{scrollbar-width:none;-ms-overflow-style:none}
+    .tros-card img{transition:transform .3s ease}
+    .tros-card:hover img{transform:scale(1.04)}
 
     /* ── modal overlay ── */
-    #niche-overlay{
+    #tros-overlay{
       position:fixed;inset:0;z-index:9000;
       background:rgba(0,0,0,.75);
       display:none;align-items:center;justify-content:center;
       padding:16px;
     }
-    #niche-overlay.open{ display:flex }
+    #tros-overlay.open{ display:flex }
 
-    /* ── modal box — matches Niche palette ── */
-    #niche-modal{
+    /* ── modal box — matches Tr-os palette ── */
+    #tros-modal{
       background:#93c5fd;          /* bg-blue-300 */
       border:2px solid #60a5fa;    /* border-blue-400 */
       border-radius:18px;
@@ -126,7 +126,7 @@
     }
 
     /* close btn */
-    #niche-modal-close{
+    #tros-modal-close{
       position:absolute;top:14px;right:14px;
       width:32px;height:32px;border-radius:50%;
       background:rgba(255,255,255,.35);
@@ -136,29 +136,29 @@
       cursor:pointer;transition:background .2s;
       line-height:1;
     }
-    #niche-modal-close:hover{ background:rgba(255,255,255,.6) }
+    #tros-modal-close:hover{ background:rgba(255,255,255,.6) }
 
     /* header row */
-    #niche-modal-header{
+    #tros-modal-header{
       display:flex;gap:14px;align-items:flex-start;
     }
-    #niche-modal-poster{
+    #tros-modal-poster{
       width:100px;height:150px;object-fit:cover;
       border-radius:10px;flex-shrink:0;
       border:2px solid #60a5fa;
       background:#bfdbfe;
     }
-    #niche-modal-info{ flex:1;min-width:0 }
-    #niche-modal-title{
+    #tros-modal-info{ flex:1;min-width:0 }
+    #tros-modal-title{
       font-family:ui-sans-serif,system-ui,sans-serif;
       color:#1e3a5f;font-size:22px;
       line-height:1.2;margin-bottom:6px;
     }
-    #niche-modal-meta{
+    #tros-modal-meta{
       font-size:12px;color:#1d4ed8;
       font-weight:700;margin-bottom:10px;
     }
-    #niche-modal-overview{
+    #tros-modal-overview{
       font-size:12.5px;color:#1e3a5f;
       line-height:1.6;
       display:-webkit-box;-webkit-line-clamp:5;
@@ -166,7 +166,7 @@
     }
 
     /* selects */
-    .niche-sel{
+    .tros-sel{
       background:#bfdbfe;
       border:1.5px solid #60a5fa;
       color:#1e3a5f;padding:9px 12px;
@@ -175,15 +175,15 @@
       font-size:13px;outline:none;cursor:pointer;
       flex:1;min-width:130px;
     }
-    .niche-sel option{ background:#bfdbfe;color:#1e3a5f }
+    .tros-sel option{ background:#bfdbfe;color:#1e3a5f }
 
     /* controls row */
-    #niche-modal-controls{
+    #tros-modal-controls{
       display:flex;flex-wrap:wrap;gap:10px;align-items:center;
     }
 
     /* watch / play btn */
-    #niche-watch-btn{
+    #tros-watch-btn{
       background:#1d4ed8;
       border:none;color:#fff;
       padding:11px 28px;border-radius:10px;
@@ -193,31 +193,31 @@
       white-space:nowrap;width:100%;justify-content:center;
       margin-top:4px;
     }
-    #niche-watch-btn:hover{ background:#1e40af;transform:translateY(-2px) }
-    #niche-watch-btn svg{ width:18px;height:18px;fill:#fff }
+    #tros-watch-btn:hover{ background:#1e40af;transform:translateY(-2px) }
+    #tros-watch-btn svg{ width:18px;height:18px;fill:#fff }
 
     /* loading text */
-    #niche-season-loading{
+    #tros-season-loading{
       font-family:ui-sans-serif,system-ui,sans-serif;
       color:#1d4ed8;font-size:13px;
     }
 
     /* ── fullscreen player ── */
-    #niche-player{
+    #tros-player{
       position:fixed;inset:0;z-index:9500;
       background:#000;
       display:none;flex-direction:column;
     }
-    #niche-player.open{ display:flex }
+    #tros-player.open{ display:flex }
 
-    #niche-player-bar{
+    #tros-player-bar{
       position:absolute;top:0;left:0;right:0;
       height:56px;z-index:10;
       background:linear-gradient(180deg,rgba(0,0,0,.9) 0%,transparent 100%);
       display:flex;align-items:center;
       padding:0 18px;gap:14px;
     }
-    #niche-player-back{
+    #tros-player-back{
       width:38px;height:38px;border-radius:50%;
       background:rgba(255,255,255,.15);
       border:1px solid rgba(255,255,255,.25);
@@ -225,16 +225,16 @@
       display:grid;place-items:center;
       cursor:pointer;transition:background .2s;
     }
-    #niche-player-back:hover{ background:rgba(255,255,255,.3) }
-    #niche-player-title{
+    #tros-player-back:hover{ background:rgba(255,255,255,.3) }
+    #tros-player-title{
       font-family:ui-sans-serif,system-ui,sans-serif;
       color:#fff;font-size:16px;
     }
-    #niche-player-sub{
+    #tros-player-sub{
       font-size:11px;color:rgba(255,255,255,.6);
       margin-top:1px;
     }
-    #niche-frame{
+    #tros-frame{
       width:100%;flex:1;min-height:0;
       border:none;display:block;
     }
@@ -276,23 +276,23 @@
   }
 
   function buildDOM() {
-    if (document.getElementById('niche-overlay')) return;
+    if (document.getElementById('tros-overlay')) return;
 
     const overlay = document.createElement('div');
-    overlay.id = 'niche-overlay';
+    overlay.id = 'tros-overlay';
     overlay.innerHTML = `
-      <div id="niche-modal">
-        <button id="niche-modal-close">✕</button>
-        <div id="niche-modal-header">
-          <img id="niche-modal-poster" src="" alt="">
-          <div id="niche-modal-info">
-            <div id="niche-modal-title"></div>
-            <div id="niche-modal-meta"></div>
-            <div id="niche-modal-overview"></div>
+      <div id="tros-modal">
+        <button id="tros-modal-close">✕</button>
+        <div id="tros-modal-header">
+          <img id="tros-modal-poster" src="" alt="">
+          <div id="tros-modal-info">
+            <div id="tros-modal-title"></div>
+            <div id="tros-modal-meta"></div>
+            <div id="tros-modal-overview"></div>
           </div>
         </div>
-        <div id="niche-modal-controls"></div>
-        <button id="niche-watch-btn">
+        <div id="tros-modal-controls"></div>
+        <button id="tros-watch-btn">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           Watch Now
         </button>
@@ -300,29 +300,29 @@
     document.body.appendChild(overlay);
 
     const player = document.createElement('div');
-    player.id = 'niche-player';
+    player.id = 'tros-player';
     player.innerHTML = `
-      <div id="niche-player-bar">
-        <button id="niche-player-back">←</button>
+      <div id="tros-player-bar">
+        <button id="tros-player-back">←</button>
         <div>
-          <div id="niche-player-title"></div>
-          <div id="niche-player-sub"></div>
+          <div id="tros-player-title"></div>
+          <div id="tros-player-sub"></div>
         </div>
       </div>
-      <iframe id="niche-frame"
+      <iframe id="tros-frame"
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
         referrerpolicy="no-referrer">
       </iframe>`;
     document.body.appendChild(player);
 
-    document.getElementById('niche-modal-close').addEventListener('click', closeModal);
+    document.getElementById('tros-modal-close').addEventListener('click', closeModal);
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
-    document.getElementById('niche-watch-btn').addEventListener('click', onWatchClick);
-    document.getElementById('niche-player-back').addEventListener('click', closeFullscreen);
+    document.getElementById('tros-watch-btn').addEventListener('click', onWatchClick);
+    document.getElementById('tros-player-back').addEventListener('click', closeFullscreen);
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (document.getElementById('niche-player').classList.contains('open')) closeFullscreen();
+        if (document.getElementById('tros-player').classList.contains('open')) closeFullscreen();
         else closeModal();
       }
     });
@@ -336,17 +336,17 @@
     const type  = item.media_type === 'tv' ? 'TV Series' : 'Movie';
     const score = item.vote_average ? `★ ${item.vote_average.toFixed(1)}` : '';
 
-    document.getElementById('niche-modal-poster').src          = mvImg(item.poster_path);
-    document.getElementById('niche-modal-title').textContent   = title;
-    document.getElementById('niche-modal-meta').textContent    = [type, year, score].filter(Boolean).join('  ·  ');
-    document.getElementById('niche-modal-overview').textContent = item.overview || '';
-    document.getElementById('niche-modal-controls').innerHTML  = '';
-    document.getElementById('niche-watch-btn').textContent     = '';
+    document.getElementById('tros-modal-poster').src          = mvImg(item.poster_path);
+    document.getElementById('tros-modal-title').textContent   = title;
+    document.getElementById('tros-modal-meta').textContent    = [type, year, score].filter(Boolean).join('  ·  ');
+    document.getElementById('tros-modal-overview').textContent = item.overview || '';
+    document.getElementById('tros-modal-controls').innerHTML  = '';
+    document.getElementById('tros-watch-btn').textContent     = '';
 
-    const btn = document.getElementById('niche-watch-btn');
+    const btn = document.getElementById('tros-watch-btn');
     btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#fff"><path d="M8 5v14l11-7z"/></svg> Watch Now`;
 
-    document.getElementById('niche-overlay').classList.add('open');
+    document.getElementById('tros-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
 
     if (item.media_type === 'tv') {
@@ -355,14 +355,14 @@
   }
 
   function closeModal() {
-    document.getElementById('niche-overlay').classList.remove('open');
+    document.getElementById('tros-overlay').classList.remove('open');
     document.body.style.overflow = '';
     currentItem = null;
   }
 
   async function buildTVControls(item) {
-    const ctrl = document.getElementById('niche-modal-controls');
-    ctrl.innerHTML = `<span id="niche-season-loading">Loading seasons…</span>`;
+    const ctrl = document.getElementById('tros-modal-controls');
+    ctrl.innerHTML = `<span id="tros-season-loading">Loading seasons…</span>`;
 
     let tvData;
     try {
@@ -378,8 +378,8 @@
     if (!seasons.length) return; 
 
     const seasonSel = document.createElement('select');
-    seasonSel.className = 'niche-sel';
-    seasonSel.id = 'niche-season-sel';
+    seasonSel.className = 'tros-sel';
+    seasonSel.id = 'tros-season-sel';
     seasons.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.season_number;
@@ -388,8 +388,8 @@
     });
 
     const epSel = document.createElement('select');
-    epSel.className = 'niche-sel';
-    epSel.id = 'niche-ep-sel';
+    epSel.className = 'tros-sel';
+    epSel.id = 'tros-ep-sel';
 
     ctrl.appendChild(seasonSel);
     ctrl.appendChild(epSel);
@@ -426,8 +426,8 @@
       src = movieUrl(item.id);
       sub = 'Full Movie — VidFast HD';
     } else {
-      const sSel = document.getElementById('niche-season-sel');
-      const eSel = document.getElementById('niche-ep-sel');
+      const sSel = document.getElementById('tros-season-sel');
+      const eSel = document.getElementById('tros-ep-sel');
       const s = sSel ? +sSel.value : 1;
       const e = eSel ? +eSel.value : 1;
       const sName = sSel ? sSel.options[sSel.selectedIndex]?.text : `Season ${s}`;
@@ -440,19 +440,19 @@
   }
 
   async function launchFullscreen(src, title, sub) {
-    document.getElementById('niche-player-title').textContent = title;
-    document.getElementById('niche-player-sub').textContent   = sub;
+    document.getElementById('tros-player-title').textContent = title;
+    document.getElementById('tros-player-sub').textContent   = sub;
     let finalSrc = src;
     try { finalSrc = await proxyPlayerUrl(src); } catch (e) {}
-    document.getElementById('niche-frame').src = finalSrc;
-    document.getElementById('niche-player').classList.add('open');
+    document.getElementById('tros-frame').src = finalSrc;
+    document.getElementById('tros-player').classList.add('open');
     closeModal();
     document.body.style.overflow = 'hidden';
   }
 
   function closeFullscreen() {
-    document.getElementById('niche-player').classList.remove('open');
-    document.getElementById('niche-frame').src = 'about:blank';
+    document.getElementById('tros-player').classList.remove('open');
+    document.getElementById('tros-frame').src = 'about:blank';
     document.body.style.overflow = '';
   }
 
@@ -467,7 +467,7 @@
     lbl.textContent = title;
 
     const row = document.createElement('div');
-    row.className = 'niche-row';
+    row.className = 'tros-row';
     Object.assign(row.style, {
       display: 'flex', overflowX: 'auto',
       gap: '10px', padding: '4px 12px 10px',
@@ -531,7 +531,7 @@
     const type  = item.media_type === 'tv' ? 'TV' : 'Film';
 
     const card = document.createElement('div');
-    card.className = 'niche-card bg-blue-400 border-2 border-blue-400 p-2 rounded-xl flex flex-col items-center justify-start cursor-pointer hover:bg-blue-300 transition-all relative';
+    card.className = 'tros-card bg-blue-400 border-2 border-blue-400 p-2 rounded-xl flex flex-col items-center justify-start cursor-pointer hover:bg-blue-300 transition-all relative';
     Object.assign(card.style, { flex: '0 0 auto', width: '155px', minHeight: '255px' });
 
     card.innerHTML = `

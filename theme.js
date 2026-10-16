@@ -1,8 +1,8 @@
 (function () {
 
-  const STORAGE_KEY = 'niche-dark';
-  const THEME_KEY = 'niche-theme';
-  const WALL_KEY = 'niche-wallpaper';
+  const STORAGE_KEY = 'tros-dark';
+  const THEME_KEY = 'tros-theme';
+  const WALL_KEY = 'tros-wallpaper';
   function getWallpaper() {
     try {
       const v = localStorage.getItem(WALL_KEY);
@@ -63,9 +63,9 @@
   let canvas, ctx, stars = [], raf;
 
   function buildCanvas() {
-    if (document.getElementById('niche-stars')) return;
+    if (document.getElementById('tros-stars')) return;
     canvas = document.createElement('canvas');
-    canvas.id = 'niche-stars';
+    canvas.id = 'tros-stars';
     canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
     document.body.prepend(canvas);
     ctx = canvas.getContext('2d');
@@ -118,15 +118,15 @@
   function stopStars() {
     cancelAnimationFrame(raf);
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const el = document.getElementById('niche-stars');
+    const el = document.getElementById('tros-stars');
     if (el) el.remove();
     canvas = null; ctx = null;
   }
 
   function injectCSS() {
-    if (document.getElementById('niche-dark-style')) return;
+    if (document.getElementById('tros-dark-style')) return;
     const s = document.createElement('style');
-    s.id = 'niche-dark-style';
+    s.id = 'tros-dark-style';
     s.textContent = `
       html, body {
         background-color: ${BG} !important;
@@ -155,17 +155,17 @@
       html.has-wallpaper button {
         text-shadow: none;
       }
-      html[data-niche-theme="ocean"] .sidebar-title,
-      html[data-niche-theme="ocean"] h1.hop {
+      html[data-tros-theme="ocean"] .sidebar-title,
+      html[data-tros-theme="ocean"] h1.hop {
         color: #2b6cb0 !important;
       }
       :root {
-        --niche-accent: ${ACCENT};
-        --niche-onacc: ${ONACC};
-        --niche-text: ${TEXT};
-        --niche-card: ${CARD_BG};
-        --niche-border: ${BORDER};
-        --niche-bg: ${BG};
+        --tros-accent: ${ACCENT};
+        --tros-onacc: ${ONACC};
+        --tros-text: ${TEXT};
+        --tros-card: ${CARD_BG};
+        --tros-border: ${BORDER};
+        --tros-bg: ${BG};
       }
 
       [style*="background-color: rgb(132"],
@@ -176,7 +176,7 @@
         background-color: ${BG} !important;
       }
 
-      #niche, #niche > * {
+      #tros, #tros > * {
         background-color: ${CARD_BG} !important;
       }
 
@@ -185,8 +185,8 @@
       [class*="text-blue"]   { color: ${ACCENT} !important; }
 
       h1, h2, h3, h4, h5, h6 { color: ${TEXT} !important; }
-      p:not(.niche-sys)       { color: ${TEXT} !important; }
-      span:not(.niche-sys)    { color: ${TEXT} !important; }
+      p:not(.tros-sys)       { color: ${TEXT} !important; }
+      span:not(.tros-sys)    { color: ${TEXT} !important; }
       label, a                { color: ${TEXT} !important; }
 
       button[class*="bg-blue"]              { background-color: ${NAV_BTN} !important; }
@@ -236,57 +236,57 @@
         border-color:     ${BORDER}  !important;
       }
 
-      #niche-overlay { background: rgba(0,0,0,.85) !important; }
+      #tros-overlay { background: rgba(0,0,0,.85) !important; }
 
-      #niche-modal {
+      #tros-modal {
         background:   ${CARD_BG} !important;
         border-color: ${BORDER}  !important;
       }
 
-      #niche-modal-title    { color: ${TEXT}   !important; }
-      #niche-modal-meta     { color: ${ACCENT} !important; }
-      #niche-modal-overview { color: ${TEXT}   !important; }
-      #niche-modal-poster   { border-color: ${BORDER} !important; }
+      #tros-modal-title    { color: ${TEXT}   !important; }
+      #tros-modal-meta     { color: ${ACCENT} !important; }
+      #tros-modal-overview { color: ${TEXT}   !important; }
+      #tros-modal-poster   { border-color: ${BORDER} !important; }
 
-      #niche-modal-close {
+      #tros-modal-close {
         background:   rgba(255,255,255,.08) !important;
         border-color: rgba(255,255,255,.15) !important;
         color:        ${ACCENT} !important;
       }
-      #niche-modal-close:hover { background: rgba(255,255,255,.18) !important; }
+      #tros-modal-close:hover { background: rgba(255,255,255,.18) !important; }
 
-      .niche-sel {
+      .tros-sel {
         background:   ${CARD_BG} !important;
         border-color: ${BORDER}  !important;
         color:        ${TEXT}    !important;
       }
-      .niche-sel option { background: ${CARD_BG} !important; color: ${TEXT} !important; }
+      .tros-sel option { background: ${CARD_BG} !important; color: ${TEXT} !important; }
 
-      #niche-watch-btn {
+      #tros-watch-btn {
         background: ${ACCENT} !important;
         color: ${ONACC} !important;
       }
-      #niche-watch-btn:hover { filter: brightness(1.12); }
+      #tros-watch-btn:hover { filter: brightness(1.12); }
 
-      #niche-season-loading { color: ${ACCENT} !important; }
+      #tros-season-loading { color: ${ACCENT} !important; }
 
       /* player bar */
-      #niche-player-bar { background: linear-gradient(180deg,rgba(0,0,0,.95) 0%,transparent 100%) !important; }
-      #niche-player-back {
+      #tros-player-bar { background: linear-gradient(180deg,rgba(0,0,0,.95) 0%,transparent 100%) !important; }
+      #tros-player-back {
         background:   rgba(255,255,255,.1) !important;
         border-color: rgba(255,255,255,.2) !important;
         color: #fff !important;
       }
-      #niche-player-title { color: #fff !important; }
-      #niche-player-sub   { color: rgba(255,255,255,.6) !important; }
+      #tros-player-title { color: #fff !important; }
+      #tros-player-sub   { color: rgba(255,255,255,.6) !important; }
 
-      /* niche card rows */
-      .niche-card {
+      /* tros card rows */
+      .tros-card {
         background:   ${CARD_BG} !important;
         border-color: ${BORDER}  !important;
       }
-      .niche-card:hover { background: ${NAV_BTN} !important; }
-      .niche-card p     { color: ${TEXT} !important; }
+      .tros-card:hover { background: ${NAV_BTN} !important; }
+      .tros-card p     { color: ${TEXT} !important; }
 
       /* lumin game browser (n1chtesting2) — kill the blue */
       .lumi-wrapper { background: ${BG} !important; color: ${TEXT} !important; }
@@ -324,14 +324,14 @@
   }
 
   function removeCSS() {
-    const el = document.getElementById('niche-dark-style');
+    const el = document.getElementById('tros-dark-style');
     if (el) el.remove();
   }
 
   function patchLumi() {
-    if (!document.getElementById('niche')) return;
+    if (!document.getElementById('tros')) return;
     const observer = new MutationObserver(() => {
-      document.querySelectorAll('#niche, #niche *').forEach(el => {
+      document.querySelectorAll('#tros, #tros *').forEach(el => {
         const bg = el.style.backgroundColor;
         if (bg && (bg.includes('132') || bg.includes('84BF') || bg.includes('4A9B'))) {
           el.style.backgroundColor = CARD_BG;
@@ -346,15 +346,15 @@
         }
       });
     });
-    observer.observe(document.getElementById('niche'), { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    observer.observe(document.getElementById('tros'), { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
   }
 
   function markSysElements() {
-    document.querySelectorAll('p.fixed').forEach(el => el.classList.add('niche-sys'));
+    document.querySelectorAll('p.fixed').forEach(el => el.classList.add('tros-sys'));
   }
 
   function postToFrame(f, dark, name) {
-    try { f.contentWindow.postMessage({ nicheTheme: dark ? 'dark' : 'ocean', nicheThemeName: name || (dark ? 'dark' : 'ocean') }, '*'); }
+    try { f.contentWindow.postMessage({ trosTheme: dark ? 'dark' : 'ocean', trosThemeName: name || (dark ? 'dark' : 'ocean') }, '*'); }
     catch (_) {}
   }
 
@@ -364,12 +364,12 @@
 
   function watchIframes() {
     document.querySelectorAll('iframe').forEach(f => {
-      f.removeEventListener('load', f._nicheLoad);
-      f._nicheLoad = () => {
+      f.removeEventListener('load', f._trosLoad);
+      f._trosLoad = () => {
         const nm = getTheme();
         postToFrame(f, nm !== 'light', nm);
       };
-      f.addEventListener('load', f._nicheLoad);
+      f.addEventListener('load', f._trosLoad);
     });
   }
 
@@ -400,7 +400,7 @@
   }
   function applyTheme(name) {
     if (!THEMES[name]) name = 'dark';
-    try { document.documentElement.dataset.nicheTheme = name; } catch (e) {}
+    try { document.documentElement.dataset.trosTheme = name; } catch (e) {}
     const P = THEMES[name];
     ACCENT = P.ACCENT; CARD_BG = P.CARD_BG; BORDER = P.BORDER;
     BG = P.BG; TEXT = P.TEXT; NAV_BTN = P.NAV_BTN; STAR = P.STAR;
@@ -417,28 +417,28 @@
   function applyDark() { applyTheme('dark'); }
   function applyLight() { applyTheme('ocean'); }
 
-  window.nicheToggleTheme = function () {
+  window.trosToggleTheme = function () {
     const cur = getTheme();
     if (cur === 'ocean') {
       let back = 'dark';
-      try { back = localStorage.getItem('niche-theme-dark') || 'dark'; } catch (e) {}
+      try { back = localStorage.getItem('tros-theme-dark') || 'dark'; } catch (e) {}
       setTheme(THEMES[back] ? back : 'dark');
     } else {
-      try { localStorage.setItem('niche-theme-dark', cur); } catch (e) {}
+      try { localStorage.setItem('tros-theme-dark', cur); } catch (e) {}
       setTheme('ocean');
     }
   };
-  window.nicheSetTheme = function (name) { setTheme(name); };
-  window.nicheGetTheme = function () { return getTheme(); };
-  window.nicheSetWallpaper = function (d) { setWallpaper(d); };
-  window.nicheGetWallpaper = function () { return getWallpaper(); };
-  window.nicheClearWallpaper = function () { setWallpaper(null); };
+  window.trosSetTheme = function (name) { setTheme(name); };
+  window.trosGetTheme = function () { return getTheme(); };
+  window.trosSetWallpaper = function (d) { setWallpaper(d); };
+  window.trosGetWallpaper = function () { return getWallpaper(); };
+  window.trosClearWallpaper = function () { setWallpaper(null); };
 
   window.addEventListener('message', e => {
-    if (!e.data || !e.data.nicheTheme) return;
-    const named = e.data.nicheThemeName;
+    if (!e.data || !e.data.trosTheme) return;
+    const named = e.data.trosThemeName;
     if (named && THEMES[named]) { setTheme(named); return; }
-    setTheme(e.data.nicheTheme === 'dark' ? 'dark' : 'ocean');
+    setTheme(e.data.trosTheme === 'dark' ? 'dark' : 'ocean');
   });
 
   window.addEventListener('storage', e => {

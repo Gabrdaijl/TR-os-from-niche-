@@ -31,13 +31,13 @@
     try { proxied = typeof url === 'string' && url !== HOME && /^https?:\/\//i.test(url); } catch {}
     setLock(proxied);
   }
-  var NICHE_HOME_URL = 'niche://browser';
+  var TROS_HOME_URL = 'tros://browser';
   function displayUrl(u) {
-    if (!u || u === HOME) return NICHE_HOME_URL;
+    if (!u || u === HOME) return TROS_HOME_URL;
     try {
       var uu = new URL(u, location.href);
       if (uu.origin === location.origin && uu.pathname.replace(/\/+$/, '').endsWith('n1chtesting1.html')) {
-        return NICHE_HOME_URL;
+        return TROS_HOME_URL;
       }
     } catch (e) {}
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(u)) return u;
@@ -66,10 +66,10 @@
   var RELAY_RE = /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/;
   var MV_STATUS = null;
   function mvEnabled() {
-    try { return localStorage.getItem('niche-mullvad') !== '0'; } catch (er) { return true; }
+    try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (er) { return true; }
   }
   function setMvEnabled(on) {
-    try { localStorage.setItem('niche-mullvad', on ? '1' : '0'); } catch (er) {}
+    try { localStorage.setItem('tros-mullvad', on ? '1' : '0'); } catch (er) {}
   }
   function mvExitText() {
     try {
@@ -89,7 +89,7 @@
     if (pt0) { pt0.checked = on; }
     mvSyncPanelLine();
     var eff = 'vps';
-    try { eff = localStorage.getItem('niche-loc') || 'mullvad-eu'; } catch (e2) {}
+    try { eff = localStorage.getItem('tros-loc') || 'mullvad-eu'; } catch (e2) {}
     if (!on || !WISP_ROUTES[eff]) { eff = 'vps'; }
     if (on && MV_STATUS && (MV_STATUS.city || MV_STATUS.country)) {
       btn.title = 'Mullvad ON - ' + mvExitText() + ' - shared exit';
@@ -117,8 +117,8 @@
   }
   function wispRoute() {
     let loc = 'vps';
-    try { loc = localStorage.getItem('niche-loc') || 'mullvad-eu'; } catch {}
-    if (RESI_ALIAS[loc]) { loc = RESI_ALIAS[loc]; try { localStorage.setItem('niche-loc', loc); } catch (e) {} }
+    try { loc = localStorage.getItem('tros-loc') || 'mullvad-eu'; } catch {}
+    if (RESI_ALIAS[loc]) { loc = RESI_ALIAS[loc]; try { localStorage.setItem('tros-loc', loc); } catch (e) {} }
     if (!mvEnabled()) { return WISP_ROUTES.vps; }
     if (loc === 'vps') { return WISP_ROUTES.vps; }
     if (RELAY_RE.test(loc)) { return WISP_ROUTES.mullvad; }
@@ -342,7 +342,7 @@
       return;
     }
     try {
-      if (/^niche:\/\//i.test(raw.trim())) {
+      if (/^tros:\/\//i.test(raw.trim())) {
         lockFor(HOME);
         tab.frame.src = HOME;
         return;
@@ -356,7 +356,7 @@
       tab.frame.src = __sj.encodeUrl(url);
     } catch (e) {}
   }
-  window.nicheBrowserNavigate = function (raw) { navigate(raw); };
+  window.trosBrowserNavigate = function (raw) { navigate(raw); };
 
   function syncAddress() {
     const tab = activeTab();
@@ -431,11 +431,11 @@
   };
   function ntabTheme() {
     try {
-      if (typeof window.nicheGetTheme === 'function') {
-        const g = window.nicheGetTheme();
+      if (typeof window.trosGetTheme === 'function') {
+        const g = window.trosGetTheme();
         if (NTAB_HI[g]) return g;
       }
-      const s = localStorage.getItem('niche-theme');
+      const s = localStorage.getItem('tros-theme');
       if (NTAB_HI[s]) return s;
     } catch (e) {}
     return 'dark';
@@ -444,13 +444,13 @@
     window._ntabThemeHook = true;
     try {
       window.addEventListener('storage', function (e) {
-        if (e && (e.key === 'niche-theme' || e.key === 'niche-dark')) {
+        if (e && (e.key === 'tros-theme' || e.key === 'tros-dark')) {
           try { renderTabs(); } catch (err) {}
           try { syncMvTheme(); } catch (err2) {}
         }
       });
       window.addEventListener('message', function (e) {
-        if (e && e.data && (e.data.nicheTheme || e.data.nicheThemeName)) {
+        if (e && e.data && (e.data.trosTheme || e.data.trosThemeName)) {
           try { syncMvTheme(); } catch (err3) {}
           try { renderTabs(); } catch (err4) {}
         }
@@ -484,8 +484,8 @@
   const locSel = document.getElementById('browser-loc');
   function syncLocSel() {
     let cur = 'mullvad-eu';
-    try { cur = localStorage.getItem('niche-loc') || 'vps'; } catch {}
-    if (typeof RESI_ALIAS !== 'undefined' && RESI_ALIAS[cur]) { cur = RESI_ALIAS[cur]; try { localStorage.setItem('niche-loc', cur); } catch (e) {} }
+    try { cur = localStorage.getItem('tros-loc') || 'vps'; } catch {}
+    if (typeof RESI_ALIAS !== 'undefined' && RESI_ALIAS[cur]) { cur = RESI_ALIAS[cur]; try { localStorage.setItem('tros-loc', cur); } catch (e) {} }
     if (!WISP_ROUTES[cur] && !RELAY_RE.test(cur)) { cur = 'mullvad-eu'; }
     locSel.value = cur;
   }
@@ -509,7 +509,7 @@
       if (st && st.relay) MV_STATUS = st;
     } catch (e2) {}
     var keep = null;
-    try { keep = localStorage.getItem('niche-loc'); } catch (e3) {}
+    try { keep = localStorage.getItem('tros-loc'); } catch (e3) {}
     locSel.innerHTML = '';
     var vps = document.createElement('option');
     vps.value = 'vps';
@@ -531,11 +531,11 @@
     }
     if (!okw) {
       want = (data.active && RELAY_RE.test(data.active)) ? data.active : mvFirstRelay();
-      try { localStorage.setItem('niche-loc', want); } catch (e4) {}
+      try { localStorage.setItem('tros-loc', want); } catch (e4) {}
     }
     locSel.value = want;
     locSel.title = 'Mullvad exit (shared by all users)';
-    try { if (RELAY_RE.test(locSel.value)) localStorage.setItem('niche-mvloc', locSel.value); } catch (e5) {}
+    try { if (RELAY_RE.test(locSel.value)) localStorage.setItem('tros-mvloc', locSel.value); } catch (e5) {}
     syncLocSel();
     syncMvUI();
     return true;
@@ -602,7 +602,7 @@
     }
     if (!hasBack) { back = mvFirstRelay(); }
     locSel.value = back;
-    try { localStorage.setItem('niche-loc', back); } catch (e11) {}
+    try { localStorage.setItem('tros-loc', back); } catch (e11) {}
     syncLocSel();
     syncMvUI();
   }
@@ -640,10 +640,10 @@
   async function mvHandleSelect() {
     var v = locSel.value;
     mvLog('select ' + v);
-    try { localStorage.setItem('niche-loc', v); } catch (e7) {}
+    try { localStorage.setItem('tros-loc', v); } catch (e7) {}
     if (RELAY_RE.test(v)) {
       setMvEnabled(true);
-      try { localStorage.setItem('niche-mvloc', v); } catch (e8) {}
+      try { localStorage.setItem('tros-mvloc', v); } catch (e8) {}
       syncMvUI();
       var ok = await mvSwitchTo(v);
       syncMvUI();
@@ -657,7 +657,7 @@
     }
     if (MV_LOCS.indexOf(v) !== -1) {
       setMvEnabled(true);
-      try { localStorage.setItem('niche-mvloc', v); } catch (e9) {}
+      try { localStorage.setItem('tros-mvloc', v); } catch (e9) {}
       syncMvUI();
       await mvReapply();
       return;
@@ -683,14 +683,14 @@
     setMvEnabled(turnOn);
     if (turnOn && locSel.value === 'vps') {
       var last = null;
-      try { last = localStorage.getItem('niche-mvloc'); } catch (e4) {}
+      try { last = localStorage.getItem('tros-mvloc'); } catch (e4) {}
       var has = false;
       if (last && last !== 'vps') {
         for (var q = 0; q < locSel.options.length; q++) { if (locSel.options[q].value === last) { has = true; break; } }
       }
       var pick = has ? last : mvFirstRelay();
       locSel.value = pick;
-      try { localStorage.setItem('niche-loc', pick); } catch (e3) {}
+      try { localStorage.setItem('tros-loc', pick); } catch (e3) {}
       syncLocSel();
     }
     syncMvUI();
@@ -720,7 +720,7 @@
     var on2 = false;
     try { on2 = mvEnabled(); } catch (e) {}
     var loc2 = '';
-    try { loc2 = localStorage.getItem('niche-loc') || ''; } catch (e2) {}
+    try { loc2 = localStorage.getItem('tros-loc') || ''; } catch (e2) {}
     if (on2 && MV_STATUS && MV_STATUS.relay) {
       var parts = String(MV_STATUS.relay).split('-');
       mc.textContent = 'vpn: ' + mvFlag(parts[0] || '') + ' ' + (parts[1] || '') + ' - ' + MV_STATUS.relay.replace(/\.conf$/, '');
@@ -854,7 +854,7 @@
   const FIND_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="21" y2="21"/></svg>';
   function readHistory() {
     try {
-      const h = JSON.parse(localStorage.getItem('niche-history') || '[]');
+      const h = JSON.parse(localStorage.getItem('tros-history') || '[]');
       return Array.isArray(h) ? h : [];
     } catch (e) { return []; }
   }
@@ -863,7 +863,7 @@
       if (!url || !/^https?:\/\//i.test(url)) return;
       let h = readHistory().filter((x) => x && x.u !== url);
       h.unshift({ t: String(title || url).slice(0, 80), u: url });
-      localStorage.setItem('niche-history', JSON.stringify(h.slice(0, 50)));
+      localStorage.setItem('tros-history', JSON.stringify(h.slice(0, 50)));
     } catch (e) {}
   }
   function closeSuggest() {

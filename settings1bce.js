@@ -15,17 +15,17 @@
 
   function current() {
     try {
-      if (typeof window.nicheGetTheme === 'function') return window.nicheGetTheme();
-      return localStorage.getItem('niche-theme') || 'dark';
+      if (typeof window.trosGetTheme === 'function') return window.trosGetTheme();
+      return localStorage.getItem('tros-theme') || 'dark';
     } catch (e) { return 'dark'; }
   }
 
   function pick(id) {
     try {
-      if (typeof window.nicheSetTheme === 'function') window.nicheSetTheme(id);
+      if (typeof window.trosSetTheme === 'function') window.trosSetTheme(id);
       else {
-        localStorage.setItem('niche-theme', id);
-        localStorage.setItem('niche-dark', '1');
+        localStorage.setItem('tros-theme', id);
+        localStorage.setItem('tros-dark', '1');
         location.reload();
       }
     } catch (e) {}
@@ -59,7 +59,7 @@
 
   function getCloak() {
     try {
-      var v = JSON.parse(localStorage.getItem('niche-cloak') || 'null');
+      var v = JSON.parse(localStorage.getItem('tros-cloak') || 'null');
       if (v && typeof v === 'object') return v;
     } catch (e) {}
     return null;
@@ -80,8 +80,8 @@
 
   function saveCloak(c) {
     try {
-      if (c) localStorage.setItem('niche-cloak', JSON.stringify(c));
-      else localStorage.removeItem('niche-cloak');
+      if (c) localStorage.setItem('tros-cloak', JSON.stringify(c));
+      else localStorage.removeItem('tros-cloak');
     } catch (e) {}
     applyCloak(c);
     renderCloaks();
@@ -127,8 +127,8 @@
   function refreshWallpaper() {
     var data = null;
     try {
-      if (typeof window.nicheGetWallpaper === 'function') data = window.nicheGetWallpaper();
-      else data = localStorage.getItem('niche-wallpaper');
+      if (typeof window.trosGetWallpaper === 'function') data = window.trosGetWallpaper();
+      else data = localStorage.getItem('tros-wallpaper');
     } catch (e) {}
     var img = document.getElementById('wallpaper-preview');
     var st = document.getElementById('wallpaper-status');
@@ -143,12 +143,12 @@
 
   function storeDirect(url) {
     try {
-      localStorage.setItem('niche-wallpaper', url);
+      localStorage.setItem('tros-wallpaper', url);
     } catch (e) {
       return false;
     }
     try {
-      if (typeof window.nicheSetWallpaper === 'function') window.nicheSetWallpaper(url);
+      if (typeof window.trosSetWallpaper === 'function') window.trosSetWallpaper(url);
     } catch (e2) {}
     return true;
   }
@@ -242,7 +242,7 @@
   });
 
   document.getElementById('cloak-reset').addEventListener('click', function () {
-    document.title = 'Niche Settings';
+    document.title = 'Tr-os Settings';
     var link = document.querySelector('link[rel="icon"]');
     if (link) link.removeAttribute('href');
     try {
@@ -261,8 +261,8 @@
 
   document.getElementById('wallpaper-remove').addEventListener('click', function () {
     try {
-      if (typeof window.nicheClearWallpaper === 'function') window.nicheClearWallpaper();
-      else localStorage.removeItem('niche-wallpaper');
+      if (typeof window.trosClearWallpaper === 'function') window.trosClearWallpaper();
+      else localStorage.removeItem('tros-wallpaper');
     } catch (e) {}
     refreshWallpaper();
   });
@@ -281,7 +281,7 @@
 
   function getPanic() {
     try {
-      var v = JSON.parse(localStorage.getItem('niche-panic') || 'null');
+      var v = JSON.parse(localStorage.getItem('tros-panic') || 'null');
       if (v && typeof v === 'object' && v.key && v.url) return v;
     } catch (e) {}
     return null;
@@ -329,7 +329,7 @@
     if (pendingRec) pendingRec.url = url;
     if (!pendingRec || !pendingRec.key || !url) return;
     try {
-      localStorage.setItem('niche-panic', JSON.stringify(pendingRec));
+      localStorage.setItem('tros-panic', JSON.stringify(pendingRec));
     } catch (e) {}
     pendingRec = null;
     refreshPanic();
@@ -343,8 +343,8 @@
 
   document.getElementById('panic-clear').addEventListener('click', function () {
     try {
-      localStorage.removeItem('niche-panic');
-      localStorage.removeItem('niche-panic-pending');
+      localStorage.removeItem('tros-panic');
+      localStorage.removeItem('tros-panic-pending');
       var urlInput = document.getElementById('panic-url');
       if (urlInput) urlInput.value = '';
     } catch (e) {}

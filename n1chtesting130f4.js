@@ -3,8 +3,8 @@
       var RESI_ALIAS = { paloalto: 'mullvad-us', boston: 'mullvad-us', milan: 'mullvad-eu' };
       function cur() {
         var v = 'mullvad-eu';
-        try { v = localStorage.getItem('niche-loc') || 'mullvad-eu'; } catch {}
-        if (RESI_ALIAS[v]) { v = RESI_ALIAS[v]; try { localStorage.setItem('niche-loc', v); } catch (e) {} }
+        try { v = localStorage.getItem('tros-loc') || 'mullvad-eu'; } catch {}
+        if (RESI_ALIAS[v]) { v = RESI_ALIAS[v]; try { localStorage.setItem('tros-loc', v); } catch (e) {} }
         return v;
       }
       var cv = cur();
@@ -18,7 +18,7 @@
         } catch (e) { return; }
         if (!data || !data.relays || !data.relays.length) return;
         var keep = null;
-        try { keep = localStorage.getItem('niche-loc'); } catch (e2) {}
+        try { keep = localStorage.getItem('tros-loc'); } catch (e2) {}
         sel.innerHTML = '';
         var vps = document.createElement('option');
         vps.value = 'vps';
@@ -40,7 +40,7 @@
         }
         if (!okw) {
           want = (data.active && /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/.test(data.active)) ? data.active : sel.options[1].value;
-          try { localStorage.setItem('niche-loc', want); } catch (e3) {}
+          try { localStorage.setItem('tros-loc', want); } catch (e3) {}
         }
         sel.value = want;
         sel.title = 'Mullvad exit (shared by all users)';
@@ -53,7 +53,7 @@
       } catch {}
       sel.addEventListener('change', () => {
         var v = sel.value;
-        try { localStorage.setItem('niche-loc', v); } catch {}
+        try { localStorage.setItem('tros-loc', v); } catch {}
         if (/^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/.test(v)) {
           var st = document.getElementById('loc-status');
           if (st) { st.hidden = false; st.textContent = 'Switching Mullvad exit...'; }
@@ -90,13 +90,13 @@
       {
       name: "ace [wasm]",
       role: "Owner of Helium",
-      msg: " “niche is one of the greatest ubg sites i've ever seen.” ",
+      msg: " “tros is one of the greatest ubg sites i've ever seen.” ",
       pfp: "ace.png"
     },
      {
       name: "hvtrs",
       role: "Owner of Cherri & Breeze",
-      msg: " “let's keep niche niche” ",
+      msg: " “let's keep tros tros” ",
       pfp: "x8r.png"
     },
       {
@@ -125,25 +125,25 @@
     {
       name: "JustAOrange",
       role: "Owner of Nexora",
-      msg: " “stay niche” ",
+      msg: " “stay tros” ",
       pfp: "orange.png"
     },
     {
       name: "duderucool",
       role: "Owner of Flux",
-      msg: " “niche looks like a niche site but good” ",
+      msg: " “tros looks like a tros site but good” ",
       pfp: "dudercool.png"
     },
      {
       name: "Mr Coffee",
       role: "Owner of Vanta",
-      msg: " “I love niche because it is owned by my king ” ",
+      msg: " “I love tros because it is owned by my king ” ",
       pfp: "mrcoffee.png"
     },
      {
       name: "Zaka",
       role: "Owner of Zaka",
-      msg: " “niche gonna be better then t9 os frfr” ",
+      msg: " “Welcome to Tr-os” ",
       pfp: "zaka.png"
     },
      {
