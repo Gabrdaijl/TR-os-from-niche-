@@ -11,6 +11,7 @@ const WISP_ROUTES = {
 var RELAY_RE = /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/;
 var RESI_ALIAS = { paloalto: "mullvad-us", boston: "mullvad-us", milan: "mullvad-eu" };
 function mvEnabled() {
+  if (window.TR_OS.vpnConfigured === false) return false;
   try { return localStorage.getItem("tros-mullvad") !== "0"; }
   catch (e) { return true; }
 }
@@ -32,7 +33,7 @@ window.trosSetLocation = async function (loc) {
   if (!WISP_ROUTES[loc] && !RELAY_RE.test(loc)) return false;
   try { localStorage.setItem("tros-loc", loc); } catch (e) {}
   try {
-    if (__bareConn) await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: wispUrl() }]);
+    if (__bareConn) await __bareConn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: wispUrl() }]);
   } catch (e) { return false; }
   try {
     const fr = document.getElementById("_pframe");
@@ -141,14 +142,14 @@ async function initScramjet() {
     },
   });
   await client.init();
-  navigator.serviceWorker.register("sw.js");
+  await window.TR_OS.ensureServiceWorker();
 
-  const conn = new BareMux.BareMuxConnection("baremux/worker.js");
+  const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
   __bareConn = conn;
 
   // Just set the transport directly. Do NOT open a test WebSocket!
   try {
-    await conn.setTransport("epoxy/index.mjs", [{ wisp: wispUrl() }]);
+    await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: wispUrl() }]);
   } catch (err) {
     console.error("Failed to set Epoxy transport:", err);
   }

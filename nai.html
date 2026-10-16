@@ -651,13 +651,6 @@
       updateQuotaUI();
       return;
     }
-    if (!unlimitedOk) {
-      try {
-        const qa = quotaRead();
-        qa.push(Date.now());
-        localStorage.setItem('tros-ai-quota', JSON.stringify(qa));
-      } catch {}
-    }
     updateQuotaUI();
 
     if (welcomeScreen) welcomeScreen.style.display = 'none';
@@ -744,12 +737,24 @@
     }
     async function runStream() {
       const res = await window.TR_OS.fetch(API_URL, {
+        signal: AbortSignal.timeout(90000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: selectedModel, messages: history, stream: true }),
       });
       const ct = ((res.headers && res.headers.get('content-type')) || '').toLowerCase();
-      if (!res.ok || !res.body || ct.indexOf('application/json') !== -1) return null;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw Object.assign(new Error(errorData.error || 'AI service returned HTTP ' + res.status), { status: res.status });
+      }
+      if (ct.indexOf('application/json') !== -1) {
+        const data = await res.json();
+        const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (typeof content !== 'string' || !content) return null;
+        paintTokens(content);
+        return content;
+      }
+      if (!res.body) return null;
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = '';
@@ -775,19 +780,21 @@
       return out.text;
     }
 
-    let reply = null;
-    try { reply = await runStream(); } catch { reply = null; }
+    let reply = null, streamFailure = null, requestSucceeded = true;
+    try { reply = await runStream(); } catch (error) { streamFailure = error; reply = null; }
     streamDone = true;
     if (typeTimer) { clearTimeout(typeTimer); typeTimer = null; }
     if (sText) { sText.textContent = typeBuf; }
     if (!reply) {
       // Fallback: single-shot request (proxies without SSE support)
       try {
+        if (streamFailure && streamFailure.status) throw streamFailure;
         const res = await window.TR_OS.fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: selectedModel, messages: history, stream: false }),
         });
+        if (!res.ok) throw new Error(res.status === 404 ? 'AI service is not connected yet.' : 'AI service returned HTTP ' + res.status);
         const rawText = await res.text();
         try {
           const data = JSON.parse(rawText);
@@ -796,6 +803,7 @@
           reply = `Server returned: ${rawText.substring(0, 200)}`;
         }
       } catch (e) {
+        requestSucceeded = false;
         reply = `connection error — ${e.message}`;
       }
       try { dotsRow.remove(); } catch {}
@@ -803,13 +811,13 @@
         sBox.innerHTML = '';
         sBox.appendChild(renderRich(reply));
         const entry = { role: 'assistant', content: reply };
-        history.push(entry);
+        if (requestSucceeded) history.push(entry);
         addAiActions(sEl, entry, reply);
       } else {
         const nb = bubble(reply, 'ai');
         feed.appendChild(nb.row);
         const entry = { role: 'assistant', content: reply };
-        history.push(entry);
+        if (requestSucceeded) history.push(entry);
         addAiActions(nb.el, entry, reply);
       }
     } else {
@@ -817,9 +825,19 @@
       sBox.innerHTML = '';
       sBox.appendChild(renderRich(reply));
       const entry = { role: 'assistant', content: reply };
-      history.push(entry);
+      if (requestSucceeded) history.push(entry);
       addAiActions(sEl, entry, reply);
     }
+    if (requestSucceeded) {
+    if (!unlimitedOk) {
+      try {
+        const qa = quotaRead();
+        qa.push(Date.now());
+        localStorage.setItem('tros-ai-quota', JSON.stringify(qa));
+      } catch {}
+    }
+    }
+    updateQuotaUI();
     feed.scrollTop = feed.scrollHeight;
     saveCurrentChat();
     logExchange(text, modelSelector.value, reply);

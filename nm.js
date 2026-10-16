@@ -5,7 +5,7 @@
   const BASE = 'https://api.themoviedb.org/3';
   const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
   // Mullvad VPN (tros toggle): same-origin relays that exit via the tunnel.
-  const MV_ON = () => { try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (e) { return true; } };
+  const MV_ON = () => { if (window.TR_OS.vpnConfigured === false) return false; try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (e) { return true; } };
   let __tmdbProxyEnabled = MV_ON();
   const mvApi = path => __tmdbProxyEnabled ? 'api/tmdb' + path : BASE + path;
   const mvImg = itemPath => {
@@ -51,10 +51,10 @@
         },
       });
       await client.init();
-      try { navigator.serviceWorker.register("sw.js"); } catch (e) {}
-      const conn = new BareMux.BareMuxConnection("baremux/worker.js");
-      try { await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl("/wisp-mullvad/") }]); }
-      catch (err) { await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl("/wisp-mullvad/") }]); }
+      await window.TR_OS.ensureServiceWorker();
+      const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
+      try { await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(window.TR_OS.vpnConfigured === false ? "/wisp-vps/" : "/wisp-mullvad/") }]); }
+      catch (err) { await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(window.TR_OS.vpnConfigured === false ? "/wisp-vps/" : "/wisp-mullvad/") }]); }
       __barePlay = conn;
       __sjPlay = client;
       __sjPlayReady = true;

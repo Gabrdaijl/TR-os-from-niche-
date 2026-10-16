@@ -1552,7 +1552,7 @@
         </div></div>
            </div>
 
-                      <input id="apiKeyInput" value="sk_live_name_here" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none">
+                      <input id="apiKeyInput" type="password" placeholder="Cloud API key" autocomplete="off" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none">
 
           <script>
   const API_BASE = "";
@@ -1830,6 +1830,7 @@
   let abortCtrl = null;
 
   function apiKey() {
+    if (window.TR_OS.cloudKeyOnServer) return "";
     let input = document.getElementById('apiKeyInput');
     let key = input ? input.value.trim() : "";
 
@@ -1919,6 +1920,10 @@
       return;
     }
 
+    if (window.TR_OS.cloudConfigured === false) {
+      setStatus("Cloud gaming is unavailable right now.", "You can still play games from the Games menu.");
+      return;
+    }
     setStatus(`Launching ${game.name}…`);
     let res;
     try {
@@ -2063,7 +2068,7 @@
     if (nav && !document.getElementById('apiKeyInput')) {
       const input = document.createElement('input');
       input.id = 'apiKeyInput';
-      input.type = 'text';
+      input.type = 'password';
       input.placeholder = 'API Key';
       input.className = 'bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none';
       nav.appendChild(input);

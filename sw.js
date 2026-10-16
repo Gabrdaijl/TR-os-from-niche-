@@ -47,6 +47,7 @@ importScripts("scram/scramjet.all.js");
 
 const { ScramjetServiceWorker } = $scramjetLoadWorker();
 const scramjet = new ScramjetServiceWorker();
+let proxyConfigReady;
 
 const CONFIG = {
 	blocked: [
@@ -184,8 +185,17 @@ async function handleRequest(event) {
   try {
     let configTimer;
     try {
+      if (!proxyConfigReady) {
+        // A controller message can set the instance config before the worker
+        // has initialized the shared rewriter/WASM configuration. Load both
+        // from the same IndexedDB record once before serving proxy traffic.
+        scramjet.config = undefined;
+        proxyConfigReady = scramjet.loadConfig().then(() => {
+          if (!scramjet.config) throw new Error('Proxy configuration is missing');
+        });
+      }
       await Promise.race([
-        scramjet.loadConfig(),
+        proxyConfigReady,
         new Promise((_, reject) => {
           configTimer = setTimeout(() => reject(new Error("Proxy initialization timed out")), 5000);
         }),
@@ -194,6 +204,7 @@ async function handleRequest(event) {
       clearTimeout(configTimer);
     }
   } catch {
+    proxyConfigReady = null;
     return new Response("Proxy is not ready. Open the TR-os home page and try again.", { status: 503 });
   }
 
@@ -219,7 +230,13 @@ async function handleRequest(event) {
 
       return response;
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('TR-os proxy request failed:', e);
+    self.clients.matchAll().then(clients => {
+      for (const client of clients) client.postMessage({ type: 'tr-os-proxy-error', message: String(e && e.message || e) });
+    }).catch(() => {});
+    return new Response('This page could not be loaded through TR-os. Please try again.', { status: 502 });
+  }
 
   try {
     return await fetch(event.request);

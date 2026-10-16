@@ -3,8 +3,8 @@
       var RESI_ALIAS = { paloalto: 'mullvad-us', boston: 'mullvad-us', milan: 'mullvad-eu' };
       function cur() {
         var v = 'mullvad-eu';
-        try { v = localStorage.getItem('TR-os-loc') || 'mullvad-eu'; } catch {}
-        if (RESI_ALIAS[v]) { v = RESI_ALIAS[v]; try { localStorage.setItem('TR-os-loc', v); } catch (e) {} }
+        try { v = localStorage.getItem('tros-loc') || 'mullvad-eu'; } catch {}
+        if (RESI_ALIAS[v]) { v = RESI_ALIAS[v]; try { localStorage.setItem('tros-loc', v); } catch (e) {} }
         return v;
       }
       var cv = cur();
@@ -18,7 +18,7 @@
         } catch (e) { return; }
         if (!data || !data.relays || !data.relays.length) return;
         var keep = null;
-        try { keep = localStorage.getItem('TR-os-loc'); } catch (e2) {}
+        try { keep = localStorage.getItem('tros-loc'); } catch (e2) {}
         sel.innerHTML = '';
         var vps = document.createElement('option');
         vps.value = 'vps';
@@ -40,10 +40,14 @@
         }
         if (!okw) {
           want = (data.active && /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/.test(data.active)) ? data.active : sel.options[1].value;
-          try { localStorage.setItem('TR-os-loc', want); } catch (e3) {}
+          try { localStorage.setItem('tros-loc', want); } catch (e3) {}
         }
         sel.value = want;
         sel.title = 'Mullvad exit (shared by all users)';
+      }
+      if (window.TR_OS.vpnConfigured === false) {
+        sel.innerHTML = '<option value="vps">Direct proxy</option>';
+        try { localStorage.setItem('tros-loc', 'vps'); } catch (_) {}
       }
       mvLoadHome();
       try {
@@ -53,7 +57,7 @@
       } catch {}
       sel.addEventListener('change', () => {
         var v = sel.value;
-        try { localStorage.setItem('TR-os-loc', v); } catch {}
+        try { localStorage.setItem('tros-loc', v); } catch {}
         if (/^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/.test(v)) {
           var st = document.getElementById('loc-status');
           if (st) { st.hidden = false; st.textContent = 'Switching Mullvad exit...'; }

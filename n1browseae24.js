@@ -47,11 +47,11 @@
   async function applyTransport() {
     if (!__bareConn) return false;
     try {
-      await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
+      await __bareConn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
       return true;
     } catch (err) {
       try {
-        await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
+        await __bareConn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
         return true;
       } catch (e2) { return false; }
     }
@@ -66,6 +66,7 @@
   var RELAY_RE = /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/;
   var MV_STATUS = null;
   function mvEnabled() {
+    if (window.TR_OS.vpnConfigured === false) return false;
     try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (er) { return true; }
   }
   function setMvEnabled(on) {
@@ -82,11 +83,12 @@
   function syncMvUI() {
     var btn = document.getElementById('mullvad-toggle');
     if (!btn) return;
+    btn.disabled = window.TR_OS.vpnConfigured === false;
     var on = mvEnabled();
     btn.textContent = on ? 'MV ON' : 'MV OFF';
     btn.style.opacity = on ? '1' : '0.55';
     var pt0 = document.getElementById('mv-panel-toggle');
-    if (pt0) { pt0.checked = on; }
+    if (pt0) { pt0.checked = on; pt0.disabled = window.TR_OS.vpnConfigured === false; }
     mvSyncPanelLine();
     var eff = 'vps';
     try { eff = localStorage.getItem('tros-loc') || 'mullvad-eu'; } catch (e2) {}
@@ -138,15 +140,15 @@
         },
       });
       await client.init();
-      try { navigator.serviceWorker.register("sw.js"); } catch {}
-      const conn = new BareMux.BareMuxConnection("baremux/worker.js");
+      await window.TR_OS.ensureServiceWorker();
+      const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
       __bareConn = conn;
       await epoxyWarm.catch(() => null);
       try {
-        await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
+        await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
       } catch (err) {
         try {
-          await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
+          await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
         } catch (e2) {}
       }
       __sj = client;

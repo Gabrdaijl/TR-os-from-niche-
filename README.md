@@ -1,17 +1,40 @@
 # TR-os
 
-Browser desktop frontend with games, movies, AI, cloud launcher, themes and settings.
+TR-os med egen Node-server för webbproxy, online-status, gruppchatt och privata meddelanden. Frontend, teman, spelkatalog och filmkatalog ingår.
 
-Serve this repository over HTTPS (or localhost for development). Keep all files and directories together at the site root. The proxy service worker needs its scope and proxy routes on the same origin.
+## Starta
 
-## Backend services
+Använd Node.js 22.12 eller senare.
 
-This repository does not include the reference site's backend. Static hosting alone cannot implement its proxy, VPN, AI, shared chat or cloud gaming. Configure services you operate in `tr-os.config.js`:
+```sh
+npm ci
+npm start
+```
 
-- `apiBase`: HTTP API base; defaults to this origin. Required routes include `/online`, `/chat/*`, `/api/mullvad/*`, `/api/tmdb*` and `/cloud/v1/*`.
-- `wispBase`: WebSocket server base; defaults to `apiBase`. It must provide the selected `/wisp-*/` routes and `/tros-ws`.
-- `aiUrl`: AI relay; defaults to `/api/ai`. Supply provider credentials on the server, never in frontend files.
+Öppna `http://localhost:8173/index.html`. Kör `npm test` för serverns integrationstester. Chatt och online-sessioner hålls i minnet och nollställs när servern startas om.
 
-Cloud gaming additionally requires the provider's session service and a valid account/API key. Changing a hostname does not create those services.
+## Publicera på en server
 
-The bundled proxy runtime and Scramjet runtime files are included. Their third-party notices remain in the source. This is a frontend repair and branding change; full backend parity has not been verified.
+GitHub lagrar koden; GitHub Pages kan inte köra Node-backenden. Kör `npm start` på en Node-kompatibel host eller bygg den medföljande Dockerfilen. Sätt `HOST=0.0.0.0` på en host som kräver det, använd HTTPS och vidarebefordra WebSocket-uppgraderingar i reverse proxyn. Frontend, service worker och backend ska ligga på samma domän.
+
+Servern blockerar åtkomst till serverkod, miljöfiler och paketmappar. Direkt proxy tillåter webbportarna 80 och 443; privata och lokala IP-adresser blockeras.
+
+## AI, VPN och molnspel
+
+Kopiera `.env.example` till `.env` lokalt och fyll i de tjänster du äger. Miljöfilen ska aldrig läggas på GitHub.
+
+- AI: ange `AI_URL` till en OpenAI-kompatibel chat-completions-endpoint, `AI_KEY` och eventuellt `AI_MODEL`. Alternativt används en lokal Ollama-server på `OLLAMA_URL` med modellen `OLLAMA_MODEL`; Ollama och modellen måste redan finnas och vara startade. Inga AI-svar simuleras.
+- VPN: ange `VPN_API_URL` för ett eget API med `/api/mullvad/relays`, `/status` och `/switch`, samt `VPN_WISP_URL` för dess proxyutgång. Utan detta används direkt proxy.
+- Molnspel: ange `CLOUD_API_URL` till en tjänst som implementerar frontendens `/cloud/v1/*`-kontrakt. `CLOUD_API_KEY` kan hållas på servern. En giltig leverantör och spelrättigheter krävs.
+- Cheats: `JOIN_URL` anger den spel-/undervisningstjänst som knappen ska öppna. Saknas den visas ett meddelande med länk till spelkatalogen.
+- Filmmetadata: `TMDB_API_KEY` kan sättas på servern. Filmplanschernas proxy följer samma API-bas som övriga anrop.
+
+Detta är en självständig implementation för TR-os, inte referenssidans privata serverkod. Frontendens flöden bevaras, men tillgång till privata VPN-, AI- och molnspelstjänster ingår inte automatiskt.
+
+## Bibliotek
+
+Proxybiblioteken och deras licensnotiser finns kvar i källkoden. Serverns Wisp-implementation kommer från [MercuryWorkshop/wisp-js](https://github.com/MercuryWorkshop/wisp-js) och installeras som en separat npm-dependency. Lokala AI-anrop använder [Ollamas chat-API](https://docs.ollama.com/api/chat).
+
+Den speglade Scramjet-filen är korrigerad på två ställen: service workerns IndexedDB-namn återställs från `%24scramjet.html` till `$scramjet`, samma namn som klienten använder. Övriga tredjepartsnotiser behålls.
+
+Sätt miljövariabeln `TR_OS_NETWORK_TEST=1` vid testkörning för det extra testet av en riktig utgående Wisp-ström. Övriga tester kräver ingen extern AI- eller molnspelsleverantör.
