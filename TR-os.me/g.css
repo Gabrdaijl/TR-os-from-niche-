@@ -1,0 +1,139 @@
+:root {
+  --cursor-default: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACe0lEQVR4nO2Uv2sTYRjHv897P9K7g8SSCBXeCy0EC4UsFRRca+niH+AgdhFCh+Kgf0Vxc3FxcghUp/4DDqVugS7VIaRDczVLmrShvctd7t7Hoa2otJqebXDIB245Xu77ed57ngcY878ihCiYpvmIiCZHHq7r+gPXdXsLCwtHUspjy7KeARCjyifXdT+vr68rZuadnR2enZ31Hcd5AUAbhYBRLBaP9vf3+Zzd3V0ulUpBJpN5gpu+CSKypJR+p9Phn6nValwsFn3DMB7eqAQR2VLK4HcBZuaNjQ3luu6hpml3AdDIBZiZ19bWYillQwhRuBGJvwkwM6+srPSnpqY+EdHEtUsMIxBFES8tLQX5fP4tAGPkAszMnU6Hy+Vy4DjOS1zneA4rwMxcr9d5enra13X9PlJOxj+NU6lUQqVSyWSz2QoRmWm+oQ97sNlsolqtwnEczM3NYX5+HrZtY3t7O47jOABgAggB8LULeJ6HxcVFFAoFEBFOTk7QbrcxGAxY07Sv/X7/41VCryQQRRGWl5chpcTMzMyP91tbW6Hnee/DMKwmSdJEiuqBS3pA1/XDRqMBpRRWV1dxcHDwS3i320W3243CMPwQx3FdKfWNmaOrhgMXLBEimrAs63k+n39t2zb7vt+Ooiiby+XMcrk8kcvlsLm52W+1Wu+CIHijlNpj5j5SVH+hAABdCFEwDOMeEd1RSnkAyDTNx47jPGVmJ0mSWq/XexXH8Rdm7gJQacIvEyAAphAiC8AGMACQENGkEOK2EOKWUupIKbWXJEkLp/8+NZftccJpfwicVUdEBgDrbP8PmPmYmVM13jACfzovzkLPnzFjxoz5J74DYS+yEcgAtH0AAAAASUVORK5CYII=) 6 4, default;
+  --cursor-pointer: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACaUlEQVR4nO2Wv2sTYRjHP8n1cjbpVQNStZLQQEEbUFwqFFo6OQkVcRcJBOuWQcEpm0OaSv6GQOeiW8FFSwYdXCvXQdChhiJ3rQ1Vk3qPw+XqIflxd4F0yReeIeG5ez7v8zzvcw+MNNIZKxLC3zXx2FAUAa5omlbLZDIHwHMgRvBDhA4+BqxtbGxIq9WShYWFE+Ba+//QENEAvmPAzeXlZRRFYWlpSQFuAeowACKAAmiqqgIQi8UAJjwAoSCCZKCT7yPgCU4vKG2f0DDd5J5eB97W63WxbVu2t7fFMAzJ5XKi6/q3ZDL5BbgH3AbiHpiBAseANDAOnPcCuLa/vy+maYplWTI/Py/5fF4SicQn4FIbPHTw65OTk59XVlYknU4fAM+Ad/8DeO3w8FBs25b19XUBCsC5MFmI4DTWq83NTbFtW5rNppTLZVFVtdkLwLVqtSrAC5yyBemzUwANuDs9PW0ZhnH64q2tLTFNsy9AqVQS4ClwgRBlcGt/EXiQzWZ/NRqNvkG9VigUBHjoB6BTegQ4AY6B9zs7Oy+LxWKgE+zt7QHUATvQgx65o1cHMtFo9EOtVvOdgcXFRQFu4AyqwD3ghVCBJHBnbm7OdylmZ2ePgRn+zYPQiuBcpcvA2urqqi+AeDz+FUjhzI+Bp6KCk8oZ4E2lUukZ3LIsAT4CV3FuU08AP3RuPyRwplsxlUrdn5qaGu/kfHR0xO7u7mvgMWDiNHTXpcVvetx+mMAZyTrOVe1U3xPgB/AdaLR/93yxX7kQWtu6LSI28Bv4CTTps7KF3Ql7fXbdPfFPv+BhAPw+O7RFdaSRBtZf47PgMn65C04AAAAASUVORK5CYII=) 12 5, pointer;
+  --cursor-text: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABi0lEQVR4nO2Wv07DMBDGf5eWVh1aFLUe0xWVBfEATDDyujwAKxITQ9+hEgoltBEN7THYKSGAGvcPCCmfZOl8ju3P8fm+gxo1/hiy45yirT/YeyUgQENE+kBQHFDVKfAGLIFVVRK+BBphGN53u92z8kCSJA9xHF8CM+DVEdkrBGgZYzRNU03TVFV1bRtjFDgBBkCLiodr+pJYLBa3URSdi0hvMpkwHA5R1Zcsy8ZAx625TWxt3hx7sgEwMsaoquYnvwYugBGefyDY/Mkair3XOfBUGkuBqfPP3XeVgtCHANjoXmADrYjcN3P2quqCvgTULZ6V/Evny/B4gtsQyEnsMr4zgb2iJvAvCQhfk4yU2sEICNAUkcEnp8gxcIRNww0fEr5aEIRheFdUw06nQxRFN0mSjOM4vuJDjg+vhsXmNOGU31JDSvft1LCFpxr6BIxg77kL9IGe6ws2+2XAM/AIJK6/MSt6V0RAG6v7bdfPscRWQikeFdE2NWHgNv7uBeXBd7CasMo8LzGqUeMdX8CZRBWyqCYAAAAASUVORK5CYII=) 15 14, text;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: #000;
+  overflow: hidden;
+  cursor: var(--cursor-default) !important;
+}
+
+a,
+button,
+select,
+.nav-btn,
+[onclick],
+.cursor-pointer {
+  cursor: var(--cursor-pointer) !important;
+}
+
+input,
+textarea {
+  cursor: var(--cursor-text) !important;
+}
+
+.game-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  align-content: flex-start;
+  width: 100%;
+  height: 100%;
+}
+
+.game-card {
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  width: 6rem;
+  height: 6rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.game-card:active {
+  transform: scale(0.95);
+}
+
+.game-card-img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+  border-radius: 0.25rem;
+}
+
+.game-card-label {
+  font-size: 0.75rem;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.game-sentinel {
+  width: 100%;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+.game-loading,
+.game-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.game-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #dc2626;
+}
+
+.game-launching {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  position: relative;
+}
+
+.game-back {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  transition: background-color 0.15s ease;
+}
+
+.game-launching-label {
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.game-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 1rem;
+}

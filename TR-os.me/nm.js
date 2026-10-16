@@ -1,0 +1,544 @@
+ (() => {
+  'use strict';
+
+  const KEY  = '3a73619bbb8fc6d47742d1b5b2b707b5';
+  const BASE = 'https://api.themoviedb.org/3';
+  const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
+  // Mullvad VPN (niche toggle): same-origin relays that exit via the tunnel.
+  const MV_ON = () => { try { return localStorage.getItem('niche-mullvad') !== '0'; } catch (e) { return true; } };
+  const mvApi = path => { try { if (localStorage.getItem('niche-mullvad') !== '0') return '/api/tmdb' + path; } catch (e) {} return BASE + path; };
+  const mvImg = itemPath => {
+    if (!itemPath) return '';
+    try { if (localStorage.getItem('niche-mullvad') !== '0') return '/api/tmdb-img/t/p/w342' + itemPath; } catch (e) {}
+    return IMG(itemPath);
+  };
+  const ANIME_PX = '&with_original_language=ja&with_genres=16';
+
+  let __sjPlay = null, __sjPlayReady = false, __barePlay = null;
+  async function ensurePlayerProxy() {
+    if (__sjPlayReady) return true;
+    try {
+      const { ScramjetController } = $scramjetLoadController();
+      const client = new ScramjetController({
+        files: {
+          wasm: "/scram/scramjet.wasm.wasm",
+          all: "/scram/scramjet.all.js",
+          sync: "/scram/scramjet.sync.js",
+        },
+      });
+      await client.init();
+      try { navigator.serviceWorker.register("sw.js"); } catch (e) {}
+      const conn = new BareMux.BareMuxConnection("baremux/worker.js");
+      try { await conn.setTransport("epoxy/index.mjs", [{ wisp: "wss://" + location.host + "/wisp-mullvad/" }]); }
+      catch (err) { await conn.setTransport("epoxy/index.mjs", [{ wisp: "wss://t9os.space/wisp-mullvad/" }]); }
+      __barePlay = conn;
+      __sjPlay = client;
+      __sjPlayReady = true;
+      return true;
+    } catch (e) { return false; }
+  }
+  async function proxyPlayerUrl(url) {
+    let on = true;
+    try { on = localStorage.getItem('niche-mullvad') !== '0'; } catch (e) {}
+    if (!on) return url;
+    try {
+      const ok = await ensurePlayerProxy();
+      if (!ok || !__sjPlayReady) return url;
+      return __sjPlay.encodeUrl(url);
+    } catch (e) { return url; }
+  }
+  const movieUrl = id       => `https://vidfast.vc/movie/${id}`;
+  const tvUrl    = (id,s,e) => `https://vidfast.vc/tv/${id}/${s}/${e}`;
+
+  const CATS = [
+    { n: 'Trending',          ep: 'trending/all/week',  px: '',                                                          t: null    },
+    { n: 'Popular Movies',    ep: 'discover/movie',     px: '&sort_by=popularity.desc',                                  t: 'movie' },
+    { n: 'Popular TV',        ep: 'discover/tv',        px: '&sort_by=popularity.desc',                                  t: 'tv'    },
+    { n: 'Anime',             ep: 'discover/tv',        px: `${ANIME_PX}&sort_by=popularity.desc`,                       t: 'tv'    },
+    { n: 'Top Rated Movies',  ep: 'discover/movie',     px: '&sort_by=vote_average.desc&vote_count.gte=500',             t: 'movie' },
+    { n: 'Action',            ep: 'discover/movie',     px: '&with_genres=28&sort_by=popularity.desc',                   t: 'movie' },
+    { n: 'Sci-Fi',            ep: 'discover/movie',     px: '&with_genres=878&sort_by=popularity.desc',                  t: 'movie' },
+    { n: 'Horror',            ep: 'discover/movie',     px: '&with_genres=27&sort_by=popularity.desc',                   t: 'movie' },
+    { n: 'Drama Series',      ep: 'discover/tv',        px: '&with_genres=18&sort_by=popularity.desc',                   t: 'tv'    },
+    { n: 'Anime Films',       ep: 'discover/movie',     px: `${ANIME_PX}&sort_by=popularity.desc`,                       t: 'movie' },
+    { n: 'Comedy',            ep: 'discover/movie',     px: '&with_genres=35&sort_by=popularity.desc',                   t: 'movie' },
+    { n: 'Top Anime',         ep: 'discover/tv',        px: `${ANIME_PX}&sort_by=vote_average.desc&vote_count.gte=200`,  t: 'tv'    },
+  ];
+
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes npulse  { 0%,100%{opacity:.45}50%{opacity:.85} }
+    @keyframes nfadeIn { from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)} }
+    @keyframes nslideUp{ from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)} }
+
+    .niche-row::-webkit-scrollbar{display:none}
+    .niche-row{scrollbar-width:none;-ms-overflow-style:none}
+    .niche-card img{transition:transform .3s ease}
+    .niche-card:hover img{transform:scale(1.04)}
+
+    /* ── modal overlay ── */
+    #niche-overlay{
+      position:fixed;inset:0;z-index:9000;
+      background:rgba(0,0,0,.75);
+      display:none;align-items:center;justify-content:center;
+      padding:16px;
+    }
+    #niche-overlay.open{ display:flex }
+
+    /* ── modal box — matches Niche palette ── */
+    #niche-modal{
+      background:#93c5fd;          /* bg-blue-300 */
+      border:2px solid #60a5fa;    /* border-blue-400 */
+      border-radius:18px;
+      width:min(540px,100%);
+      max-height:92vh;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      animation:nfadeIn .22s ease;
+      position:relative;
+      padding:20px;
+      gap:16px;
+    }
+
+    /* close btn */
+    #niche-modal-close{
+      position:absolute;top:14px;right:14px;
+      width:32px;height:32px;border-radius:50%;
+      background:rgba(255,255,255,.35);
+      border:1px solid rgba(255,255,255,.5);
+      color:#1d4ed8;font-size:16px;
+      display:grid;place-items:center;
+      cursor:pointer;transition:background .2s;
+      line-height:1;
+    }
+    #niche-modal-close:hover{ background:rgba(255,255,255,.6) }
+
+    /* header row */
+    #niche-modal-header{
+      display:flex;gap:14px;align-items:flex-start;
+    }
+    #niche-modal-poster{
+      width:100px;height:150px;object-fit:cover;
+      border-radius:10px;flex-shrink:0;
+      border:2px solid #60a5fa;
+      background:#bfdbfe;
+    }
+    #niche-modal-info{ flex:1;min-width:0 }
+    #niche-modal-title{
+      font-family:ui-sans-serif,system-ui,sans-serif;
+      color:#1e3a5f;font-size:22px;
+      line-height:1.2;margin-bottom:6px;
+    }
+    #niche-modal-meta{
+      font-size:12px;color:#1d4ed8;
+      font-weight:700;margin-bottom:10px;
+    }
+    #niche-modal-overview{
+      font-size:12.5px;color:#1e3a5f;
+      line-height:1.6;
+      display:-webkit-box;-webkit-line-clamp:5;
+      -webkit-box-orient:vertical;overflow:hidden;
+    }
+
+    /* selects */
+    .niche-sel{
+      background:#bfdbfe;
+      border:1.5px solid #60a5fa;
+      color:#1e3a5f;padding:9px 12px;
+      border-radius:9px;
+      font-family:ui-sans-serif,system-ui,sans-serif;
+      font-size:13px;outline:none;cursor:pointer;
+      flex:1;min-width:130px;
+    }
+    .niche-sel option{ background:#bfdbfe;color:#1e3a5f }
+
+    /* controls row */
+    #niche-modal-controls{
+      display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    }
+
+    /* watch / play btn */
+    #niche-watch-btn{
+      background:#1d4ed8;
+      border:none;color:#fff;
+      padding:11px 28px;border-radius:10px;
+      font-family:ui-sans-serif,system-ui,sans-serif;font-size:15px;
+      cursor:pointer;transition:background .2s,transform .15s;
+      display:flex;align-items:center;gap:8px;
+      white-space:nowrap;width:100%;justify-content:center;
+      margin-top:4px;
+    }
+    #niche-watch-btn:hover{ background:#1e40af;transform:translateY(-2px) }
+    #niche-watch-btn svg{ width:18px;height:18px;fill:#fff }
+
+    /* loading text */
+    #niche-season-loading{
+      font-family:ui-sans-serif,system-ui,sans-serif;
+      color:#1d4ed8;font-size:13px;
+    }
+
+    /* ── fullscreen player ── */
+    #niche-player{
+      position:fixed;inset:0;z-index:9500;
+      background:#000;
+      display:none;flex-direction:column;
+    }
+    #niche-player.open{ display:flex }
+
+    #niche-player-bar{
+      position:absolute;top:0;left:0;right:0;
+      height:56px;z-index:10;
+      background:linear-gradient(180deg,rgba(0,0,0,.9) 0%,transparent 100%);
+      display:flex;align-items:center;
+      padding:0 18px;gap:14px;
+    }
+    #niche-player-back{
+      width:38px;height:38px;border-radius:50%;
+      background:rgba(255,255,255,.15);
+      border:1px solid rgba(255,255,255,.25);
+      color:#fff;font-size:20px;
+      display:grid;place-items:center;
+      cursor:pointer;transition:background .2s;
+    }
+    #niche-player-back:hover{ background:rgba(255,255,255,.3) }
+    #niche-player-title{
+      font-family:ui-sans-serif,system-ui,sans-serif;
+      color:#fff;font-size:16px;
+    }
+    #niche-player-sub{
+      font-size:11px;color:rgba(255,255,255,.6);
+      margin-top:1px;
+    }
+    #niche-frame{
+      width:100%;flex:1;min-height:0;
+      border:none;display:block;
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.addEventListener('DOMContentLoaded', boot);
+
+  let grid, searchWrap;
+  let currentItem = null;
+
+  function boot() {
+    const input = document.querySelector('input[type="text"]');
+    if (!input) return;
+    searchWrap = input.closest('div');
+    grid = searchWrap?.parentElement;
+    if (!grid) return;
+
+    Object.assign(grid.style, {
+      height: 'auto', minHeight: '765px',
+      overflowY: 'auto', overflowX: 'hidden',
+    });
+
+    wipeSections();
+    CATS.forEach(cat => loadSection(cat));
+    buildDOM();
+
+    let timer;
+    input.addEventListener('input', e => {
+      clearTimeout(timer);
+      const q = e.target.value.trim();
+      if (!q) { wipeSections(); CATS.forEach(c => loadSection(c)); return; }
+      timer = setTimeout(() => doSearch(q), 480);
+    });
+  }
+
+  function wipeSections() {
+    [...grid.children].forEach(el => { if (el !== searchWrap) el.remove(); });
+  }
+
+  function buildDOM() {
+    if (document.getElementById('niche-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'niche-overlay';
+    overlay.innerHTML = `
+      <div id="niche-modal">
+        <button id="niche-modal-close">✕</button>
+        <div id="niche-modal-header">
+          <img id="niche-modal-poster" src="" alt="">
+          <div id="niche-modal-info">
+            <div id="niche-modal-title"></div>
+            <div id="niche-modal-meta"></div>
+            <div id="niche-modal-overview"></div>
+          </div>
+        </div>
+        <div id="niche-modal-controls"></div>
+        <button id="niche-watch-btn">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          Watch Now
+        </button>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const player = document.createElement('div');
+    player.id = 'niche-player';
+    player.innerHTML = `
+      <div id="niche-player-bar">
+        <button id="niche-player-back">←</button>
+        <div>
+          <div id="niche-player-title"></div>
+          <div id="niche-player-sub"></div>
+        </div>
+      </div>
+      <iframe id="niche-frame"
+        allowfullscreen
+        allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
+        referrerpolicy="no-referrer">
+      </iframe>`;
+    document.body.appendChild(player);
+
+    document.getElementById('niche-modal-close').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.getElementById('niche-watch-btn').addEventListener('click', onWatchClick);
+    document.getElementById('niche-player-back').addEventListener('click', closeFullscreen);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('niche-player').classList.contains('open')) closeFullscreen();
+        else closeModal();
+      }
+    });
+  }
+
+  // ── modal open ───────────────────────────────────────────────────
+  async function openModal(item) {
+    currentItem = item;
+    const title = item.title || item.name || '—';
+    const year  = (item.release_date || item.first_air_date || '').slice(0, 4);
+    const type  = item.media_type === 'tv' ? 'TV Series' : 'Movie';
+    const score = item.vote_average ? `★ ${item.vote_average.toFixed(1)}` : '';
+
+    document.getElementById('niche-modal-poster').src          = mvImg(item.poster_path);
+    document.getElementById('niche-modal-title').textContent   = title;
+    document.getElementById('niche-modal-meta').textContent    = [type, year, score].filter(Boolean).join('  ·  ');
+    document.getElementById('niche-modal-overview').textContent = item.overview || '';
+    document.getElementById('niche-modal-controls').innerHTML  = '';
+    document.getElementById('niche-watch-btn').textContent     = '';
+
+    const btn = document.getElementById('niche-watch-btn');
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#fff"><path d="M8 5v14l11-7z"/></svg> Watch Now`;
+
+    document.getElementById('niche-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    if (item.media_type === 'tv') {
+      await buildTVControls(item);
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('niche-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    currentItem = null;
+  }
+
+  async function buildTVControls(item) {
+    const ctrl = document.getElementById('niche-modal-controls');
+    ctrl.innerHTML = `<span id="niche-season-loading">Loading seasons…</span>`;
+
+    let tvData;
+    try {
+      tvData = await fetch(mvApi(`/tv/${item.id}?api_key=${KEY}`)).then(r => r.json());
+    } catch {
+      ctrl.innerHTML = `<span style="color:#dc2626;font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px">Failed to load seasons.</span>`;
+      return;
+    }
+
+    const seasons = (tvData.seasons || []).filter(s => s.season_number > 0);
+    ctrl.innerHTML = '';
+
+    if (!seasons.length) return; 
+
+    const seasonSel = document.createElement('select');
+    seasonSel.className = 'niche-sel';
+    seasonSel.id = 'niche-season-sel';
+    seasons.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.season_number;
+      opt.textContent = s.name || `Season ${s.season_number}`;
+      seasonSel.appendChild(opt);
+    });
+
+    const epSel = document.createElement('select');
+    epSel.className = 'niche-sel';
+    epSel.id = 'niche-ep-sel';
+
+    ctrl.appendChild(seasonSel);
+    ctrl.appendChild(epSel);
+
+    async function loadEps(sNum) {
+      epSel.innerHTML = '<option>Loading…</option>';
+      try {
+        const d = await fetch(mvApi(`/tv/${item.id}/season/${sNum}?api_key=${KEY}`)).then(r => r.json());
+        const eps = d.episodes || [];
+        epSel.innerHTML = '';
+        eps.forEach(e => {
+          const opt = document.createElement('option');
+          opt.value = e.episode_number;
+          opt.textContent = `Ep ${e.episode_number}: ${e.name || '—'}`;
+          epSel.appendChild(opt);
+        });
+      } catch {
+        epSel.innerHTML = '<option value="1">Episode 1</option>';
+      }
+    }
+
+    await loadEps(+seasonSel.value);
+    seasonSel.addEventListener('change', () => loadEps(+seasonSel.value));
+  }
+
+  function onWatchClick() {
+    if (!currentItem) return;
+    const item = currentItem;
+    const title = item.title || item.name || '—';
+
+    let src, sub;
+
+    if (item.media_type === 'movie') {
+      src = movieUrl(item.id);
+      sub = 'Full Movie — VidFast HD';
+    } else {
+      const sSel = document.getElementById('niche-season-sel');
+      const eSel = document.getElementById('niche-ep-sel');
+      const s = sSel ? +sSel.value : 1;
+      const e = eSel ? +eSel.value : 1;
+      const sName = sSel ? sSel.options[sSel.selectedIndex]?.text : `Season ${s}`;
+      const eName = eSel ? eSel.options[eSel.selectedIndex]?.text : `Episode ${e}`;
+      src = tvUrl(item.id, s, e);
+      sub = `${sName}  ·  ${eName} — VidFast HD`;
+    }
+
+    launchFullscreen(src, title, sub);
+  }
+
+  async function launchFullscreen(src, title, sub) {
+    document.getElementById('niche-player-title').textContent = title;
+    document.getElementById('niche-player-sub').textContent   = sub;
+    let finalSrc = src;
+    try { finalSrc = await proxyPlayerUrl(src); } catch (e) {}
+    document.getElementById('niche-frame').src = finalSrc;
+    document.getElementById('niche-player').classList.add('open');
+    closeModal();
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeFullscreen() {
+    document.getElementById('niche-player').classList.remove('open');
+    document.getElementById('niche-frame').src = 'about:blank';
+    document.body.style.overflow = '';
+  }
+
+  function mkShell(title) {
+    const wrap = document.createElement('div');
+    wrap.className = 'w-full';
+    wrap.style.marginBottom = '4px';
+
+    const lbl = document.createElement('p');
+    lbl.className = 'font-sans text-blue-600 px-3 pt-2 pb-1';
+    lbl.style.fontSize = '18px';
+    lbl.textContent = title;
+
+    const row = document.createElement('div');
+    row.className = 'niche-row';
+    Object.assign(row.style, {
+      display: 'flex', overflowX: 'auto',
+      gap: '10px', padding: '4px 12px 10px',
+    });
+
+    for (let i = 0; i < 8; i++) row.appendChild(mkSkel());
+    wrap.appendChild(lbl);
+    wrap.appendChild(row);
+    return { wrap, row };
+  }
+
+  async function loadSection(cat) {
+    const { wrap, row } = mkShell(cat.n);
+    grid.appendChild(wrap);
+    try {
+      let url = mvApi(`/${cat.ep}?api_key=${KEY}&language=en-US&page=1`);
+      if (cat.px) url += cat.px;
+      const d = await fetch(url).then(r => r.json());
+      const items = (d.results || [])
+        .filter(i => i.poster_path)
+        .map(i => ({ ...i, media_type: i.media_type || cat.t }))
+        .slice(0, 20);
+      row.innerHTML = '';
+      if (!items.length) {
+        row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">Nothing here.</p>';
+        return;
+      }
+      items.forEach(i => row.appendChild(mkCard(i)));
+    } catch {
+      row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">Failed to load.</p>';
+    }
+  }
+
+  async function doSearch(q) {
+    wipeSections();
+    const { wrap, row } = mkShell(`Results for "${q}"`);
+    grid.appendChild(wrap);
+    try {
+      const [tvR, movR] = await Promise.all([
+        fetch(mvApi(`/search/tv?api_key=${KEY}&query=${encodeURIComponent(q)}&language=en-US`)).then(r => r.json()),
+        fetch(mvApi(`/search/movie?api_key=${KEY}&query=${encodeURIComponent(q)}&language=en-US`)).then(r => r.json()),
+      ]);
+      const items = [
+        ...(tvR.results  || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'tv'    })),
+        ...(movR.results || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'movie' })),
+      ].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 40);
+      row.innerHTML = '';
+      if (!items.length) {
+        row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">No results found.</p>';
+        return;
+      }
+      items.forEach(i => row.appendChild(mkCard(i)));
+    } catch {
+      row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">Search failed.</p>';
+    }
+  }
+
+  function mkCard(item) {
+    const title = item.title || item.name || '—';
+    const year  = (item.release_date || item.first_air_date || '').slice(0, 4);
+    const type  = item.media_type === 'tv' ? 'TV' : 'Film';
+
+    const card = document.createElement('div');
+    card.className = 'niche-card bg-blue-400 border-2 border-blue-400 p-2 rounded-xl flex flex-col items-center justify-start cursor-pointer hover:bg-blue-300 transition-all relative';
+    Object.assign(card.style, { flex: '0 0 auto', width: '155px', minHeight: '255px' });
+
+    card.innerHTML = `
+      <img src="${mvImg(item.poster_path)}" alt="${esc(title)}"
+        loading="lazy" class="w-full rounded-md object-cover" style="height:195px">
+      <p class="font-sans text-blue-600 text-center w-full mt-2"
+        style="font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
+        ${esc(title)}
+      </p>
+      <div style="display:flex;justify-content:space-between;width:100%;margin-top:4px">
+        <p class="font-sans text-blue-500" style="font-size:11px">${esc(year)}</p>
+        <p class="font-sans text-blue-500" style="font-size:11px">${esc(type)}</p>
+      </div>`;
+
+    card.addEventListener('click', () => openModal(item));
+    return card;
+  }
+
+  function mkSkel() {
+    const s = document.createElement('div');
+    Object.assign(s.style, {
+      flex: '0 0 155px', height: '255px', borderRadius: '12px',
+      background: 'rgba(147,197,253,0.45)',
+      animation: 'npulse 1.5s ease-in-out infinite',
+    });
+    return s;
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g,
+      c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+})();

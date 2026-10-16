@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Mirrored from https://t9os.space/settings.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:16 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Niche Settings</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Agbalumo&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.cur2.css">
+  <link rel="stylesheet" href="settings5e1f.css?v=2">
+  <script src="theme.black5ce31.js?v=19"></script>
+  <script src="settings1bce.js?v=6" defer></script>
+  <script src="panic.js"></script>
+</head>
+<body>
+  <div id="sroot">
+    <aside id="sbar">
+      <button data-pane="appearance" class="on">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M12 21c-1 0-1.5-1-1.5-2 0-1.5 1.5-2 3-2H17a4 4 0 0 0 4-4"/></svg>
+        Appearance
+      </button>
+      <button data-pane="cloaking">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a7 7 0 0 0-7 7c0 1.5.5 2.9 1.3 4L4 20l6-2.3c.6.2 1.3.3 2 .3a7 7 0 0 0 0-14z"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg>
+        Cloaking
+      </button>
+      <button data-pane="panic">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+        Panic
+      </button>
+    </aside>
+
+    <main id="smain">
+      <div class="toprow">
+        <span class="cur" id="settings-current"></span>
+      </div>
+
+      <section data-pane="appearance">
+        <h1>Appearance</h1>
+        <div class="rowline">
+          <div>
+            <h2 style="margin:0;">Theme</h2>
+            <p class="sub">Dark, warm and light themes. Applies instantly.</p>
+          </div>
+        </div>
+        <div class="pills" id="theme-list"></div>
+
+        <h2>Background</h2>
+        <p class="sub">Custom wallpaper behind translucent panels. Saved on this device.</p>
+        <div class="card">
+          <img id="wallpaper-preview" alt="Wallpaper preview" style="display:none;">
+          <div class="grow">
+            <div class="t">Custom background</div>
+            <div class="s" id="wallpaper-status">No custom wallpaper set.</div>
+          </div>
+          <label class="btn" for="wallpaper-file">Choose</label>
+          <input id="wallpaper-file" type="file" accept="image/*" style="display:none;">
+          <button class="btn ghost" id="wallpaper-remove" type="button">Remove</button>
+        </div>
+      </section>
+
+      <section data-pane="cloaking" hidden>
+        <h1>Tab cloaking</h1>
+        <p class="sub">Disguise this tab as a school site. Applies instantly, saved on this device.</p>
+        <div class="pills" id="cloak-list"></div>
+
+        <h2>Custom</h2>
+        <label class="lbl" for="cloak-title">Tab title</label>
+        <input type="text" id="cloak-title" placeholder="Home - Classroom" autocomplete="off">
+        <label class="lbl" for="cloak-icon">Favicon URL</label>
+        <input type="text" id="cloak-icon" placeholder="https://xn--rvg/" autocomplete="off">
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn" id="cloak-save" type="button">Apply cloak</button>
+          <button class="btn ghost" id="cloak-reset" type="button">Reset</button>
+        </div>
+      </section>
+
+
+      <section data-pane="panic" hidden>
+      <h1>Panic</h1>
+      <p class="sub">Pick a key and a URL. Pressing it anywhere in the shell jumps there instantly.</p>
+      <div class="card">
+        <div class="grow">
+          <div class="t" id="panic-key-label">No key set</div>
+          <div class="s">Click Record, then press any key or combo.</div>
+        </div>
+        <button class="btn" id="panic-record" type="button">Record</button>
+      </div>
+      <label class="lbl" for="panic-url">Destination URL</label>
+      <input type="text" id="panic-url" placeholder="https://classroom.google.com/" autocomplete="off">
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn" id="panic-save" type="button">Save panic key</button>
+        <button class="btn ghost" id="panic-clear" type="button">Clear</button>
+      </div>
+    </section>
+
+
+    </main>
+  </div>
+
+  <script src="online.js"></script>
+</body>
+
+<!-- Mirrored from https://t9os.space/settings.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:17 GMT -->
+</html>

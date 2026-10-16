@@ -1,0 +1,46 @@
+@keyframes fx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fx-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+html.fx-ready body {
+  animation: fx-fade 0.35s ease both;
+}
+
+.fx-item {
+  animation: fx-rise 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: var(--fx-d, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.fx-ready body,
+  .fx-item {
+    animation: none;
+  }
+}
+
+html body {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
