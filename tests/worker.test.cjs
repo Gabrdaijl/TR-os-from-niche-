@@ -30,7 +30,7 @@ function worker({ neverReady = false } = {}) {
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(require.resolve('../sw.js'), 'utf8'), context);
-  return { request: route => context.handleRequest({ request: { url: 'https://site.test' + route } }), loads: () => loads };
+  return { request: route => context.handleRequest({ request: { url: 'https://site.test' + route } }), loads: () => loads, blocked: context.isBlocked };
 }
 test('repeat visits bypass proxy initialization for app files', async () => {
   const app = worker({ neverReady: true });
@@ -51,4 +51,21 @@ test('controller and worker use the same database after repairing the mirrored l
   const source = fs.readFileSync(require.resolve('../scram/scramjet.all.js'), 'utf8');
   assert.ok(source.includes('indexedDB.open("$scramjet",1)'));
   assert.ok(!source.includes('indexedDB.open("%24scramjet.html"'));
+});
+
+test('mirrored Scramjet still enables the actual DOM, worker and shared hooks', () => {
+ const source = fs.readFileSync(require.resolve('../scram/scramjet.all.js'), 'utf8');
+ for (const group of ['dom', 'worker', 'shared']) {
+  assert.ok(source.includes('r.startsWith("./' + group + '/")'));
+  assert.ok(!source.includes(group + '/index.html'));
+ }
+});
+
+test('proxy ad rules match domain suffixes and wildcard paths without blocking unrelated assets', () => {
+ const app = worker();
+ assert.equal(app.blocked('ads.doubleclick.net', '/banner.js'), true);
+ assert.equal(app.blocked('doubleclick.net', '/banner.js'), true);
+ assert.equal(app.blocked('game.test', '/ads/banner.js'), true);
+ assert.equal(app.blocked('notdoubleclick.net', '/game.wasm'), false);
+ assert.equal(app.blocked('cdn.game.test', '/assets/game.wasm'), false);
 });
