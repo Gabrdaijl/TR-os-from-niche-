@@ -9,6 +9,9 @@
 Examples:
 const CONFIG = {
 	blocked: [
+		".doubleclick.net", ".googlesyndication.com", ".googleadservices.com",
+		".adsterra.com", ".popads.net", ".popcash.net", ".highperformanceformat.com",
+		".profitablecpmrate.com", ".profitableratecpm.com", ".effectivegatecpm.com",
 		block a domain
 		"example.com",
     subdomains
@@ -52,6 +55,9 @@ let proxyConfigReady;
 
 const CONFIG = {
 	blocked: [
+        ".doubleclick.net", ".googlesyndication.com", ".googleadservices.com",
+        ".adsterra.com", ".popads.net", ".popcash.net", ".highperformanceformat.com",
+        ".profitablecpmrate.com", ".profitableratecpm.com", ".effectivegatecpm.com",
 		"youtube.com/get_video_info?*adformat=*",
 		"youtube.com/api/stats/ads/*",
 		"youtube.com/pagead/*",
@@ -140,24 +146,16 @@ function toRegex(pattern) {
  * @returns {boolean}
  */
 function isBlocked(hostname, pathname) {
-	return CONFIG.blocked.some((pattern) => {
-		if (pattern.startsWith("#")) {
-			pattern = pattern.substring(1);
-		}
-		if (pattern.startsWith("*")) {
-			pattern = pattern.substring(1);
-		}
-
-		if (pattern.includes("/")) {
-			const [hostPattern, ...pathParts] = pattern.split("/");
-			const pathPattern = pathParts.join("/");
-			const hostRegex = toRegex(hostPattern);
-			const pathRegex = toRegex(`/${pathPattern}`);
-			return hostRegex.test(hostname) && pathRegex.test(pathname);
-		}
-		const hostRegex = toRegex(pattern);
-		return hostRegex.test(hostname);
-	});
+  return CONFIG.blocked.some(pattern => {
+    pattern = pattern.replace(/^#/, '');
+    const slash = pattern.indexOf('/');
+    const host = slash < 0 ? pattern : pattern.slice(0, slash);
+    const path = slash < 0 ? null : pattern.slice(slash);
+    const matchesHost = host === '*' || (host.startsWith('.')
+      ? hostname === host.slice(1) || hostname.endsWith(host)
+      : toRegex(host).test(hostname));
+    return matchesHost && (!path || toRegex(path).test(pathname));
+  });
 }
 
 /**
