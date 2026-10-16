@@ -439,8 +439,8 @@
     } else {
       const sSel = document.getElementById('tros-season-sel');
       const eSel = document.getElementById('tros-ep-sel');
-      const s = sSel ? +sSel.value : 1;
-      const e = eSel ? +eSel.value : 1;
+      const s = Number(sSel?.value) || 1;
+      const e = Number(eSel?.value) || 1;
       const sName = sSel ? sSel.options[sSel.selectedIndex]?.text : `Season ${s}`;
       const eName = eSel ? eSel.options[eSel.selectedIndex]?.text : `Episode ${e}`;
       src = tvUrl(item.id, s, e);
