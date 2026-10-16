@@ -9,7 +9,7 @@
   let __sj = null, __sjReady = false;
   var MV_BUILD = 'r5';
   function mvLog(m) {
-    try { fetch('/api/mullvad/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ m: String(m).slice(0, 200) }) }); } catch (e) {}
+    try { fetch('api/mullvad/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ m: String(m).slice(0, 200) }) }); } catch (e) {}
   }
   mvLog('boot ' + MV_BUILD);
   try {
@@ -132,9 +132,9 @@
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({
         files: {
-          wasm: "/scram/scramjet.wasm.wasm",
-          all: "/scram/scramjet.all.js",
-          sync: "/scram/scramjet.sync.js",
+          wasm: "scram/scramjet.wasm.wasm",
+          all: "scram/scramjet.all.js",
+          sync: "scram/scramjet.sync.js",
         },
       });
       await client.init();
@@ -498,13 +498,13 @@
   async function mvLoadRelays() {
     var data = null;
     try {
-      var rr = await fetch('/api/mullvad/relays');
+      var rr = await fetch('api/mullvad/relays');
       data = await rr.json();
     } catch (e) { mvLog('relays fetch fail'); return false; }
     if (!data || !data.relays || !data.relays.length) return false;
     if (data.active) { MV_STATUS = { relay: data.active, exit_ip: data.exit_ip || null, country: '', city: '' }; }
     try {
-      var sr = await fetch('/api/mullvad/status');
+      var sr = await fetch('api/mullvad/status');
       var st = await sr.json();
       if (st && st.relay) MV_STATUS = st;
     } catch (e2) {}
@@ -558,7 +558,7 @@
       attempt++;
       if (btn) { btn.textContent = 'SW ' + attempt + '/3'; }
       try {
-        var r = await fetch('/api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+        var r = await fetch('api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
         var d = await r.json();
         if (d && d.ok) { MV_STATUS = d; ok = true; }
         else if (d && d.error === 'switch in progress') { await mvSleep(5000); }
@@ -572,7 +572,7 @@
       if (btn) { btn.textContent = '...'; }
       for (var vi = 0; vi < 10; vi++) {
         try {
-          var vsr = await fetch('/api/mullvad/status');
+          var vsr = await fetch('api/mullvad/status');
           var vst = await vsr.json();
           if (vst && vst.relay === id) { MV_STATUS = vst; verified = true; break; }
           if (vst && vst.relay) { MV_STATUS = vst; }
@@ -623,7 +623,7 @@
       try { exp = MV_STATUS && MV_STATUS.exit_ip; } catch (e3) {}
       if (!exp || ip !== exp) {
         try {
-          var sr = await fetch('/api/mullvad/status');
+          var sr = await fetch('api/mullvad/status');
           var st = await sr.json();
           if (st && st.relay) { MV_STATUS = st; }
         } catch (e5) {}
@@ -735,7 +735,7 @@
     if (!list) return;
     var data = null;
     try {
-      var rr = await fetch('/api/mullvad/relays');
+      var rr = await fetch('api/mullvad/relays');
       data = await rr.json();
     } catch (e) { data = null; }
     list.innerHTML = '';

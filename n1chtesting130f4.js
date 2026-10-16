@@ -13,7 +13,7 @@
       async function mvLoadHome() {
         var data = null;
         try {
-          var rr = await fetch('/api/mullvad/relays');
+          var rr = await fetch('api/mullvad/relays');
           data = await rr.json();
         } catch (e) { return; }
         if (!data || !data.relays || !data.relays.length) return;
@@ -58,7 +58,7 @@
           var st = document.getElementById('loc-status');
           if (st) { st.hidden = false; st.textContent = 'Switching Mullvad exit...'; }
           try { sel.disabled = true; } catch (e) {}
-          fetch('/api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v }) }).then(function (r) { return r.json(); }).then(function (d) {
+          fetch('api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v }) }).then(function (r) { return r.json(); }).then(function (d) {
             if (d && d.ok) { location.reload(); }
             else {
               var st2 = document.getElementById('loc-status');

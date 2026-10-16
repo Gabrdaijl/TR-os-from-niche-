@@ -7,10 +7,10 @@
   // Mullvad VPN (niche toggle): same-origin relays that exit via the tunnel.
   const MV_ON = () => { try { return localStorage.getItem('niche-mullvad') !== '0'; } catch (e) { return true; } };
   let __tmdbProxyEnabled = MV_ON();
-  const mvApi = path => __tmdbProxyEnabled ? '/api/tmdb' + path : BASE + path;
+  const mvApi = path => __tmdbProxyEnabled ? 'api/tmdb' + path : BASE + path;
   const mvImg = itemPath => {
     if (!itemPath) return '';
-    if (__tmdbProxyEnabled) return '/api/tmdb-img/t/p/w342' + itemPath;
+    if (__tmdbProxyEnabled) return 'api/tmdb-img/t/p/w342' + itemPath;
     return IMG(itemPath);
   };
   async function readJsonSafe(res) {
@@ -22,7 +22,7 @@
   async function tmdbJson(path) {
     if (__tmdbProxyEnabled) {
       try {
-        const proxyRes = await fetch('/api/tmdb' + path);
+        const proxyRes = await fetch('api/tmdb' + path);
         if (proxyRes.ok) {
           const data = await readJsonSafe(proxyRes);
           if (data && typeof data === 'object') return data;
@@ -45,9 +45,9 @@
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({
         files: {
-          wasm: "/scram/scramjet.wasm.wasm",
-          all: "/scram/scramjet.all.js",
-          sync: "/scram/scramjet.sync.js",
+          wasm: "scram/scramjet.wasm.wasm",
+          all: "scram/scramjet.all.js",
+          sync: "scram/scramjet.sync.js",
         },
       });
       await client.init();
