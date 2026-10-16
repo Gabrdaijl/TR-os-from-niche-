@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<!-- Mirrored from https://t9os.space/launcher.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:14 GMT -->
+<!-- Mirrored from https://TR-os/launcher.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:14 GMT -->
 <!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
 <head>
     <meta charset="UTF-8">
@@ -14,7 +14,7 @@
     <script src="theme.js"></script>
     <link rel="stylesheet" href="page-fx5e1f.css?v=2">
     <script src="page-fx7b30.js?v=4" defer></script>
-    <title>Niche</title>
+    <title>TR-os</title>
   <script src="panic.js"></script>
 </head>
 
@@ -321,23 +321,23 @@
   }
 
   function setupOverlay() {
-    let overlay = document.getElementById('nicheOverlay');
+    let overlay = document.getElementById('trOsOverlay');
     if (!overlay) {
       overlay = document.createElement('div');
-      overlay.id = 'nicheOverlay';
+      overlay.id = 'trOsOverlay';
       overlay.className = 'fixed inset-0 bg-black hidden flex-col items-center justify-center z-50';
       overlay.innerHTML = `
-        <div id="nicheLoading" class="flex flex-col items-center text-white gap-4 absolute">
+        <div id="trOsLoading" class="flex flex-col items-center text-white gap-4 absolute">
           <div class="w-10 h-10 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
-          <div id="nicheLoadingText" class="text-xl font-bold">Loading…</div>
-          <div id="nicheStatusSub" class="text-sm text-gray-400"></div>
+          <div id="trOsLoadingText" class="text-xl font-bold">Loading…</div>
+          <div id="trOsStatusSub" class="text-sm text-gray-400"></div>
         </div>
-        <iframe id="nicheGameFrame" class="w-full h-full hidden bg-black" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen referrerpolicy="no-referrer"></iframe>
-        <button id="nicheCloseBtn" class="absolute top-4 right-4 bg-black-600 text-white px-4 py-2 rounded-lg hover:bg-black-700 font-bold">X</button>
+        <iframe id="trOsGameFrame" class="w-full h-full hidden bg-black" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen referrerpolicy="no-referrer"></iframe>
+        <button id="trOsCloseBtn" class="absolute top-4 right-4 bg-black-600 text-white px-4 py-2 rounded-lg hover:bg-black-700 font-bold">X</button>
       `;
       document.body.appendChild(overlay);
       
-      document.getElementById('nicheCloseBtn').onclick = async () => {
+      document.getElementById('trOsCloseBtn').onclick = async () => {
         if (activeUuid) {
           try {
             await apiFetch(`/cloud/v1/quitSession`, {
@@ -349,7 +349,7 @@
         }
         resetState();
         overlay.style.display = 'none';
-        document.getElementById('nicheGameFrame').src = "";
+        document.getElementById('trOsGameFrame').src = "";
         document.body.style.overflow = "";
       };
     }
@@ -357,18 +357,18 @@
   }
 
   function setStatus(main, sub="") {
-    const txt = document.getElementById('nicheLoadingText');
-    const subTxt = document.getElementById('nicheStatusSub');
+    const txt = document.getElementById('trOsLoadingText');
+    const subTxt = document.getElementById('trOsStatusSub');
     if(txt) txt.textContent = main;
     if(subTxt) subTxt.textContent = sub;
   }
 
   function openOverlay(label) {
     setupOverlay();
-    const overlay = document.getElementById('nicheOverlay');
+    const overlay = document.getElementById('trOsOverlay');
     overlay.style.display = 'flex';
-    document.getElementById('nicheLoading').style.display = 'flex';
-    document.getElementById('nicheGameFrame').style.display = 'none';
+    document.getElementById('trOsLoading').style.display = 'flex';
+    document.getElementById('trOsGameFrame').style.display = 'none';
     document.body.style.overflow = 'hidden';
     setStatus(`Loading ${label}…`);
   }
@@ -389,9 +389,9 @@
 
     if (LOCAL_GAMES[game.key]) {
       setTimeout(() => {
-        document.getElementById('nicheLoading').style.display = 'none';
-        document.getElementById('nicheGameFrame').style.display = 'block';
-        document.getElementById('nicheGameFrame').src = LOCAL_GAMES[game.key];
+        document.getElementById('trOsLoading').style.display = 'none';
+        document.getElementById('trOsGameFrame').style.display = 'block';
+        document.getElementById('trOsGameFrame').src = LOCAL_GAMES[game.key];
         launchLog('loaded', game, 'local: ' + LOCAL_GAMES[game.key]);
       }, 1200);
       return;
@@ -514,10 +514,10 @@
     }
 
     setStatus("Connecting…");
-    const frame = document.getElementById('nicheGameFrame');
+    const frame = document.getElementById('trOsGameFrame');
     frame.src = `${apiBase || ""}/cloud/v1/embed?id=${encodeURIComponent(activeUuid)}&host=${encodeURIComponent(location.host)}`;
     frame.onload = () => {
-      document.getElementById('nicheLoading').style.display = 'none';
+      document.getElementById('trOsLoading').style.display = 'none';
       frame.style.display = 'block';
       setStatus("Live", "Streaming — click inside to capture keyboard/mouse.");
       launchLog('loaded', game, 'uuid: ' + activeUuid);
@@ -583,5 +583,5 @@
   <script src="online.js"></script>
 </body>
 
-<!-- Mirrored from https://t9os.space/launcher.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:16 GMT -->
+<!-- Mirrored from https://TR-os/launcher.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:16 GMT -->
 </html> 
