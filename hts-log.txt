@@ -1,0 +1,21 @@
+HTTrack3.50-5 launched on Fri, 16 Oct 2026 00:05:32 at https://t9os.space/ +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qwC2%Ps2u1%s%uN0%I0p3DaK0H0%kf2%f#f -F "Mozilla/5.0 (compatible; HTTrack; +https://www.httrack.com/)" -%F "<!-- Mirrored from {url} by HTTrack Website Copier/3.x [XR&CO], {date} -->" -%l "sv, en, *" https://t9os.space/ -O1 "C:\Mina webbsidor\niche" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+00:06:47	Error: 	"Not Found" (404) at link https://t9os.space/epoxy.wasm (from https://t9os.space/epoxy/index.mjs)
+00:06:47	Error: 	"Not Found" (404) at link https://t9os.space/dom/ (from https://t9os.space/scram/scramjet.all.js)
+00:06:47	Error: 	"Not Found" (404) at link https://t9os.space/worker/ (from https://t9os.space/scram/scramjet.all.js)
+00:06:47	Error: 	"Not Found" (404) at link https://t9os.space/shared/ (from https://t9os.space/scram/scramjet.all.js)
+00:06:47	Error: 	"Not Found" (404) at link https://t9os.space/$scramjet (from https://t9os.space/scram/scramjet.all.js)
+00:06:47	Error: 	"Not Found" (404) at link https://t9os.space/wasm_bg.wasm (from https://t9os.space/scram/scramjet.all.js)
+00:06:52	Error: 	"Not Found" (404) at link https://t9os.space/baremux/ (from https://t9os.space/sw.js)
+00:06:52	Error: 	"Not Found" (404) at link https://t9os.space/cloud/ (from https://t9os.space/sw.js)
+00:06:52	Error: 	"Not Found" (404) at link https://t9os.space/stratus/ (from https://t9os.space/sw.js)
+00:06:52	Error: 	"Not Found" (404) at link https://t9os.space/wallpaper-api/ (from https://t9os.space/sw.js)
+
+HTTrack Website Copier/3.50-5 mirror complete in 1 minutes 20 seconds : 155 links scanned, 143 files written (5320022 bytes overall) [4833833 bytes received at 60422 bytes/sec], 1125231 bytes transferred using HTTP compression in 28 files, ratio 47%, 1.7 requests per connection
+(10 errors, 0 warnings, 0 messages)
