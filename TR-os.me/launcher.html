@@ -1,40 +1,1560 @@
 <!DOCTYPE html>
-<html lang="en">
-
-<!-- Mirrored from https://t9os.space/launcher.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:14 GMT -->
-<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
-<head>
-    <meta charset="UTF-8">
+<!-- saved from url=(0032)https://t9os.space/launcher.html -->
+<html lang="en" class="fx-ready" data-niche-theme="dark"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Agbalumo&amp;display=swap" rel="stylesheet"> 
-    <link rel="stylesheet" href="index.css">
-    <script src="../cdn.jsdelivr.net/gh/luminsdk/script%40latest/lumin.min.js"></script>
-    <script src="cloud.js"></script>
-    <script src="theme.js"></script>
-    <link rel="stylesheet" href="page-fx5e1f.css?v=2">
-    <script src="page-fx7b30.js?v=4" defer></script>
+    <script src="./bror_files/browser@4"></script><style>/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer properties;
+@layer theme, base, components, utilities;
+@layer theme {
+  :root, :host {
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+    --color-blue-100: oklch(93.2% 0.032 255.585);
+    --color-blue-200: oklch(88.2% 0.059 254.128);
+    --color-blue-300: oklch(80.9% 0.105 251.813);
+    --color-blue-400: oklch(70.7% 0.165 254.624);
+    --color-blue-500: oklch(62.3% 0.214 259.815);
+    --color-gray-400: oklch(70.7% 0.022 261.325);
+    --color-gray-600: oklch(44.6% 0.03 256.802);
+    --color-black: #000;
+    --color-white: #fff;
+    --spacing: 0.25rem;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: calc(1 / 0.75);
+    --text-sm: 0.875rem;
+    --text-sm--line-height: calc(1.25 / 0.875);
+    --text-xl: 1.25rem;
+    --text-xl--line-height: calc(1.75 / 1.25);
+    --font-weight-bold: 700;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --animate-spin: spin 1s linear infinite;
+    --default-transition-duration: 150ms;
+    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    --default-font-family: var(--font-sans);
+    --default-mono-font-family: var(--font-mono);
+  }
+}
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+  html, :host {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: var(--default-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji');
+    font-feature-settings: var(--default-font-feature-settings, normal);
+    font-variation-settings: var(--default-font-variation-settings, normal);
+    -webkit-tap-highlight-color: transparent;
+  }
+  hr {
+    height: 0;
+    color: inherit;
+    border-top-width: 1px;
+  }
+  abbr:where([title]) {
+    -webkit-text-decoration: underline dotted;
+    text-decoration: underline dotted;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  a {
+    color: inherit;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
+  }
+  b, strong {
+    font-weight: bolder;
+  }
+  code, kbd, samp, pre {
+    font-family: var(--default-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+    font-feature-settings: var(--default-mono-font-feature-settings, normal);
+    font-variation-settings: var(--default-mono-font-variation-settings, normal);
+    font-size: 1em;
+  }
+  small {
+    font-size: 80%;
+  }
+  sub, sup {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+  sub {
+    bottom: -0.25em;
+  }
+  sup {
+    top: -0.5em;
+  }
+  table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
+  }
+  :-moz-focusring:where(:not(iframe)) {
+    outline: auto;
+  }
+  progress {
+    vertical-align: baseline;
+  }
+  summary {
+    display: list-item;
+  }
+  ol, ul, menu {
+    list-style: none;
+  }
+  img, svg, video, canvas, audio, iframe, embed, object {
+    display: block;
+    vertical-align: middle;
+  }
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+  button, input, select, optgroup, textarea, ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+  }
+  :where(select:is([multiple], [size])) optgroup {
+    font-weight: bolder;
+  }
+  :where(select:is([multiple], [size])) optgroup option {
+    padding-inline-start: 20px;
+  }
+  ::file-selector-button {
+    margin-inline-end: 4px;
+  }
+  ::placeholder {
+    opacity: 1;
+  }
+  @supports (not (-webkit-appearance: -apple-pay-button))  or (contain-intrinsic-size: 1px) {
+    ::placeholder {
+      color: currentcolor;
+      @supports (color: color-mix(in lab, red, red)) {
+        color: color-mix(in oklab, currentcolor 50%, transparent);
+      }
+    }
+  }
+  textarea {
+    resize: vertical;
+  }
+  ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+  ::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: inherit;
+  }
+  ::-webkit-datetime-edit {
+    display: inline-flex;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+  ::-webkit-datetime-edit, ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field, ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field, ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field {
+    padding-block: 0;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: 1;
+  }
+  :-moz-ui-invalid {
+    box-shadow: none;
+  }
+  button, input:where([type='button'], [type='reset'], [type='submit']), ::file-selector-button {
+    appearance: button;
+  }
+  ::-webkit-inner-spin-button, ::-webkit-outer-spin-button {
+    height: auto;
+  }
+  [hidden]:where(:not([hidden='until-found'])) {
+    display: none !important;
+  }
+}
+@layer utilities {
+  .absolute {
+    position: absolute;
+  }
+  .fixed {
+    position: fixed;
+  }
+  .relative {
+    position: relative;
+  }
+  .inset-0 {
+    inset: 0px;
+  }
+  .top-4 {
+    top: calc(var(--spacing) * 4);
+  }
+  .right-4 {
+    right: calc(var(--spacing) * 4);
+  }
+  .z-50 {
+    z-index: 50;
+  }
+  .m-1 {
+    margin: var(--spacing);
+  }
+  .mx-auto {
+    margin-inline: auto;
+  }
+  .mt-1 {
+    margin-top: var(--spacing);
+  }
+  .mt-2 {
+    margin-top: calc(var(--spacing) * 2);
+  }
+  .flex {
+    display: flex;
+  }
+  .hidden {
+    display: none;
+  }
+  .h-10 {
+    height: calc(var(--spacing) * 10);
+  }
+  .h-12 {
+    height: calc(var(--spacing) * 12);
+  }
+  .h-34 {
+    height: calc(var(--spacing) * 34);
+  }
+  .h-62 {
+    height: calc(var(--spacing) * 62);
+  }
+  .h-full {
+    height: 100%;
+  }
+  .w-10 {
+    width: calc(var(--spacing) * 10);
+  }
+  .w-40 {
+    width: calc(var(--spacing) * 40);
+  }
+  .w-50 {
+    width: calc(var(--spacing) * 50);
+  }
+  .w-full {
+    width: 100%;
+  }
+  .animate-spin {
+    animation: var(--animate-spin);
+  }
+  .cursor-pointer {
+    cursor: pointer;
+  }
+  .flex-col {
+    flex-direction: column;
+  }
+  .items-center {
+    align-items: center;
+  }
+  .justify-center {
+    justify-content: center;
+  }
+  .justify-start {
+    justify-content: flex-start;
+  }
+  .gap-2 {
+    gap: calc(var(--spacing) * 2);
+  }
+  .gap-4 {
+    gap: calc(var(--spacing) * 4);
+  }
+  .rounded-2xl {
+    border-radius: var(--radius-2xl);
+  }
+  .rounded-full {
+    border-radius: calc(infinity * 1px);
+  }
+  .rounded-lg {
+    border-radius: var(--radius-lg);
+  }
+  .rounded-md {
+    border-radius: var(--radius-md);
+  }
+  .rounded-xl {
+    border-radius: var(--radius-xl);
+  }
+  .border {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+  }
+  .border-4 {
+    border-style: var(--tw-border-style);
+    border-width: 4px;
+  }
+  .border-blue-200 {
+    border-color: var(--color-blue-200);
+  }
+  .border-blue-500 {
+    border-color: var(--color-blue-500);
+  }
+  .border-gray-600 {
+    border-color: var(--color-gray-600);
+  }
+  .border-t-white {
+    border-top-color: var(--color-white);
+  }
+  .bg-black {
+    background-color: var(--color-black);
+  }
+  .bg-blue-300 {
+    background-color: var(--color-blue-300);
+  }
+  .bg-blue-400 {
+    background-color: var(--color-blue-400);
+  }
+  .bg-blue-500 {
+    background-color: var(--color-blue-500);
+  }
+  .object-cover {
+    object-fit: cover;
+  }
+  .p-2 {
+    padding: calc(var(--spacing) * 2);
+  }
+  .px-2 {
+    padding-inline: calc(var(--spacing) * 2);
+  }
+  .px-4 {
+    padding-inline: calc(var(--spacing) * 4);
+  }
+  .py-1 {
+    padding-block: var(--spacing);
+  }
+  .py-2 {
+    padding-block: calc(var(--spacing) * 2);
+  }
+  .text-center {
+    text-align: center;
+  }
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+  .text-sm {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+  .text-xl {
+    font-size: var(--text-xl);
+    line-height: var(--tw-leading, var(--text-xl--line-height));
+  }
+  .text-xs {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+  }
+  .text-\[14px\] {
+    font-size: 14px;
+  }
+  .font-bold {
+    --tw-font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-bold);
+  }
+  .text-blue-100 {
+    color: var(--color-blue-100);
+  }
+  .text-gray-400 {
+    color: var(--color-gray-400);
+  }
+  .text-white {
+    color: var(--color-white);
+  }
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .duration-300 {
+    --tw-duration: 300ms;
+    transition-duration: 300ms;
+  }
+  .ease-out {
+    --tw-ease: var(--ease-out);
+    transition-timing-function: var(--ease-out);
+  }
+  .outline-none {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+  @media (hover: hover) {
+    .hover\:bg-blue-500:hover {
+      background-color: var(--color-blue-500);
+    }
+  }
+}
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-duration {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ease {
+  syntax: "*";
+  inherits: false;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-border-style: solid;
+      --tw-font-weight: initial;
+      --tw-duration: initial;
+      --tw-ease: initial;
+    }
+  }
+}
+</style>
+    <link href="./bror_files/css2" rel="stylesheet"> 
+    <link rel="stylesheet" href="./bror_files/index.css">
+    <script src="./bror_files/lumin.min.js.nedladdning"></script>
+    <script src="./bror_files/cloud.js.nedladdning"></script>
+    <script src="./bror_files/theme.js.nedladdning"></script>
+    <link rel="stylesheet" href="./bror_files/page-fx.css">
+    <script src="./bror_files/page-fx.js.nedladdning" defer=""></script>
     <title>Niche</title>
-  <script src="panic.js"></script>
-</head>
+  <script src="./bror_files/panic.js.nedladdning"></script>
+<style>@keyframes _discoShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}@keyframes _discoBlink{0%{opacity:.55}100%{opacity:.25}}</style><style id="niche-dark-style">
+      html, body {
+        background-color: #000000 !important;
+      }
+      html {
+        height: 100%;
+      }
+      body {
+        min-height: 100vh;
+      }
+      html.has-wallpaper #settings-shell {
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+      html.has-wallpaper body {
+        background-color: transparent !important;
+      }
+      html.has-wallpaper [class*="rounded-2xl"] {
+        background-color: color-mix(in srgb, #111111 62%, transparent) !important;
+      }
+      html.has-wallpaper p, html.has-wallpaper span, html.has-wallpaper h1,
+      html.has-wallpaper h2, html.has-wallpaper h3, html.has-wallpaper div {
+        text-shadow: 0 1px 4px rgba(0,0,0,.55);
+      }
+      html.has-wallpaper input, html.has-wallpaper textarea,
+      html.has-wallpaper button {
+        text-shadow: none;
+      }
+      html[data-niche-theme="ocean"] .sidebar-title,
+      html[data-niche-theme="ocean"] h1.hop {
+        color: #2b6cb0 !important;
+      }
+      :root {
+        --niche-accent: #ffffff;
+        --niche-onacc: #000000;
+        --niche-text: #ffffff;
+        --niche-card: #111111;
+        --niche-border: #2b2b2b;
+        --niche-bg: #000000;
+      }
 
-<body style="margin:0;min-height:100dvh;">
+      [style*="background-color: rgb(132"],
+      [style*="background-color:#84"],
+      [style*="background-color: #84"],
+      [style*="menuBackground"],
+      [style*="gameBackground"] {
+        background-color: #000000 !important;
+      }
+
+      #niche, #niche > * {
+        background-color: #111111 !important;
+      }
+
+      [class*="bg-blue"]     { background-color: #111111 !important; }
+      [class*="border-blue"] { border-color: #2b2b2b !important; }
+      [class*="text-blue"]   { color: #ffffff !important; }
+
+      h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+      p:not(.niche-sys)       { color: #ffffff !important; }
+      span:not(.niche-sys)    { color: #ffffff !important; }
+      label, a                { color: #ffffff !important; }
+
+      button[class*="bg-blue"]              { background-color: #161616 !important; }
+      button[class*="hover:bg-blue"]:hover  { background-color: #1f1f1f !important; }
+
+      svg { color: #ffffff !important; stroke: #ffffff !important; }
+      svg[stroke]:not([stroke="none"]), svg [stroke]:not([stroke="none"]),
+      svg path:not([stroke="none"]), svg line:not([stroke="none"]),
+      svg rect:not([stroke="none"]), svg circle:not([stroke="none"]) { stroke: #ffffff !important; }
+      svg[fill]:not([fill="none"]), svg [fill]:not([fill="none"]) { fill: #ffffff !important; }
+
+      .nav-btn::after {
+        background:    #111111 !important;
+        border-color:  #2b2b2b  !important;
+        color:         #ffffff    !important;
+      }
+
+      input {
+        background-color: #111111 !important;
+        border-color:     #2b2b2b  !important;
+        color:            #ffffff    !important;
+      }
+      input::placeholder { color: #737373 !important; }
+      input:focus {
+        border-color: #ffffff !important;
+        box-shadow: 0 0 0 2px rgba(255,255,255,.15) !important;
+        outline: none !important;
+      }
+
+      div[onclick] {
+        background-color: #111111 !important;
+        border-color:     #2b2b2b  !important;
+      }
+
+      [class*="rounded-2xl"] {
+        background-color: #111111 !important;
+        border-color:     #2b2b2b  !important;
+      }
+
+      iframe {
+        background:   #000000 !important;
+        color-scheme: dark;
+      }
+
+      #theme-btn, div.fixed.bottom-3.left-3 {
+        background-color: #111111 !important;
+        border-color:     #2b2b2b  !important;
+      }
+
+      #niche-overlay { background: rgba(0,0,0,.85) !important; }
+
+      #niche-modal {
+        background:   #111111 !important;
+        border-color: #2b2b2b  !important;
+      }
+
+      #niche-modal-title    { color: #ffffff   !important; }
+      #niche-modal-meta     { color: #ffffff !important; }
+      #niche-modal-overview { color: #ffffff   !important; }
+      #niche-modal-poster   { border-color: #2b2b2b !important; }
+
+      #niche-modal-close {
+        background:   rgba(255,255,255,.08) !important;
+        border-color: rgba(255,255,255,.15) !important;
+        color:        #ffffff !important;
+      }
+      #niche-modal-close:hover { background: rgba(255,255,255,.18) !important; }
+
+      .niche-sel {
+        background:   #111111 !important;
+        border-color: #2b2b2b  !important;
+        color:        #ffffff    !important;
+      }
+      .niche-sel option { background: #111111 !important; color: #ffffff !important; }
+
+      #niche-watch-btn {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      #niche-watch-btn:hover { filter: brightness(1.12); }
+
+      #niche-season-loading { color: #ffffff !important; }
+
+      /* player bar */
+      #niche-player-bar { background: linear-gradient(180deg,rgba(0,0,0,.95) 0%,transparent 100%) !important; }
+      #niche-player-back {
+        background:   rgba(255,255,255,.1) !important;
+        border-color: rgba(255,255,255,.2) !important;
+        color: #fff !important;
+      }
+      #niche-player-title { color: #fff !important; }
+      #niche-player-sub   { color: rgba(255,255,255,.6) !important; }
+
+      /* niche card rows */
+      .niche-card {
+        background:   #111111 !important;
+        border-color: #2b2b2b  !important;
+      }
+      .niche-card:hover { background: #161616 !important; }
+      .niche-card p     { color: #ffffff !important; }
+
+      /* lumin game browser (n1chtesting2) — kill the blue */
+      .lumi-wrapper { background: #000000 !important; color: #ffffff !important; }
+      .lumi-search, .lumi-source-select {
+        background: #111111 !important;
+        border-color: #2b2b2b !important;
+        color: #ffffff !important;
+      }
+      .lumi-btn, .lumi-random-btn {
+        background: #161616 !important;
+        color: #ffffff !important;
+      }
+      .lumi-btn:hover, .lumi-random-btn:hover { background: #2b2b2b !important; }
+      .lumi-game-card { background: #111111 !important; border-color: #2b2b2b !important; }
+      .lumi-page-btn {
+        background: #161616 !important;
+        color: #ffffff !important;
+        border-color: #2b2b2b !important;
+      }
+      .lumi-page-btn.active {
+        background: #ffffff !important;
+        color: #000000 !important;
+        border-color: #ffffff !important;
+      }
+      .lumi-game-view { background: #000000 !important; border-color: #2b2b2b !important; }
+      .lumi-back-btn, .lumi-download-btn, .lumi-aboutblank-btn, .lumi-fullscreen-btn {
+        background: #161616 !important;
+        color: #ffffff !important;
+      }
+      .lumi-back-btn:hover, .lumi-download-btn:hover, .lumi-aboutblank-btn:hover, .lumi-fullscreen-btn:hover {
+        background: #2b2b2b !important;
+      }
+    </style></head>
+
+<body style="margin: 0px; min-height: 100dvh;"><canvas id="niche-stars" style="position: fixed; inset: 0px; pointer-events: none; z-index: 0;" width="1280" height="632"></canvas>
 
 
 
 
            <div class="bg-blue-300 rounded-2xl flex flex-col gap-2 p-2 items-center" style="width:100%;height:100dvh;min-height:100dvh;margin:0;border-radius:0;border:none;">
              <div class="flex justify-center w-full py-2">
-                        <input id="gameSearch" type="text" placeholder="Search 225+ cloud titles..." class=" font-sans h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl transition-all duration-300 ease-out" style="width:min(350px,70vw);" onfocus="this.style.width='min(550px,92vw)'" onblur="this.style.width='min(350px,70vw)'"/>
+                        <input id="gameSearch" type="text" placeholder="Search 225+ cloud titles..." class=" font-sans h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl transition-all duration-300 ease-out" style="width:min(350px,70vw);" onfocus="this.style.width='min(550px,92vw)'" onblur="this.style.width='min(350px,70vw)'">
                         </div>
-            <div id="gameGrid" class="flex gap-2 p-2 items-center justify-center" style="flex-wrap:wrap;overflow-y:auto;align-content:flex-start;width:100%;flex:1;min-height:0;"></div>
+            <div id="gameGrid" class="flex gap-2 p-2 items-center justify-center" style="flex-wrap:wrap;overflow-y:auto;align-content:flex-start;width:100%;flex:1;min-height:0;"><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260304175808508.jpg" class="w-full h-34 object-cover rounded-md" alt="Grand Theft Auto V">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Grand Theft Auto V</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260724175308547.jpg" class="w-full h-34 object-cover rounded-md" alt="Red Dead Redemption">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Red Dead Redemption</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260729175805537.jpg" class="w-full h-34 object-cover rounded-md" alt="DRAGON BALL: Sparking! ZERO">
+          <h3 class="text-white text-xs font-bold text-center mt-2">DRAGON BALL: Sparking! ZERO</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260724162056936.jpg" class="w-full h-34 object-cover rounded-md" alt="Black Myth: Wukong">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Black Myth: Wukong</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260717173741180.jpg" class="w-full h-34 object-cover rounded-md" alt="PRAGMATA">
+          <h3 class="text-white text-xs font-bold text-center mt-2">PRAGMATA</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260731161441839.jpg" class="w-full h-34 object-cover rounded-md" alt="Battlefield 6">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Battlefield 6</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Shooting</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260717171729202.jpg" class="w-full h-34 object-cover rounded-md" alt="Mafia: The Old Country">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mafia: The Old Country</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Shooting</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260724172914224.jpg" class="w-full h-34 object-cover rounded-md" alt="Detroit: Become Human">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Detroit: Become Human</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260807163708404.jpg" class="w-full h-34 object-cover rounded-md" alt="INDUSTRIA 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">INDUSTRIA 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260731161251783.jpg" class="w-full h-34 object-cover rounded-md" alt="Far Cry 5">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Far Cry 5</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260724172724981.jpg" class="w-full h-34 object-cover rounded-md" alt="Invincible VS">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Invincible VS</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260807170417761.jpg" class="w-full h-34 object-cover rounded-md" alt="Commandos: Origins">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Commandos: Origins</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260807161422252.jpg" class="w-full h-34 object-cover rounded-md" alt="Maid of Sker">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Maid of Sker</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260731172523208.jpg" class="w-full h-34 object-cover rounded-md" alt="Transformers: Battlegrounds">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Transformers: Battlegrounds</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260807161230470.jpg" class="w-full h-34 object-cover rounded-md" alt="Persona 5 Strikers">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Persona 5 Strikers</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260710155543902.jpg" class="w-full h-34 object-cover rounded-md" alt="Oddsparks: An Automation Adventure">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Oddsparks: An Automation Adventure</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Easy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260710154415676.jpg" class="w-full h-34 object-cover rounded-md" alt="Burkina Faso: Radical Insurgency">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Burkina Faso: Radical Insurgency</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260724172550548.jpg" class="w-full h-34 object-cover rounded-md" alt="World War Z - Aftermath">
+          <h3 class="text-white text-xs font-bold text-center mt-2">World War Z - Aftermath</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Shooting</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260703111731566.jpg" class="w-full h-34 object-cover rounded-md" alt="GOD FORSAKEN">
+          <h3 class="text-white text-xs font-bold text-center mt-2">GOD FORSAKEN</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260703110509447.jpg" class="w-full h-34 object-cover rounded-md" alt="Gym Manager">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Gym Manager</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Simulation</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260626151723124.jpg" class="w-full h-34 object-cover rounded-md" alt="FEROCIOUS">
+          <h3 class="text-white text-xs font-bold text-center mt-2">FEROCIOUS</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260626144006357.jpg" class="w-full h-34 object-cover rounded-md" alt="Cavalry Girls">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cavalry Girls</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260626144102556.jpg" class="w-full h-34 object-cover rounded-md" alt="Quarantine Zone - The Last Check">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Quarantine Zone - The Last Check</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Simulation</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2026061814460915.jpg" class="w-full h-34 object-cover rounded-md" alt="Diablo II - Resurrected">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Diablo II - Resurrected</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144515330.jpg" class="w-full h-34 object-cover rounded-md" alt="Resident Evil Requiem">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Resident Evil Requiem</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144542619.jpg" class="w-full h-34 object-cover rounded-md" alt="Forza Horizon 6">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Forza Horizon 6</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144200465.jpg" class="w-full h-34 object-cover rounded-md" alt="God of War">
+          <h3 class="text-white text-xs font-bold text-center mt-2">God of War</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144227530.jpg" class="w-full h-34 object-cover rounded-md" alt="I Am Jesus Christ">
+          <h3 class="text-white text-xs font-bold text-center mt-2">I Am Jesus Christ</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Simulation</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144252587.jpg" class="w-full h-34 object-cover rounded-md" alt="The Spirit of the Samurai">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Spirit of the Samurai</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144315606.jpg" class="w-full h-34 object-cover rounded-md" alt="Wicked Seed">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Wicked Seed</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144340798.jpg" class="w-full h-34 object-cover rounded-md" alt="Taboo Trial">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Taboo Trial</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144407643.jpg" class="w-full h-34 object-cover rounded-md" alt="Tomb Raider - Definitive Edition">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Tomb Raider - Definitive Edition</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144430322.jpg" class="w-full h-34 object-cover rounded-md" alt="Cricket 26">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cricket 26</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260618144453541.jpg" class="w-full h-34 object-cover rounded-md" alt="Hollow Knight: Silksong">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hollow Knight: Silksong</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Indie</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260515162908395.jpg" class="w-full h-34 object-cover rounded-md" alt="Little Nightmares III">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Little Nightmares III</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250903105440952.png" class="w-full h-34 object-cover rounded-md" alt="SAND LAND">
+          <h3 class="text-white text-xs font-bold text-center mt-2">SAND LAND</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2025090217335483.jpg" class="w-full h-34 object-cover rounded-md" alt="X-Plane 11">
+          <h3 class="text-white text-xs font-bold text-center mt-2">X-Plane 11</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Simulation</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250901143139167.jpg" class="w-full h-34 object-cover rounded-md" alt="GUILTY GEAR -STRIVE-">
+          <h3 class="text-white text-xs font-bold text-center mt-2">GUILTY GEAR -STRIVE-</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2026051516284867.jpg" class="w-full h-34 object-cover rounded-md" alt="Sim Racing Telemetry - F1 22">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Sim Racing Telemetry - F1 22</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Racing</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260515162820447.jpg" class="w-full h-34 object-cover rounded-md" alt="Clair Obscur: Expedition 33">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Clair Obscur: Expedition 33</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250829153823174.png" class="w-full h-34 object-cover rounded-md" alt="Easy Red 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Easy Red 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250829115558198.png" class="w-full h-34 object-cover rounded-md" alt="Wolf Mate">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Wolf Mate</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250930120300208.jpg" class="w-full h-34 object-cover rounded-md" alt="JDM: Japanese Drift Master">
+          <h3 class="text-white text-xs font-bold text-center mt-2">JDM: Japanese Drift Master</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Racing</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627115659712.png" class="w-full h-34 object-cover rounded-md" alt="The First Berserker: Khazan">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The First Berserker: Khazan</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627112123936.png" class="w-full h-34 object-cover rounded-md" alt="Blue Prince">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Blue Prince</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Puzzle</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250613113813585.jpg" class="w-full h-34 object-cover rounded-md" alt="Only Up">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Only Up</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2025061214262743.png" class="w-full h-34 object-cover rounded-md" alt="Schedule 1">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Schedule 1</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Simulation</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260407163551925.jpg" class="w-full h-34 object-cover rounded-md" alt="WWE 2K25">
+          <h3 class="text-white text-xs font-bold text-center mt-2">WWE 2K25</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250530162530751.png" class="w-full h-34 object-cover rounded-md" alt="RuneScape: Dragonwilds">
+          <h3 class="text-white text-xs font-bold text-center mt-2">RuneScape: Dragonwilds</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Multiplayer</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2025053015334968.png" class="w-full h-34 object-cover rounded-md" alt="Cities: Skylines 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cities: Skylines 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627144457604.jpg" class="w-full h-34 object-cover rounded-md" alt="Crashlands 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Crashlands 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250523151922656.png" class="w-full h-34 object-cover rounded-md" alt="Mandragora: Whispers of the Witch Tree">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mandragora: Whispers of the Witch Tree</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250516155744357.png" class="w-full h-34 object-cover rounded-md" alt="Frostpunk 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Frostpunk 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250430164222535.png" class="w-full h-34 object-cover rounded-md" alt="Manor Lords">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Manor Lords</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250527115852814.jpg" class="w-full h-34 object-cover rounded-md" alt="inZOI">
+          <h3 class="text-white text-xs font-bold text-center mt-2">inZOI</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250425165139248.png" class="w-full h-34 object-cover rounded-md" alt="AI LIMIT">
+          <h3 class="text-white text-xs font-bold text-center mt-2">AI LIMIT</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250425162419325.png" class="w-full h-34 object-cover rounded-md" alt="Horizon Zero Dawn">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Horizon Zero Dawn</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250425153104777.jpg" class="w-full h-34 object-cover rounded-md" alt="Dead Space 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Dead Space 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250425144627336.png" class="w-full h-34 object-cover rounded-md" alt="Deathloop">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Deathloop</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250425111359553.png" class="w-full h-34 object-cover rounded-md" alt="Football Manager 2023">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Football Manager 2023</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250418160850720.jpg" class="w-full h-34 object-cover rounded-md" alt="Dead Space 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Dead Space 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260408171835296.jpg" class="w-full h-34 object-cover rounded-md" alt="The Last of Us Part II">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Last of Us Part II</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250418110314927.png" class="w-full h-34 object-cover rounded-md" alt="Inside the Backrooms">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Inside the Backrooms</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250411114101787.jpg" class="w-full h-34 object-cover rounded-md" alt="Platform 8">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Platform 8</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/202509301203287.jpg" class="w-full h-34 object-cover rounded-md" alt="Five Hearts Under One Roof">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Five Hearts Under One Roof</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Casual</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250527115454441.jpg" class="w-full h-34 object-cover rounded-md" alt="Ghost of Tsushima">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Ghost of Tsushima</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260410172113912.jpg" class="w-full h-34 object-cover rounded-md" alt="The Callisto Protocol">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Callisto Protocol</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250402141532953.jpg" class="w-full h-34 object-cover rounded-md" alt="Poppy Playtime: Chapter 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Poppy Playtime: Chapter 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250328180047198.png" class="w-full h-34 object-cover rounded-md" alt="Raft">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Raft</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250801170443257.jpg" class="w-full h-34 object-cover rounded-md" alt="Mafia III: Definitive Edition">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mafia III: Definitive Edition</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627144331837.jpg" class="w-full h-34 object-cover rounded-md" alt="Mafia II: Definitive Edition">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mafia II: Definitive Edition</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250331151732927.png" class="w-full h-34 object-cover rounded-md" alt="TCG Card Shop">
+          <h3 class="text-white text-xs font-bold text-center mt-2">TCG Card Shop</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250930115220269.jpg" class="w-full h-34 object-cover rounded-md" alt="Uncharted 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Uncharted 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250408111349799.png" class="w-full h-34 object-cover rounded-md" alt="Undertale">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Undertale</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250320164718378.png" class="w-full h-34 object-cover rounded-md" alt="Yandere Simulator">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Yandere Simulator</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250408111140703.png" class="w-full h-34 object-cover rounded-md" alt="Amanda the Adventurer">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Amanda the Adventurer</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250312142044488.png" class="w-full h-34 object-cover rounded-md" alt="Poppy Playtime: Chapter 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Poppy Playtime: Chapter 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250312113635587.jpg" class="w-full h-34 object-cover rounded-md" alt="Poppy Playtime: Chapter 1">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Poppy Playtime: Chapter 1</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250312161610449.jpg" class="w-full h-34 object-cover rounded-md" alt="MiSide">
+          <h3 class="text-white text-xs font-bold text-center mt-2">MiSide</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251218002037369.jpg" class="w-full h-34 object-cover rounded-md" alt="God of War: Ragnarök">
+          <h3 class="text-white text-xs font-bold text-center mt-2">God of War: Ragnarök</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250226105957398.png" class="w-full h-34 object-cover rounded-md" alt="Poppy Playtime: Chapter 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Poppy Playtime: Chapter 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240527172935321.png" class="w-full h-34 object-cover rounded-md" alt="FIFA23">
+          <h3 class="text-white text-xs font-bold text-center mt-2">FIFA23</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20241224160908458.jpg" class="w-full h-34 object-cover rounded-md" alt="SCUM">
+          <h3 class="text-white text-xs font-bold text-center mt-2">SCUM</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250331173717794.jpg" class="w-full h-34 object-cover rounded-md" alt="WWE 2K24">
+          <h3 class="text-white text-xs font-bold text-center mt-2">WWE 2K24</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240527171656277.jpg" class="w-full h-34 object-cover rounded-md" alt="Buckshot Roulette">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Buckshot Roulette</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2024052717080272.png" class="w-full h-34 object-cover rounded-md" alt="Supermarket Simulator">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Supermarket Simulator</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2024052717011280.jpg" class="w-full h-34 object-cover rounded-md" alt="The Long Drive">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Long Drive</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Easy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240527165429575.jpg" class="w-full h-34 object-cover rounded-md" alt="GigaBash">
+          <h3 class="text-white text-xs font-bold text-center mt-2">GigaBash</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240527163117749.png" class="w-full h-34 object-cover rounded-md" alt="Zoonomaly">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Zoonomaly</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240527161909639.jpg" class="w-full h-34 object-cover rounded-md" alt="Hades II">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hades II</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2024052018070993.png" class="w-full h-34 object-cover rounded-md" alt="Brotato (Cloud)">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Brotato (Cloud)</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Easy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240411183825744.jpg" class="w-full h-34 object-cover rounded-md" alt="Wobbly Life">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Wobbly Life</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Multiplayer</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20240223104219285.jpg" class="w-full h-34 object-cover rounded-md" alt="Sniper: Ghost Warrior Contracts 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Sniper: Ghost Warrior Contracts 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250402141624654.jpg" class="w-full h-34 object-cover rounded-md" alt="Tekken 8">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Tekken 8</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20241217183311663.jpg" class="w-full h-34 object-cover rounded-md" alt="Halo: The Master Chief Collection">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Halo: The Master Chief Collection</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20241108164656767.jpg" class="w-full h-34 object-cover rounded-md" alt="Alan Wake 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Alan Wake 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250225111706535.jpg" class="w-full h-34 object-cover rounded-md" alt="Neon Abyss">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Neon Abyss</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230921170257932.jpg" class="w-full h-34 object-cover rounded-md" alt="Stick Fight: The Game">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Stick Fight: The Game</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Multiplayer</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230831160505147.jpg" class="w-full h-34 object-cover rounded-md" alt="Ratchet &amp; Clank">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Ratchet &amp; Clank</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260408152339290.jpg" class="w-full h-34 object-cover rounded-md" alt="The Last of Us Part I">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Last of Us Part I</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/202605151629306.jpg" class="w-full h-34 object-cover rounded-md" alt="Resident Evil 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Resident Evil 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230518222345800.jpg" class="w-full h-34 object-cover rounded-md" alt="Builder Simulator">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Builder Simulator</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230504180952993.jpg" class="w-full h-34 object-cover rounded-md" alt="Minecraft: Legends">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Minecraft: Legends</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230329174621974.jpg" class="w-full h-34 object-cover rounded-md" alt="Need for Speed: Payback">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Need for Speed: Payback</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230309154245933.jpg" class="w-full h-34 object-cover rounded-md" alt="SpongeBob SquarePants: Battle for Bikini Bottom">
+          <h3 class="text-white text-xs font-bold text-center mt-2">SpongeBob SquarePants: Battle for Bikini Bottom</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Online</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230309143751602.jpg" class="w-full h-34 object-cover rounded-md" alt="Super Bunny Man">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Super Bunny Man</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Multiplayer</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250930145508266.jpg" class="w-full h-34 object-cover rounded-md" alt="Hogwarts Legacy">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hogwarts Legacy</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230208162229856.jpg" class="w-full h-34 object-cover rounded-md" alt="SpongeBob SquarePants: The Cosmic Shake">
+          <h3 class="text-white text-xs font-bold text-center mt-2">SpongeBob SquarePants: The Cosmic Shake</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230112141904622.jpg" class="w-full h-34 object-cover rounded-md" alt="Drift Racing Online">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Drift Racing Online</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Sports</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250402140901381.jpg" class="w-full h-34 object-cover rounded-md" alt="Choo-Choo Charles">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Choo-Choo Charles</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251218002310690.jpg" class="w-full h-34 object-cover rounded-md" alt="Marvel's Spider-Man: Miles Morales">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Marvel's Spider-Man: Miles Morales</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2023050818554376.jpeg" class="w-full h-34 object-cover rounded-md" alt="NBA 2K23">
+          <h3 class="text-white text-xs font-bold text-center mt-2">NBA 2K23</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Sports</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20220905122011868.webp" class="w-full h-34 object-cover rounded-md" alt="Ranch Simulator22">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Ranch Simulator22</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250930114154630.jpg" class="w-full h-34 object-cover rounded-md" alt="Marvel's Spider-Man Remastered">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Marvel's Spider-Man Remastered</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260305115627492.jpg" class="w-full h-34 object-cover rounded-md" alt="Forza Horizon 5">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Forza Horizon 5</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Racing</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250613153035148.jpg" class="w-full h-34 object-cover rounded-md" alt="Stray">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Stray</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260122010947516.png" class="w-full h-34 object-cover rounded-md" alt="Pokémon Legends: Arceus">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Pokémon Legends: Arceus</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20220601160738157.png" class="w-full h-34 object-cover rounded-md" alt="Subnautica Zero">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Subnautica Zero</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250103180827822.jpg" class="w-full h-34 object-cover rounded-md" alt="GhostWire: Tokyo">
+          <h3 class="text-white text-xs font-bold text-center mt-2">GhostWire: Tokyo</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627181815843.png" class="w-full h-34 object-cover rounded-md" alt="THE KING OF FIGHTERS XV">
+          <h3 class="text-white text-xs font-bold text-center mt-2">THE KING OF FIGHTERS XV</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2025081515231470.jpg" class="w-full h-34 object-cover rounded-md" alt="Hitman 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hitman 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20220308113443136.webp" class="w-full h-34 object-cover rounded-md" alt="Nintendo Star Brawl">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Nintendo Star Brawl</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260407165500251.jpg" class="w-full h-34 object-cover rounded-md" alt="Red Dead Redemption 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Red Dead Redemption 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2026051516303039.jpg" class="w-full h-34 object-cover rounded-md" alt="Elden Ring">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Elden Ring</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20220218162726597.webp" class="w-full h-34 object-cover rounded-md" alt="LEGO The Incredibles">
+          <h3 class="text-white text-xs font-bold text-center mt-2">LEGO The Incredibles</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Multiplayer</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250402141702762.jpg" class="w-full h-34 object-cover rounded-md" alt="Watch Dogs: Legion">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Watch Dogs: Legion</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250402141418448.jpg" class="w-full h-34 object-cover rounded-md" alt="God of War 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">God of War 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20118160905685.webp" class="w-full h-34 object-cover rounded-md" alt="Cooking Simulator">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cooking Simulator</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20220106131728331.webp" class="w-full h-34 object-cover rounded-md" alt="FIFA19">
+          <h3 class="text-white text-xs font-bold text-center mt-2">FIFA19</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627144431471.jpg" class="w-full h-34 object-cover rounded-md" alt="Grand Theft Auto: Vice City">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Grand Theft Auto: Vice City</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260515162949699.jpg" class="w-full h-34 object-cover rounded-md" alt="Grand Theft Auto: San Andreas">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Grand Theft Auto: San Andreas</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627191826951.png" class="w-full h-34 object-cover rounded-md" alt="Grand Theft Auto III">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Grand Theft Auto III</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211202161034296.webp" class="w-full h-34 object-cover rounded-md" alt="The Legend of Zelda: Breath of the Wild">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Legend of Zelda: Breath of the Wild</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211116093752503.webp" class="w-full h-34 object-cover rounded-md" alt="ARK: Survival Evolved">
+          <h3 class="text-white text-xs font-bold text-center mt-2">ARK: Survival Evolved</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211109153159749.webp" class="w-full h-34 object-cover rounded-md" alt="Cities: Skylines">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cities: Skylines</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211008154130946.webp" class="w-full h-34 object-cover rounded-md" alt="Arma 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Arma 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250627144524899.jpg" class="w-full h-34 object-cover rounded-md" alt="Assassin's Creed: Brotherhood">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Assassin's Creed: Brotherhood</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211008145828215.webp" class="w-full h-34 object-cover rounded-md" alt="Assassin's Creed: Revelations">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Assassin's Creed: Revelations</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230420211652688.jpg" class="w-full h-34 object-cover rounded-md" alt="Assassin's Creed: Black Flag">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Assassin's Creed: Black Flag</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2025040214122974.jpg" class="w-full h-34 object-cover rounded-md" alt="Assassin's Creed: Syndicate">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Assassin's Creed: Syndicate</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251218002137560.jpg" class="w-full h-34 object-cover rounded-md" alt="Football: PES 2021">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Football: PES 2021</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2024122416440565.jpg" class="w-full h-34 object-cover rounded-md" alt="Mount &amp; Blade II: Bannerlord">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mount &amp; Blade II: Bannerlord</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230322201636769.png" class="w-full h-34 object-cover rounded-md" alt="Fling to Finish">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Fling to Finish</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Multiplayer</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230322203032216.jpg" class="w-full h-34 object-cover rounded-md" alt="A Way Out">
+          <h3 class="text-white text-xs font-bold text-center mt-2">A Way Out</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210909162030298.webp" class="w-full h-34 object-cover rounded-md" alt="Slime Rancher">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Slime Rancher</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260122002957664.png" class="w-full h-34 object-cover rounded-md" alt="GTA V MOD version">
+          <h3 class="text-white text-xs font-bold text-center mt-2">GTA V MOD version</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210827110503152.webp" class="w-full h-34 object-cover rounded-md" alt="Alba: A Wildlife Adventure">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Alba: A Wildlife Adventure</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Puzzle</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210826165254727.webp" class="w-full h-34 object-cover rounded-md" alt="Days Gone">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Days Gone</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20241217191626272.jpg" class="w-full h-34 object-cover rounded-md" alt="Assassin's Creed Odyssey: The Fate of Atlantis">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Assassin's Creed Odyssey: The Fate of Atlantis</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210819152350351.webp" class="w-full h-34 object-cover rounded-md" alt="Euro Truck Simulator 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Euro Truck Simulator 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210819150927774.webp" class="w-full h-34 object-cover rounded-md" alt="Forza Horizon 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Forza Horizon 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210804170038384.webp" class="w-full h-34 object-cover rounded-md" alt="Tokyo 2020 Olympics">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Tokyo 2020 Olympics</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Sports</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210729161026790.webp" class="w-full h-34 object-cover rounded-md" alt="SUPERHOT: Mind Control Delete">
+          <h3 class="text-white text-xs font-bold text-center mt-2">SUPERHOT: Mind Control Delete</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260626144246541.jpg" class="w-full h-34 object-cover rounded-md" alt="Resident Evil Village">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Resident Evil Village</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210715203828208.webp" class="w-full h-34 object-cover rounded-md" alt="My Friend Pedro">
+          <h3 class="text-white text-xs font-bold text-center mt-2">My Friend Pedro</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Action</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121175158608.png" class="w-full h-34 object-cover rounded-md" alt="Doom Eternal">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Doom Eternal</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230824153232681.jpg" class="w-full h-34 object-cover rounded-md" alt="Party Hard 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Party Hard 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210701110046951.webp" class="w-full h-34 object-cover rounded-md" alt="The Amazing Spider-Man 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Amazing Spider-Man 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210625155800236.webp" class="w-full h-34 object-cover rounded-md" alt="Transformers: Devastation">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Transformers: Devastation</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121174633373.png" class="w-full h-34 object-cover rounded-md" alt="Control">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Control</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2026012117405271.png" class="w-full h-34 object-cover rounded-md" alt="Halo: Reach">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Halo: Reach</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250815155732187.jpg" class="w-full h-34 object-cover rounded-md" alt="The Amazing Spider-Man">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Amazing Spider-Man</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210423120714547.webp" class="w-full h-34 object-cover rounded-md" alt="Fallout 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Fallout 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230323122354541.png" class="w-full h-34 object-cover rounded-md" alt="It Takes Two">
+          <h3 class="text-white text-xs font-bold text-center mt-2">It Takes Two</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210402153932908.webp" class="w-full h-34 object-cover rounded-md" alt="Minecraft: Dungeons">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Minecraft: Dungeons</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/202601211709089.png" class="w-full h-34 object-cover rounded-md" alt="Call of Duty: WWII">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Call of Duty: WWII</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210223113905296.webp" class="w-full h-34 object-cover rounded-md" alt="Little Nightmares II">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Little Nightmares II</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2021070115544498.webp" class="w-full h-34 object-cover rounded-md" alt="Hand of Fate 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hand of Fate 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210423111748763.webp" class="w-full h-34 object-cover rounded-md" alt="The Past Room">
+          <h3 class="text-white text-xs font-bold text-center mt-2">The Past Room</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Puzzle</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250801170522640.jpg" class="w-full h-34 object-cover rounded-md" alt="Little Nightmares">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Little Nightmares</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250613152910794.jpg" class="w-full h-34 object-cover rounded-md" alt="Mafia: Definitive Edition">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mafia: Definitive Edition</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210827103721165.webp" class="w-full h-34 object-cover rounded-md" alt="ONE PIECE: PIRATE WARRIORS 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">ONE PIECE: PIRATE WARRIORS 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230508200039339.png" class="w-full h-34 object-cover rounded-md" alt="Overcooked 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Overcooked 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Puzzle</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121155951685.png" class="w-full h-34 object-cover rounded-md" alt="Boomerang Fu">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Boomerang Fu</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Puzzle</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/b004_zunxiangtuijian_2.webp" class="w-full h-34 object-cover rounded-md" alt="Off-Road Heroes 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Off-Road Heroes 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Racing</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211013103809191.webp" class="w-full h-34 object-cover rounded-md" alt="Far Cry Primal">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Far Cry Primal</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210203172102804.webp" class="w-full h-34 object-cover rounded-md" alt="Mirror's Edge Catalyst">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Mirror's Edge Catalyst</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20211013104959287.webp" class="w-full h-34 object-cover rounded-md" alt="Far Cry 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Far Cry 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Shooting</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/b004_remengyouxi.webp" class="w-full h-34 object-cover rounded-md" alt="COD6 Modern Warfare">
+          <h3 class="text-white text-xs font-bold text-center mt-2">COD6 Modern Warfare</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260410170557349.jpg" class="w-full h-34 object-cover rounded-md" alt="Cyberpunk 2077">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cyberpunk 2077</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260410165139465.jpg" class="w-full h-34 object-cover rounded-md" alt="Batman: Arkham Origins">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Batman: Arkham Origins</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260408115021808.jpg" class="w-full h-34 object-cover rounded-md" alt="Batman: Arkham Knight">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Batman: Arkham Knight</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250801170502249.jpg" class="w-full h-34 object-cover rounded-md" alt="Far Cry New Dawn">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Far Cry New Dawn</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251110142109170.png" class="w-full h-34 object-cover rounded-md" alt="Tom Clancy's Ghost Recon Wildlands">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Tom Clancy's Ghost Recon Wildlands</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1.webp" class="w-full h-34 object-cover rounded-md" alt="Resident Evil: Revelations 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Resident Evil: Revelations 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260407173529946.jpg" class="w-full h-34 object-cover rounded-md" alt="Stardew Valley">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Stardew Valley</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230322195617171.jpg" class="w-full h-34 object-cover rounded-md" alt="Sekiro: Shadows Die Twice">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Sekiro: Shadows Die Twice</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250815161718587.jpg" class="w-full h-34 object-cover rounded-md" alt="Attack On Titan 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Attack On Titan 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20220428154836446.png" class="w-full h-34 object-cover rounded-md" alt="Curse of the Dead Gods">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Curse of the Dead Gods</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121153136443.png" class="w-full h-34 object-cover rounded-md" alt="Bloodstained: Ritual of the Night">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Bloodstained: Ritual of the Night</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">RPG</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121151347543.png" class="w-full h-34 object-cover rounded-md" alt="Forager">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Forager</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Puzzle</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250815172959772.jpg" class="w-full h-34 object-cover rounded-md" alt="Resident Evil 7: Biohazard">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Resident Evil 7: Biohazard</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210910111018307.webp" class="w-full h-34 object-cover rounded-md" alt="Titanfall 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Titanfall 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260416114647944.jpg" class="w-full h-34 object-cover rounded-md" alt="Watch Dogs 2">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Watch Dogs 2</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121145749473.png" class="w-full h-34 object-cover rounded-md" alt="Cuphead">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Cuphead</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230608153228735.jpg" class="w-full h-34 object-cover rounded-md" alt="What Remains of Edith Finch">
+          <h3 class="text-white text-xs font-bold text-center mt-2">What Remains of Edith Finch</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250225112426902.png" class="w-full h-34 object-cover rounded-md" alt="Untitled Goose Game">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Untitled Goose Game</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250815162338597.jpg" class="w-full h-34 object-cover rounded-md" alt="Rise of the Tomb Raider">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Rise of the Tomb Raider</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230907123321261.jpg" class="w-full h-34 object-cover rounded-md" alt="Katana ZERO">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Katana ZERO</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2026012114475233.png" class="w-full h-34 object-cover rounded-md" alt="Wizard of Legend">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Wizard of Legend</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1(1).webp" class="w-full h-34 object-cover rounded-md" alt="One Piece: Burning Blood">
+          <h3 class="text-white text-xs font-bold text-center mt-2">One Piece: Burning Blood</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Fighting</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210402165758426.webp" class="w-full h-34 object-cover rounded-md" alt="Ori and the Will of the Wisps">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Ori and the Will of the Wisps</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1(2).webp" class="w-full h-34 object-cover rounded-md" alt="Doraemon: Story of Seasons">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Doraemon: Story of Seasons</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260121144523682.png" class="w-full h-34 object-cover rounded-md" alt="Hades">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hades</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1(3).webp" class="w-full h-34 object-cover rounded-md" alt="Ace Combat 7: Skies Unknown">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Ace Combat 7: Skies Unknown</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20230322194948461.jpg" class="w-full h-34 object-cover rounded-md" alt="Witchers 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Witchers 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210428162111388.webp" class="w-full h-34 object-cover rounded-md" alt="Terminator: Resistance">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Terminator: Resistance</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2025061315324568.jpg" class="w-full h-34 object-cover rounded-md" alt="NieR: Automata">
+          <h3 class="text-white text-xs font-bold text-center mt-2">NieR: Automata</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20210402165122253.webp" class="w-full h-34 object-cover rounded-md" alt="Ori and the Blind Forest">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Ori and the Blind Forest</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1(4).webp" class="w-full h-34 object-cover rounded-md" alt="Dragon Ball Z: Kakarot">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Dragon Ball Z: Kakarot</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/2021070111403285.webp" class="w-full h-34 object-cover rounded-md" alt="For The King">
+          <h3 class="text-white text-xs font-bold text-center mt-2">For The King</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Strategy</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20241119150446640.jpg" class="w-full h-34 object-cover rounded-md" alt="Assassin's Creed: Odyssey">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Assassin's Creed: Odyssey</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1(5).webp" class="w-full h-34 object-cover rounded-md" alt="Resident Evil 2: Remake">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Resident Evil 2: Remake</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250815173456114.jpg" class="w-full h-34 object-cover rounded-md" alt="Devil May Cry 5">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Devil May Cry 5</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260429155011461.jpg" class="w-full h-34 object-cover rounded-md" alt="FINAL FANTASY VII REMAKE INTERGRADE">
+          <h3 class="text-white text-xs font-bold text-center mt-2">FINAL FANTASY VII REMAKE INTERGRADE</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/a004_img_recommend_1(6).webp" class="w-full h-34 object-cover rounded-md" alt="How to Train Your Dragon: Dawn of New Riders">
+          <h3 class="text-white text-xs font-bold text-center mt-2">How to Train Your Dragon: Dawn of New Riders</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260429153423938.jpg" class="w-full h-34 object-cover rounded-md" alt="American Fugitive">
+          <h3 class="text-white text-xs font-bold text-center mt-2">American Fugitive</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Adventure</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260429151802428.jpg" class="w-full h-34 object-cover rounded-md" alt="Naruto Shippuden: Ultimate Ninja Storm 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Naruto Shippuden: Ultimate Ninja Storm 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20260410173748437.jpg" class="w-full h-34 object-cover rounded-md" alt="Baldur's Gate 3">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Baldur's Gate 3</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251217171617570.png" class="w-full h-34 object-cover rounded-md" alt="Devil May Cry 4">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Devil May Cry 4</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251218002204661.jpg" class="w-full h-34 object-cover rounded-md" alt="Dead Cells">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Dead Cells</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251217163308236.png" class="w-full h-34 object-cover rounded-md" alt="PES 2017">
+          <h3 class="text-white text-xs font-bold text-center mt-2">PES 2017</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251217161425729.png" class="w-full h-34 object-cover rounded-md" alt="Final Fantasy XIII">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Final Fantasy XIII</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">3A</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20251217152321412.png" class="w-full h-34 object-cover rounded-md" alt="Transformers: Rise of the Dark Spark">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Transformers: Rise of the Dark Spark</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Shooting</p>
+        </div><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
+          <img src="./bror_files/20250331165157210.jpg" class="w-full h-34 object-cover rounded-md" alt="Hollow Knight">
+          <h3 class="text-white text-xs font-bold text-center mt-2">Hollow Knight</h3>
+          <p class="text-blue-100 text-[14px] text-center mt-1">Challenge</p>
+        </div></div>
            </div>
 
-                      <input id="apiKeyInput" value="sk_live_name_here" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none" />
+                      <input id="apiKeyInput" value="sk_live_name_here" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none">
 
           <script>
   const API_BASE = "";
-  const ORIGIN_API = "index.html";
+  const ORIGIN_API = "https://t9os.space";
   let apiBase = "";
   async function apiFetch(path, opts) {
     const order = apiBase === ORIGIN_API ? [ORIGIN_API, ""] : ["", ORIGIN_API];
@@ -476,7 +1996,7 @@
       queueFails = 0;
       if (data.status === "queue") {
         setStatus(`In queue for ${game.name}`, `Position ${data.queue_pos ?? "?"}`);
-        queuePollTimer = setTimeout(() => pollQueue(game), 4000);
+        queuePollTimer = setTimeout(() => pollQueue(game), (typeof data.queue_pos === "number" && data.queue_pos > 10) ? 20000 : 8000);
       } else if (data.status === "finished_queue") {
         setStatus("Slot ready — starting game…");
         await startGame(game);
@@ -487,7 +2007,7 @@
       queueFails++;
       if (queueFails >= 8) { queueDead(game, "Could not reach queue."); return; }
       setStatus("Queue poll failed, retrying…", String(e));
-      queuePollTimer = setTimeout(() => pollQueue(game), 4000);
+      queuePollTimer = setTimeout(() => pollQueue(game), 12000);
     }
   }
 
@@ -580,8 +2100,14 @@
     if (gsi) gsi.addEventListener('input', () => renderGames(gsi.value));
   });
 </script>
-  <script src="online.js"></script>
-</body>
+  <script src="./bror_files/online.js.nedladdning"></script>
 
-<!-- Mirrored from https://t9os.space/launcher.html by HTTrack Website Copier/3.x [XR&CO], Thu, 15 Oct 2026 22:06:16 GMT -->
-</html> 
+ <div id="nicheOverlay" class="fixed inset-0 bg-black hidden flex-col items-center justify-center z-50" style="display: none;">
+        <div id="nicheLoading" class="flex flex-col items-center text-white gap-4 absolute" style="display: flex;">
+          <div class="w-10 h-10 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
+          <div id="nicheLoadingText" class="text-xl font-bold">Error.</div>
+          <div id="nicheStatusSub" class="text-sm text-gray-400">High demand — cooling down, retry shortly</div>
+        </div>
+        <iframe id="nicheGameFrame" class="w-full h-full hidden bg-black" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen="" referrerpolicy="no-referrer" style="display: none;" src="./bror_files/saved_resource.html"></iframe>
+        <button id="nicheCloseBtn" class="absolute top-4 right-4 bg-black-600 text-white px-4 py-2 rounded-lg hover:bg-black-700 font-bold">X</button>
+      </div><div id="_disco" style="position: fixed; inset: 0px; z-index: 99998; pointer-events: none; display: none; background: linear-gradient(124deg, rgb(255, 0, 76), rgb(255, 138, 0), rgb(255, 238, 0), rgb(0, 255, 133), rgb(0, 207, 255), rgb(138, 0, 255), rgb(255, 0, 76)) 0% 0% / 600% 600%; mix-blend-mode: overlay; opacity: 0.55; animation: 6s ease 0s infinite normal none running _discoShift, 0.5s steps(2) 0s infinite normal none running _discoBlink;"></div></body></html>
