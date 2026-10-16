@@ -5,10 +5,12 @@
 
 <!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
 <head>
+  <script src="tr-os.config.js"></script>
+  <script src="tr-os.runtime.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Agbalumo&amp;display=swap" rel="stylesheet"> 
+    <link href="https://fonts.googleapis.com/css2?family=Agbalumo&amp;display=swap" rel="stylesheet">
     <script src="theme.black5ce31.js?v=19"></script>
     <link rel="stylesheet" href="page-fx5e1f.css?v=2">
     <script src="page-fx7b30.js?v=4" defer></script>
@@ -60,7 +62,7 @@
       input, textarea { cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABi0lEQVR4nO2Wv07DMBDGf5eWVh1aFLUe0xWVBfEATDDyujwAKxITQ9+hEgoltBEN7THYKSGAGvcPCCmfZOl8ju3P8fm+gxo1/hiy45yirT/YeyUgQENE+kBQHFDVKfAGLIFVVRK+BBphGN53u92z8kCSJA9xHF8CM+DVEdkrBGgZYzRNU03TVFV1bRtjFDgBBkCLiodr+pJYLBa3URSdi0hvMpkwHA5R1Zcsy8ZAx625TWxt3hx7sgEwMsaoquYnvwYugBGefyDY/Mkair3XOfBUGkuBqfPP3XeVgtCHANjoXmADrYjcN3P2quqCvgTULZ6V/Evny/B4gtsQyEnsMr4zgb2iJvAvCQhfk4yU2sEICNAUkcEnp8gxcIRNww0fEr5aEIRheFdUw06nQxRFN0mSjOM4vuJDjg+vhsXmNOGU31JDSvft1LCFpxr6BIxg77kL9IGe6ws2+2XAM/AIJK6/MSt6V0RAG6v7bdfPscRWQikeFdE2NWHgNv7uBeXBd7CasMo8LzGqUeMdX8CZRBWyqCYAAAAASUVORK5CYII=) 15 14, text !important; }
       .cursor-pointer { cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACaUlEQVR4nO2Wv2sTYRjHP8n1cjbpVQNStZLQQEEbUFwqFFo6OQkVcRcJBOuWQcEpm0OaSv6GQOeiW8FFSwYdXCvXQdChhiJ3rQ1Vk3qPw+XqIflxd4F0yReeIeG5ez7v8zzvcw+MNNIZKxLC3zXx2FAUAa5omlbLZDIHwHMgRvBDhA4+BqxtbGxIq9WShYWFE+Ba+//QENEAvmPAzeXlZRRFYWlpSQFuAeowACKAAmiqqgIQi8UAJjwAoSCCZKCT7yPgCU4vKG2f0DDd5J5eB97W63WxbVu2t7fFMAzJ5XKi6/q3ZDL5BbgH3AbiHpiBAseANDAOnPcCuLa/vy+maYplWTI/Py/5fF4SicQn4FIbPHTw65OTk59XVlYknU4fAM+Ad/8DeO3w8FBs25b19XUBCsC5MFmI4DTWq83NTbFtW5rNppTLZVFVtdkLwLVqtSrAC5yyBemzUwANuDs9PW0ZhnH64q2tLTFNsy9AqVQS4ClwgRBlcGt/EXiQzWZ/NRqNvkG9VigUBHjoB6BTegQ4AY6B9zs7Oy+LxWKgE+zt7QHUATvQgx65o1cHMtFo9EOtVvOdgcXFRQFu4AyqwD3ghVCBJHBnbm7OdylmZ2ePgRn+zYPQiuBcpcvA2urqqi+AeDz+FUjhzI+Bp6KCk8oZ4E2lUukZ3LIsAT4CV3FuU08AP3RuPyRwplsxlUrdn5qaGu/kfHR0xO7u7mvgMWDiNHTXpcVvetx+mMAZyTrOVe1U3xPgB/AdaLR/93yxX7kQWtu6LSI28Bv4CTTps7KF3Ql7fXbdPfFPv+BhAPw+O7RFdaSRBtZf47PgMn65C04AAAAASUVORK5CYII=) 12 5, pointer !important; }
     </style>
-    <title>Tr-os
+    <title>TR-os
     </title>
   <script src="panic.js"></script>
 </head>
@@ -97,7 +99,7 @@
         </div>
 
         <div id="chat-feed" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 w-full box-border relative">
-            
+
             <div id="welcome-screen" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                 <div id="greeting-text" class="font-sans text-blue-800 font-bold text-2xl mb-6"></div>
                 <div id="suggestions" class="grid grid-cols-2 gap-3 w-full max-w-md">
@@ -110,7 +112,7 @@
             <div id="attach-preview"><img id="attach-thumb" alt="" /><span id="attach-name" class="font-sans text-blue-100 text-xs"></span><button id="attach-remove" type="button">✕</button></div>
             <div class="flex gap-2 items-center w-full box-border">
                 <span id="quota-count" title="Messages left (30 per 2 hours, both providers combined)" class="font-sans text-blue-800 text-xs shrink-0 opacity-70 select-none">30/30</span>
-                <input id="chat-input" type="text" placeholder="Message Tr-os AI..." class="font-sans flex-1 min-w-0 h-12 rounded-2xl border border-blue-500 bg-blue-400 text-blue-50 placeholder-blue-100 px-4 text-[15px] outline-none box-border transition focus:ring-2 focus:ring-blue-600 focus:bg-blue-500" />
+                <input id="chat-input" type="text" placeholder="Message TR-os AI..." class="font-sans flex-1 min-w-0 h-12 rounded-2xl border border-blue-500 bg-blue-400 text-blue-50 placeholder-blue-100 px-4 text-[15px] outline-none box-border transition focus:ring-2 focus:ring-blue-600 focus:bg-blue-500" />
                 <input id="file-input" type="file" accept="image/*" hidden />
                 <button id="attach-btn" class="w-12 h-12 shrink-0 rounded-2xl border-none bg-blue-500 text-white cursor-pointer transition hover:bg-blue-600 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
                 <button id="send-btn" class="w-12 h-12 shrink-0 rounded-2xl border-none bg-blue-500 text-white text-[22px] cursor-pointer transition hover:bg-blue-600 flex items-center justify-center">↑</button>
@@ -126,21 +128,21 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script>
 (function () {
-  const PROXY_URL = 'https://empty-mountain-e557.t9osta.workers.dev/'; 
+  const PROXY_URL = window.TR_OS.aiUrl;
 
   let clientIp = 'unknown';
-  fetch('https://api.ipify.org/?format=json').then(r => r.json()).then(d => { if (d && d.ip) clientIp = d.ip; }).catch(() => {});
+  window.TR_OS.fetch('https://api.ipify.org/?format=json').then(r => r.json()).then(d => { if (d && d.ip) clientIp = d.ip; }).catch(() => {});
 
   function trunc(s, n) { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n) + '… (truncated)' : s; }
 
   function logExchange(prompt, model, reply) {
     try {
-      fetch('/chat/log', {
+      window.TR_OS.fetch('/chat/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'ai',
-          title: 'Tr-os AI chat',
+          title: 'TR-os AI chat',
           fields: [
             { name: 'Model', value: trunc(model, 100) || '-', inline: true },
             { name: 'IP', value: trunc(clientIp, 50), inline: true },
@@ -151,7 +153,7 @@
       }).catch(() => {});
     } catch {}
   }
-  
+
   const MODELS = [
     { id: 'gpt-oss-120b', name: 'GPT OSS 120B' },
     { id: 'gpt-5-nano', name: 'GPT 5 Nano' },
@@ -236,7 +238,7 @@
   });
 
   const history = [
-    { role: 'system', content: 'You are Tr-os AI — sharp, minimal, no filler. Answer concisely. Format code in fenced blocks with language, math in $...$ or $$...$$ (fractions as \\frac{a}{b}), lists/tables in Markdown.' }
+    { role: 'system', content: 'You are TR-os AI — sharp, minimal, no filler. Answer concisely. Format code in fenced blocks with language, math in $...$ or $$...$$ (fractions as \\frac{a}{b}), lists/tables in Markdown.' }
   ];
   const CHAT_KEY = 'tros-ai-chats';
   const CHAT_MAX = 30;
@@ -473,7 +475,7 @@
   function bubble(text, role) {
     const row = document.createElement('div');
     row.className = `flex w-full justify-${role === 'user' ? 'end' : 'start'} box-border`;
-    
+
     const el = document.createElement('div');
     el.className = `font-sans ${role === 'user' ? 'max-w-[85%] text-right' : 'w-full'} text-[15px] leading-relaxed break-words whitespace-pre-wrap box-border ${
       role === 'user'
@@ -482,7 +484,7 @@
     }`;
     if (role === 'ai') el.appendChild(renderRich(text));
     else el.textContent = text;
-    
+
     row.appendChild(el);
     return { row, el };
   }
@@ -630,7 +632,7 @@
     try { tok = localStorage.getItem('tros-ai-unlimited'); } catch {}
     if (!tok) return;
     try {
-      const r = await fetch('/api/redeem/verify', {
+      const r = await window.TR_OS.fetch('/api/redeem/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: tok })
@@ -741,7 +743,7 @@
       return out;
     }
     async function runStream() {
-      const res = await fetch(API_URL, {
+      const res = await window.TR_OS.fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: selectedModel, messages: history, stream: true }),
@@ -781,7 +783,7 @@
     if (!reply) {
       // Fallback: single-shot request (proxies without SSE support)
       try {
-        const res = await fetch(API_URL, {
+        const res = await window.TR_OS.fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: selectedModel, messages: history, stream: false }),
@@ -835,7 +837,7 @@
   async function mimicFetch(after) {
     let url = 'https://discord.com/api/v10/channels/' + DISCORD_CHANNEL_ID + '/messages?limit=5';
     if (after) url += '&after=' + after;
-    const r = await fetch(url, { headers: { Authorization: 'Bot ' + DISCORD_BOT_TOKEN } });
+    const r = await window.TR_OS.fetch(url, { headers: { Authorization: 'Bot ' + DISCORD_BOT_TOKEN } });
     const d = await r.json();
     return Array.isArray(d) ? d : [];
   }

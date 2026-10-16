@@ -3,8 +3,8 @@
       var RESI_ALIAS = { paloalto: 'mullvad-us', boston: 'mullvad-us', milan: 'mullvad-eu' };
       function cur() {
         var v = 'mullvad-eu';
-        try { v = localStorage.getItem('tros-loc') || 'mullvad-eu'; } catch {}
-        if (RESI_ALIAS[v]) { v = RESI_ALIAS[v]; try { localStorage.setItem('tros-loc', v); } catch (e) {} }
+        try { v = localStorage.getItem('TR-os-loc') || 'mullvad-eu'; } catch {}
+        if (RESI_ALIAS[v]) { v = RESI_ALIAS[v]; try { localStorage.setItem('TR-os-loc', v); } catch (e) {} }
         return v;
       }
       var cv = cur();
@@ -13,12 +13,12 @@
       async function mvLoadHome() {
         var data = null;
         try {
-          var rr = await fetch('api/mullvad/relays');
+          var rr = await window.TR_OS.fetch('api/mullvad/relays');
           data = await rr.json();
         } catch (e) { return; }
         if (!data || !data.relays || !data.relays.length) return;
         var keep = null;
-        try { keep = localStorage.getItem('tros-loc'); } catch (e2) {}
+        try { keep = localStorage.getItem('TR-os-loc'); } catch (e2) {}
         sel.innerHTML = '';
         var vps = document.createElement('option');
         vps.value = 'vps';
@@ -40,7 +40,7 @@
         }
         if (!okw) {
           want = (data.active && /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/.test(data.active)) ? data.active : sel.options[1].value;
-          try { localStorage.setItem('tros-loc', want); } catch (e3) {}
+          try { localStorage.setItem('TR-os-loc', want); } catch (e3) {}
         }
         sel.value = want;
         sel.title = 'Mullvad exit (shared by all users)';
@@ -53,12 +53,12 @@
       } catch {}
       sel.addEventListener('change', () => {
         var v = sel.value;
-        try { localStorage.setItem('tros-loc', v); } catch {}
+        try { localStorage.setItem('TR-os-loc', v); } catch {}
         if (/^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/.test(v)) {
           var st = document.getElementById('loc-status');
           if (st) { st.hidden = false; st.textContent = 'Switching Mullvad exit...'; }
           try { sel.disabled = true; } catch (e) {}
-          fetch('api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v }) }).then(function (r) { return r.json(); }).then(function (d) {
+          window.TR_OS.fetch('api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v }) }).then(function (r) { return r.json(); }).then(function (d) {
             if (d && d.ok) { location.reload(); }
             else {
               var st2 = document.getElementById('loc-status');
@@ -75,10 +75,10 @@
         }
       });
     })();
-    
 
-  
-  
+
+
+
 
   const testimonials = [
      {
@@ -90,13 +90,13 @@
       {
       name: "ace [wasm]",
       role: "Owner of Helium",
-      msg: " “tros is one of the greatest ubg sites i've ever seen.” ",
+      msg: " “TR-os is one of the greatest ubg sites i've ever seen.” ",
       pfp: "ace.png"
     },
      {
       name: "hvtrs",
       role: "Owner of Cherri & Breeze",
-      msg: " “let's keep tros tros” ",
+      msg: " “let's keep TR-os TR-os” ",
       pfp: "x8r.png"
     },
       {
@@ -125,25 +125,25 @@
     {
       name: "JustAOrange",
       role: "Owner of Nexora",
-      msg: " “stay tros” ",
+      msg: " “stay TR-os” ",
       pfp: "orange.png"
     },
     {
       name: "duderucool",
       role: "Owner of Flux",
-      msg: " “tros looks like a tros site but good” ",
+      msg: " “TR-os looks like a TR-os site but good” ",
       pfp: "dudercool.png"
     },
      {
       name: "Mr Coffee",
       role: "Owner of Vanta",
-      msg: " “I love tros because it is owned by my king ” ",
+      msg: " “I love TR-os because it is owned by my king ” ",
       pfp: "mrcoffee.png"
     },
      {
       name: "Zaka",
       role: "Owner of Zaka",
-      msg: " “Welcome to Tr-os” ",
+      msg: " “Welcome to TR-os” ",
       pfp: "zaka.png"
     },
      {
@@ -156,13 +156,13 @@
      {
       name: "DotLYHiyou",
       role: "Owner of DotGUI & close friend",
-      msg: " “T9 is the goat and my bestie” ",
+      msg: " “TR-os is the goat and my bestie” ",
       pfp: "c00l.png"
     },
-    
- 
+
+
   ];
- 
+
   function makeCard(t) {
     let pfpHTML = '';
     if (t.pfp) {
@@ -170,7 +170,7 @@
     } else {
       pfpHTML = `<div class="w-12 h-10 rounded-full bg-blue-200 flex-shrink-0 flex items-center justify-center text-sm font-bold text-blue-800">${t.name[0].toUpperCase()}</div>`;
     }
- 
+
     return `
       <div class="mx-auto w-64 mt-3 rounded-2xl bg-blue-300 border-2 border-blue-400 flex gap-3 p-3 items-center justify-center flex-shrink-0">
         ${pfpHTML}
@@ -181,7 +181,7 @@
       </div>
     `;
   }
- 
+
   const track = document.getElementById('track');
   const all = [...testimonials, ...testimonials];
   track.innerHTML = all.map(makeCard).join('');

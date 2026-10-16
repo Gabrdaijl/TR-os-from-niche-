@@ -242,7 +242,7 @@
   });
 
   document.getElementById('cloak-reset').addEventListener('click', function () {
-    document.title = 'Tr-os Settings';
+    document.title = 'TR-os Settings';
     var link = document.querySelector('link[rel="icon"]');
     if (link) link.removeAttribute('href');
     try {

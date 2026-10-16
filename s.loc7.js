@@ -21,11 +21,11 @@ function trosLoc() {
 function wispUrl() {
   let loc = trosLoc();
   if (RESI_ALIAS[loc]) { loc = RESI_ALIAS[loc]; }
-  if (!mvEnabled()) { return "wss://" + location.host + WISP_ROUTES.vps; }
-  if (loc === "vps") { return "wss://" + location.host + WISP_ROUTES.vps; }
-  if (RELAY_RE.test(loc)) { return "wss://" + location.host + WISP_ROUTES.mullvad; }
-  if (WISP_ROUTES[loc]) { return "wss://" + location.host + WISP_ROUTES[loc]; }
-  return "wss://" + location.host + WISP_ROUTES.mullvad;
+  if (!mvEnabled()) { return window.TR_OS.wispUrl(WISP_ROUTES.vps); }
+  if (loc === "vps") { return window.TR_OS.wispUrl(WISP_ROUTES.vps); }
+  if (RELAY_RE.test(loc)) { return window.TR_OS.wispUrl(WISP_ROUTES.mullvad); }
+  if (WISP_ROUTES[loc]) { return window.TR_OS.wispUrl(WISP_ROUTES[loc]); }
+  return window.TR_OS.wispUrl(WISP_ROUTES.mullvad);
 }
 let __bareConn = null;
 window.trosSetLocation = async function (loc) {

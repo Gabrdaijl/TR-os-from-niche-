@@ -22,7 +22,7 @@
   async function tmdbJson(path) {
     if (__tmdbProxyEnabled) {
       try {
-        const proxyRes = await fetch('api/tmdb' + path);
+        const proxyRes = await window.TR_OS.fetch('api/tmdb' + path);
         if (proxyRes.ok) {
           const data = await readJsonSafe(proxyRes);
           if (data && typeof data === 'object') return data;
@@ -30,7 +30,7 @@
       } catch (e) {}
       __tmdbProxyEnabled = false;
     }
-    const directRes = await fetch(BASE + path);
+    const directRes = await window.TR_OS.fetch(BASE + path);
     if (!directRes.ok) throw new Error(`tmdb-${directRes.status}`);
     const data = await readJsonSafe(directRes);
     if (!data || typeof data !== 'object') throw new Error('tmdb-invalid-json');
@@ -53,8 +53,8 @@
       await client.init();
       try { navigator.serviceWorker.register("sw.js"); } catch (e) {}
       const conn = new BareMux.BareMuxConnection("baremux/worker.js");
-      try { await conn.setTransport("epoxy/index.mjs", [{ wisp: "wss://" + location.host + "/wisp-mullvad/" }]); }
-      catch (err) { await conn.setTransport("epoxy/index.mjs", [{ wisp: "wss://t9os.space/wisp-mullvad/" }]); }
+      try { await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl("/wisp-mullvad/") }]); }
+      catch (err) { await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl("/wisp-mullvad/") }]); }
       __barePlay = conn;
       __sjPlay = client;
       __sjPlayReady = true;
@@ -109,7 +109,7 @@
     }
     #tros-overlay.open{ display:flex }
 
-    /* ── modal box — matches Tr-os palette ── */
+    /* ── modal box — matches TR-os palette ── */
     #tros-modal{
       background:#93c5fd;          /* bg-blue-300 */
       border:2px solid #60a5fa;    /* border-blue-400 */
@@ -375,7 +375,7 @@
     const seasons = (tvData.seasons || []).filter(s => s.season_number > 0);
     ctrl.innerHTML = '';
 
-    if (!seasons.length) return; 
+    if (!seasons.length) return;
 
     const seasonSel = document.createElement('select');
     seasonSel.className = 'tros-sel';

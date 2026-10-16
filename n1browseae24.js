@@ -9,7 +9,7 @@
   let __sj = null, __sjReady = false;
   var MV_BUILD = 'r5';
   function mvLog(m) {
-    try { fetch('api/mullvad/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ m: String(m).slice(0, 200) }) }); } catch (e) {}
+    try { window.TR_OS.fetch('api/mullvad/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ m: String(m).slice(0, 200) }) }); } catch (e) {}
   }
   mvLog('boot ' + MV_BUILD);
   try {
@@ -31,7 +31,7 @@
     try { proxied = typeof url === 'string' && url !== HOME && /^https?:\/\//i.test(url); } catch {}
     setLock(proxied);
   }
-  var TROS_HOME_URL = 'tros://browser';
+  var TROS_HOME_URL = 'tr-os://browser';
   function displayUrl(u) {
     if (!u || u === HOME) return TROS_HOME_URL;
     try {
@@ -47,11 +47,11 @@
   async function applyTransport() {
     if (!__bareConn) return false;
     try {
-      await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: "wss://" + location.host + wispRoute() }]);
+      await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
       return true;
     } catch (err) {
       try {
-        await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: "wss://t9os.space" + wispRoute() }]);
+        await __bareConn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
         return true;
       } catch (e2) { return false; }
     }
@@ -143,10 +143,10 @@
       __bareConn = conn;
       await epoxyWarm.catch(() => null);
       try {
-        await conn.setTransport("epoxy/index.mjs", [{ wisp: "wss://" + location.host + wispRoute() }]);
+        await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
       } catch (err) {
         try {
-          await conn.setTransport("epoxy/index.mjs", [{ wisp: "wss://t9os.space" + wispRoute() }]);
+          await conn.setTransport("epoxy/index.mjs", [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
         } catch (e2) {}
       }
       __sj = client;
@@ -342,7 +342,7 @@
       return;
     }
     try {
-      if (/^tros:\/\//i.test(raw.trim())) {
+      if (/^tr-os:\/\//i.test(raw.trim())) {
         lockFor(HOME);
         tab.frame.src = HOME;
         return;
@@ -498,13 +498,13 @@
   async function mvLoadRelays() {
     var data = null;
     try {
-      var rr = await fetch('api/mullvad/relays');
+      var rr = await window.TR_OS.fetch('api/mullvad/relays');
       data = await rr.json();
     } catch (e) { mvLog('relays fetch fail'); return false; }
     if (!data || !data.relays || !data.relays.length) return false;
     if (data.active) { MV_STATUS = { relay: data.active, exit_ip: data.exit_ip || null, country: '', city: '' }; }
     try {
-      var sr = await fetch('api/mullvad/status');
+      var sr = await window.TR_OS.fetch('api/mullvad/status');
       var st = await sr.json();
       if (st && st.relay) MV_STATUS = st;
     } catch (e2) {}
@@ -558,7 +558,7 @@
       attempt++;
       if (btn) { btn.textContent = 'SW ' + attempt + '/3'; }
       try {
-        var r = await fetch('api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+        var r = await window.TR_OS.fetch('api/mullvad/switch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
         var d = await r.json();
         if (d && d.ok) { MV_STATUS = d; ok = true; }
         else if (d && d.error === 'switch in progress') { await mvSleep(5000); }
@@ -572,7 +572,7 @@
       if (btn) { btn.textContent = '...'; }
       for (var vi = 0; vi < 10; vi++) {
         try {
-          var vsr = await fetch('api/mullvad/status');
+          var vsr = await window.TR_OS.fetch('api/mullvad/status');
           var vst = await vsr.json();
           if (vst && vst.relay === id) { MV_STATUS = vst; verified = true; break; }
           if (vst && vst.relay) { MV_STATUS = vst; }
@@ -615,7 +615,7 @@
       var ctl = null;
       try { ctl = new AbortController(); } catch (e) { ctl = null; }
       var to = setTimeout(function () { try { ctl.abort(); } catch (e2) {} }, 15000);
-      var r = await fetch(url, { signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
+      var r = await window.TR_OS.fetch(url, { signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
       clearTimeout(to);
       var ip = ((await r.text()) || '').trim().split(/\s+/)[0] || '';
       if (!ip) return;
@@ -623,7 +623,7 @@
       try { exp = MV_STATUS && MV_STATUS.exit_ip; } catch (e3) {}
       if (!exp || ip !== exp) {
         try {
-          var sr = await fetch('api/mullvad/status');
+          var sr = await window.TR_OS.fetch('api/mullvad/status');
           var st = await sr.json();
           if (st && st.relay) { MV_STATUS = st; }
         } catch (e5) {}
@@ -735,7 +735,7 @@
     if (!list) return;
     var data = null;
     try {
-      var rr = await fetch('api/mullvad/relays');
+      var rr = await window.TR_OS.fetch('api/mullvad/relays');
       data = await rr.json();
     } catch (e) { data = null; }
     list.innerHTML = '';
@@ -960,12 +960,12 @@
       try {
         let list = [];
         try {
-          const r0 = await fetch('/suggest?q=' + encodeURIComponent(q));
+          const r0 = await window.TR_OS.fetch('/suggest?q=' + encodeURIComponent(q));
           const d0 = await r0.json();
           if (Array.isArray(d0.list)) list = d0.list.filter((x) => typeof x === 'string');
         } catch (e0) {}
         if (!list.length && __sjReady && typeof __sj.encodeUrl === 'function') {
-          const r = await fetch(__sj.encodeUrl('https://ac.duckduckgo.com/ac/?q=' + encodeURIComponent(q) + '&type=list'));
+          const r = await window.TR_OS.fetch(__sj.encodeUrl('https://ac.duckduckgo.com/ac/?q=' + encodeURIComponent(q) + '&type=list'));
           const d = await r.json();
           if (Array.isArray(d) && Array.isArray(d[1])) list = d[1].filter((x) => typeof x === 'string');
         }
