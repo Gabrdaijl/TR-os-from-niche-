@@ -7,6 +7,7 @@
 <head>
   <script src="tr-os.config.js"></script>
   <script src="tr-os.runtime.js"></script>
+  <script src="local-ai.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -75,7 +76,8 @@
         <div class="pt-2 border-t border-blue-400 shrink-0">
             <div class="font-sans text-blue-800 text-xs font-bold px-1 pb-1">Provider</div>
             <select id="provider-selector" class="font-sans w-full h-10 rounded-xl border border-blue-500 bg-blue-400 text-blue-50 px-2 text-sm outline-none cursor-pointer hover:bg-blue-500 transition focus:ring-2 focus:ring-blue-600 mb-2">
-              <option value="emis">Emis</option>
+              <option value="local">TR-os lokal AI</option>
+              <option value="emis">Server-API (kräver anslutning)</option>
               <option value="nvidia">Nvidia</option>
             </select>
             <div class="font-sans text-blue-800 text-xs font-bold px-1 pb-1">Model</div>
@@ -185,14 +187,23 @@
     modelSelector.appendChild(opt);
   });
   const providerSelector = document.getElementById('provider-selector');
+  const localStatus = document.createElement('p');
+  localStatus.setAttribute('role', 'status');
+  localStatus.style.cssText = 'font:12px system-ui;line-height:1.5;padding:8px;color:inherit';
+  providerSelector.after(localStatus);
+  try { if (!localStorage.getItem('tros-local-ai-introduced')) {
+    localStorage.setItem('tros-ai-provider', 'local');
+    localStorage.setItem('tros-local-ai-introduced', '1');
+  } } catch {}
   function currentProvider() {
-    try { return localStorage.getItem('tros-ai-provider') || 'emis'; } catch { return 'emis'; }
+    try { return localStorage.getItem('tros-ai-provider') || 'local'; } catch { return 'local'; }
   }
   function modelKey() { return currentProvider() === 'nvidia' ? 'tros-ai-model-nvidia' : 'tros-ai-model'; }
   function fillModels() {
     const prov = currentProvider();
     providerSelector.value = prov;
-    const list = prov === 'nvidia' ? NV_MODELS : MODELS;
+    const list = prov === 'local' ? [{ id: 'SmolLM2-360M-Instruct-q4f32_1-MLC', name: 'SmolLM2 360M · lokal textmodell' }] : prov === 'nvidia' ? NV_MODELS : MODELS;
+    localStatus.textContent = prov === 'local' ? 'Körs på din dator. Första meddelandet laddar ned några hundra MB modellfiler. Kräver WebGPU; enklare svar än stora servermodeller.' : 'Kräver en konfigurerad AI-tjänst på servern.';
     modelSelector.innerHTML = '';
     list.forEach(m => {
       const opt = document.createElement('option');
@@ -202,7 +213,7 @@
     });
     let saved = null;
     try { saved = localStorage.getItem(modelKey()); } catch {}
-    const def = prov === 'nvidia' ? 'openai/gpt-oss-20b' : 'gpt-oss-120b';
+    const def = prov === 'local' ? list[0].id : prov === 'nvidia' ? 'openai/gpt-oss-20b' : 'gpt-oss-120b';
     modelSelector.value = (saved && list.some(m => m.id === saved)) ? saved : def;
   }
   providerSelector.addEventListener('change', () => {
@@ -736,6 +747,11 @@
       return out;
     }
     async function runStream() {
+      if (currentProvider() === 'local') {
+        const content = await window.TR_OS_LOCAL_AI.complete(history, text => { localStatus.textContent = text; });
+        paintTokens(content);
+        return content;
+      }
       const res = await window.TR_OS.fetch(API_URL, {
         signal: AbortSignal.timeout(90000),
         method: 'POST',

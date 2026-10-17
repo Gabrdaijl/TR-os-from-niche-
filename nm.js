@@ -483,7 +483,9 @@
     const names = ['VidFast', 'VidLink', 'VidSrc'];
     document.getElementById('tros-player-source').selectedIndex = index;
     document.getElementById('tros-player-sub').textContent = names[index] + ' · Use Next source if playback fails';
-    const src = await proxyPlayerUrl(hosts[index] + playerPath);
+    // VidSrc's embedded player breaks when its scripts are rewritten by
+    // Scramjet. Its public embed supports normal cross-origin iframes.
+    const src = index === 2 ? hosts[index] + playerPath : await proxyPlayerUrl(hosts[index] + playerPath);
     if (generation !== playerGeneration) return;
     const frame = document.getElementById('tros-frame');
     frame.src = src;

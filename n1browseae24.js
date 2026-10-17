@@ -616,6 +616,7 @@
   }
   async function mvCheckExit() {
     var ex = document.getElementById('mv-exit');
+    if (window.TR_OS.vpnConfigured === false) { MV_EXIT_STATE = 'direct'; syncMvUI(); return; }
     try {
       if (!__sj || !__sjReady || typeof __sj.encodeUrl !== 'function') return;
       if (ex) { ex.title = 'Checking live exit through Scramjet...'; }
@@ -727,6 +728,10 @@
   function mvSyncPanelLine() {
     var mc = document.getElementById('mv-current');
     if (!mc) return;
+    if (window.TR_OS.vpnConfigured === false) {
+      mc.textContent = 'TR-os egen serverproxy · ingen VPN-tunnel';
+      return;
+    }
     var on2 = false;
     try { on2 = mvEnabled(); } catch (e) {}
     var loc2 = '';
@@ -752,7 +757,7 @@
     if (!data || !data.relays || !data.relays.length) {
       var em = document.createElement('div');
       em.style.cssText = 'padding:16px 8px;color:#8e8e93;font-size:12px;';
-      em.textContent = window.TR_OS.vpnConfigured === false ? 'No VPN service configured. Direct proxy remains available.' : 'Could not load VPN exits. Reopen this panel to retry.';
+      em.textContent = window.TR_OS.vpnConfigured === false ? 'Webbtrafiken går via TR-os egen server. Du behöver inte välja någon extern källa. VPN och val av land kräver en separat VPN-server.' : 'Could not load VPN exits. Reopen this panel to retry.';
       list.appendChild(em);
       return;
     }
@@ -789,6 +794,12 @@
     });
   }
   function mvInitPanel() {
+    if (window.TR_OS.vpnConfigured === false) {
+      var filter = document.getElementById('mv-filter');
+      if (filter) filter.hidden = true;
+      var panelToggle = document.getElementById('mv-panel-toggle');
+      if (panelToggle) panelToggle.closest('label').hidden = true;
+    }
     var logo = document.getElementById('mv-logo-btn');
     if (logo && !logo.dataset.wired) {
       logo.dataset.wired = '1';

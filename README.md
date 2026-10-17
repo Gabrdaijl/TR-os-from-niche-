@@ -24,7 +24,7 @@ Servern blockerar åtkomst till serverkod, miljöfiler och paketmappar. Med PROX
 Kopiera `.env.example` till `.env` lokalt och fyll i de tjänster du äger. Miljöfilen ska aldrig läggas på GitHub.
 
 - AI: ange `AI_URL` till en OpenAI-kompatibel chat-completions-endpoint, `AI_KEY` och eventuellt `AI_MODEL`. Alternativt används en lokal Ollama-server på `OLLAMA_URL` med modellen `OLLAMA_MODEL`; Ollama och modellen måste redan finnas och vara startade. Inga AI-svar simuleras.
-- Proxy/VPN: standardläget `PROXY_PROVIDER=reference` använder de offentliga Wisp- och Mullvad-API:erna hos t9os.space. Både VPN-trafik och direkt proxy går då genom deras servrar. VPN-utgången delas och ett serverbyte påverkar andra användare av samma tjänst. TR-os äger inte dessa servrar och deras tillgänglighet kan inte garanteras. VPN verifieras genom Mullvads kontroll-API via den aktiva proxyn. Sätt `PROXY_PROVIDER=direct` för enbart lokal direktproxy. Med `PROXY_PROVIDER=custom` används egna `VPN_API_URL`, `VPN_WISP_URL` och eventuellt `PROXY_WISP_URL`.
+- Proxy: standardläget PROXY_PROVIDER=direct använder TR-os egen Wisp-server. Ingen extern proxytjänst behövs. Detta är en webbproxy, ingen VPN-tunnel. En riktig VPN kräver egen VPN-server och konfigurerade VPN_API_URL/VPN_WISP_URL. Det gamla reference-läget är valbart men används inte som standard.
 - Molnspel: referensläget ansluter samma `/cloud/v1/*`-API hos t9os.space; det kräver att tjänsten är tillgänglig och att en giltig åtkomstnyckel finns. Ange annars `CLOUD_API_URL` till en egen tjänst som implementerar frontendens `/cloud/v1/*`-kontrakt. `CLOUD_API_KEY` kan hållas på servern. En giltig leverantör och spelrättigheter krävs.
 - Cheats: `JOIN_URL` anger den spel-/undervisningstjänst som knappen ska öppna. Spelvalen öppnar officiella anslutningssidor. Inga cheats för Gimkit, Kahoot eller Blooket ingår.
 - Filmmetadata: `TMDB_API_KEY` kan sättas på servern. Filmplanschernas proxy följer samma API-bas som övriga anrop.
@@ -52,3 +52,6 @@ Importera detta GitHub-repo i ditt Vercel-team. `vercel.json` väljer Other, byg
 Välj projektets Settings → Domains för att koppla din domän efter en lyckad driftsättning. Använd DNS-värdena som Vercel visar för just domänen. Leverantörernas API-nycklar läggs i Vercels Environment Variables, aldrig i frontend.
 
 Vercel-funktioner kan startas om och köras i flera instanser. Nuvarande chatt/presens använder minne och behöver delad lagring för pålitlig produktion med flera användare. WebSocket-klienter kan behöva återansluta vid funktionens tidsgräns. VPN, AI och molnspel kräver fortfarande att respektive anslutna tjänst är tillgänglig och har giltig åtkomst. Vercel-publicering tar inte bort dessa krav.
+
+Lokal AI: TR-os lokal AI kör SmolLM2 360M med WebLLM på besökarens WebGPU. Modellfiler hämtas vid första meddelandet och cachelagras av WebLLM. Kräver några hundra MB nedladdning och cirka 580 MB GPU-minne. Det är ingen Duck.ai-API-integration. Serveralternativen kräver fortfarande AI_URL/AI_KEY/AI_MODEL. Cloud gaming kräver egna spelservrar; katalogen är ingen spelserver.
+

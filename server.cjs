@@ -9,7 +9,8 @@ const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 
 function proxyEnvironment(source) {
   const env = { ...source };
-  if ((env.PROXY_PROVIDER || 'reference') === 'reference') {
+  env.PROXY_PROVIDER ||= 'direct';
+  if (env.PROXY_PROVIDER === 'reference') {
     env.PROXY_PROVIDER = 'reference';
     env.PROXY_WISP_URL ||= 'wss://t9os.space/wisp-vps/';
     env.VPN_WISP_URL ||= 'wss://t9os.space/wisp-mullvad/';

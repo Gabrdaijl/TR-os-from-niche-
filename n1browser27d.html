@@ -34,7 +34,7 @@
         <button id="nav-fwd" title="Forward" class="font-sans w-9 h-9 shrink-0 rounded-xl bg-blue-400 text-blue-50 cursor-pointer hover:bg-blue-500 transition flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
         <button id="nav-reload" title="Reload" class="font-sans w-9 h-9 shrink-0 rounded-xl bg-blue-400 text-blue-50 cursor-pointer hover:bg-blue-500 transition flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
         <button id="nav-home" title="Home" class="font-sans w-9 h-9 shrink-0 rounded-xl bg-blue-400 text-blue-50 cursor-pointer hover:bg-blue-500 transition flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
-        <button id="mv-logo-btn" title="Mullvad VPN" class="font-sans w-7 h-7 shrink-0 rounded-xl bg-blue-400 cursor-pointer hover:bg-blue-500 transition flex items-center justify-center overflow-hidden" style="padding:0;border:none;"><img src="mullvad.png" alt="Mullvad VPN" style="width:28px;height:28px;object-fit:cover;display:block;"></button>
+        <button id="mv-logo-btn" title="TR-os proxy" class="font-sans w-7 h-7 shrink-0 rounded-xl bg-blue-400 cursor-pointer hover:bg-blue-500 transition flex items-center justify-center overflow-hidden" style="padding:0;border:none;"><img src="logo.png" alt="TR-os proxy" style="width:28px;height:28px;object-fit:cover;display:block;"></button>
         <select id="browser-loc" title="Proxy location" class="font-sans h-9 shrink-0 rounded-xl border border-blue-500 bg-blue-400 text-blue-50 px-1 text-xs outline-none cursor-pointer hover:bg-blue-500 transition" style="max-width:150px;display:none;">
           <option value="vps">🇺🇸 VPS</option>
           <option value="mullvad-us">🇺🇸 Mullvad US</option>
@@ -55,19 +55,20 @@
     <link rel="stylesheet" href="n1browse5e1f.css?v=2">
 <div id="mv-panel" hidden style="position:fixed;left:8px;top:88px;z-index:60;width:330px;max-width:92vw;max-height:70vh;">
   <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 10px;">
-    <img src="mullvad.png" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;display:block;">
-    <span style="font-weight:700;font-size:15px;letter-spacing:.2px;">mullvad vpn</span>
-    <label class="mv-switch" title="Enable / disable Mullvad VPN"><input type="checkbox" id="mv-panel-toggle"><span></span></label>
+    <img src="logo.png" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;display:block;">
+    <span style="font-weight:700;font-size:15px;letter-spacing:.2px;">TR-os proxy</span>
+    <label class="mv-switch" title="Enable / disable TR-os proxy"><input type="checkbox" id="mv-panel-toggle"><span></span></label>
   </div>
-  <div id="mv-current" style="padding:0 16px 10px;color:#b9b9c0;font-size:12px;border-bottom:1px solid #1d1d22;">vpn: ...</div>
+  <div id="mv-current" style="padding:0 16px 10px;color:#b9b9c0;font-size:12px;border-bottom:1px solid #1d1d22;">TR-os proxy</div>
   <div style="padding:10px 12px 4px;"><input id="mv-filter" placeholder="filter country / city..." autocomplete="off"></div>
   <div id="mv-list"></div>
 </div>
 
 <div id="frames-wrap" class="fixed left-0 right-0 top-[84px] bottom-0"></div>
 
-<script src="n1browseae24.js?v=14"></script>
+<script src="n1browseae24.js?v=15"></script>
 </body>
 
 
 </html>
+

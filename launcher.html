@@ -714,7 +714,7 @@
       overlay.className = 'fixed inset-0 bg-black hidden flex-col items-center justify-center z-50';
       overlay.innerHTML = `
         <div id="trosLoading" class="flex flex-col items-center text-white gap-4 absolute">
-          <div class="w-10 h-10 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
+          <div id="trosSpinner" class="w-10 h-10 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
           <div id="trosLoadingText" class="text-xl font-bold">Loading…</div>
           <div id="trosStatusSub" class="text-sm text-gray-400"></div>
         </div>
@@ -741,11 +741,13 @@
     return overlay;
   }
 
-  function setStatus(main, sub="") {
+  function setStatus(main, sub="", busy=true) {
     const txt = document.getElementById('trosLoadingText');
     const subTxt = document.getElementById('trosStatusSub');
     if(txt) txt.textContent = main;
     if(subTxt) subTxt.textContent = sub;
+    const spinner = document.getElementById('trosSpinner');
+    if (spinner) spinner.hidden = !busy;
   }
 
   function openOverlay(label) {
@@ -773,7 +775,7 @@
     launchLog('launch', game, 'key: ' + game.key);
 
     if (game.provider === 'mobile') {
-      setStatus('Mobile cloud service is not connected.', 'The original TR-os launcher is restored. A compatible mobile game service is required to start this title.');
+      setStatus('Ingen mobilspelserver är ansluten.', 'TR-os behöver en dator/server som kör mobilspelen och strömmar bilden. Ingen sådan server finns ansluten ännu.', false);
       return;
     }
     if (LOCAL_GAMES[game.key]) {
@@ -787,15 +789,15 @@
     }
 
     if (window.TR_OS.cloudConfigured === false) {
-      setStatus("Cloud gaming is unavailable right now.", "You can still play games from the Games menu.");
+      setStatus("Ingen spelserver är ansluten till TR-os.", "Spelen i Games-menyn kan fortfarande användas. Cloud gaming kräver en dator/server som kör spelen.", false);
       return;
     }
     if (cloudAvailable === false) {
-      setStatus("Cloud service is offline.", "Close this panel and try again later. Your game catalog is still available.");
+      setStatus("Cloud service is offline.", "Close this panel and try again later. Your game catalog is still available.", false);
       return;
     }
     if (!window.TR_OS.cloudKeyOnServer && !apiKey()) {
-      setStatus("Cloud access key required.", "Close this panel and enter your cloud access key, then try again.");
+      setStatus("Cloud access key required.", "Close this panel and enter your cloud access key, then try again.", false);
       return;
     }
     setStatus(`Connecting to cloud service…`, game.name);
