@@ -334,8 +334,12 @@
       try {
         const doc = document.getElementById('tros-frame').contentDocument;
         const text = doc && doc.body && doc.body.innerText || '';
-        if (/This page could not be loaded through TR-os|There was an error loading|Proxy is not ready/.test(text) && playerSource < 2) changePlayerSource(playerSource + 1);
+        if (doc?.querySelector('[data-tros-proxy-error]') || /This page could not be loaded through TR-os|There was an error loading|Proxy is not ready/.test(text)) {
+          failedPlayerSource(playerGeneration);
+          return;
+        }
       } catch (_) {}
+      document.getElementById('tros-frame').style.visibility = 'visible';
     });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
@@ -457,7 +461,19 @@
   }
 
   let playerSource = 0, playerPath = '', playerGeneration = 0;
+  function failedPlayerSource(generation) {
+    if (generation !== playerGeneration || !playerPath) return;
+    const frame = document.getElementById('tros-frame');
+    frame.style.visibility = 'hidden';
+    if (playerSource < 2) changePlayerSource(playerSource + 1);
+    else {
+      ++playerGeneration;
+      frame.src = 'about:blank';
+      document.getElementById('tros-player-sub').textContent = 'Ingen källa kunde laddas. Välj en källa för att försöka igen eller gå tillbaka.';
+    }
+  }
   async function changePlayerSource(index) {
+    document.getElementById('tros-frame').style.visibility = 'hidden';
     playerSource = index;
     const generation = ++playerGeneration;
     const hosts = ['https://vidfast.vc', 'https://vidlink.pro', 'https://vidsrc.sh/embed'];
@@ -469,10 +485,10 @@
     const frame = document.getElementById('tros-frame');
     frame.src = src;
     setTimeout(() => {
-      if (generation !== playerGeneration || index >= 2) return;
+      if (generation !== playerGeneration) return;
       try {
         const text = frame.contentDocument?.body?.innerText || '';
-        if (/fetching,? one moment|there was an error loading|this page could not be loaded through TR-os/i.test(text)) changePlayerSource(index + 1);
+        if (/fetching,? one moment|there was an error loading|this page could not be loaded through TR-os/i.test(text)) failedPlayerSource(generation);
       } catch (_) {}
     }, 25000);
   }

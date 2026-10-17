@@ -170,6 +170,12 @@ function inject(html) {
  * @param {FetchEvent} event
  * @returns {Promise<Response>}
  */
+function proxyErrorResponse(status = 502) {
+  return new Response('<!doctype html><html><head><meta charset="utf-8"><title>TR-os</title></head><body data-tros-proxy-error style="background:#080f16;color:#d7e8f4;font:16px system-ui;text-align:center;padding:15vh 24px"><h2>TR-os</h2><p>Källan kunde inte laddas just nu.</p><p>Prova en annan källa eller försök igen senare.</p></body></html>', {
+    status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }
+  });
+}
+
 async function handleRequest(event) {
   try {
     const url = new URL(event.request.url);
@@ -204,7 +210,7 @@ async function handleRequest(event) {
     }
   } catch {
     proxyConfigReady = null;
-    return new Response("Proxy is not ready. Open the TR-os home page and try again.", { status: 503 });
+    return proxyErrorResponse(503);
   }
 
   try {
@@ -214,6 +220,7 @@ async function handleRequest(event) {
 
       if (contentType.includes("text/html")) {
         const originalText = await response.text();
+        if (/There was an error loading/i.test(originalText) && /Scramjet|Uh oh!/i.test(originalText)) return proxyErrorResponse();
         const modifiedHtml = inject(originalText);
         const encoder = new TextEncoder();
         const byteLength = encoder.encode(modifiedHtml).length;
@@ -234,13 +241,13 @@ async function handleRequest(event) {
     self.clients.matchAll().then(clients => {
       for (const client of clients) client.postMessage({ type: 'tr-os-proxy-error', message: String(e && e.message || e) });
     }).catch(() => {});
-    return new Response('This page could not be loaded through TR-os. Please try again.', { status: 502 });
+    return proxyErrorResponse();
   }
 
   try {
     return await fetch(event.request);
   } catch (e) {
-    return new Response("Service worker fetch failed", { status: 502 });
+    return proxyErrorResponse();
   }
 }
 
