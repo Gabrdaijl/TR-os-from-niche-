@@ -9,7 +9,14 @@ test('launcher keeps the complete 441-entry catalog and separate cloud providers
  assert.equal(games.filter(g=>g.provider==='cloud').length,225);
  assert.equal(games.filter(g=>g.provider==='mobile').length,216);
  for(const game of games){assert.ok(game.name);assert.ok(game.img);assert.ok(game.provider);}
- assert.ok(games.find(g=>g.name==='Roblox'&&g.provider==='mobile'));
+ assert.ok(games.find(g=>g.name==='Roblox'&&g.provider==='mobile'&&g.packageName==='com.roblox.client'));
+ for(const game of games.filter(g=>g.provider==='mobile')) {
+  const url=new URL(game.playerUrl);
+  assert.equal(url.origin,'https://web.cloudmoonapp.com');
+  assert.equal(url.pathname,'/game/'+encodeURIComponent(game.packageName)+'/');
+  assert.ok(game.packageName);
+ }
+ assert.ok(games.filter(g=>g.provider==='cloud').every(g=>!g.playerUrl));
  assert.ok(games.find(g=>g.name==='Grand Theft Auto V'&&g.provider==='cloud'));
  assert.ok(games.filter(g=>g.provider==='mobile').every(g=>/^data:image\/(png|jpeg|webp);base64,/.test(g.img)));
  assert.ok(!/guestsynapse|Password!|sk_live_name_here|t9os|niche/i.test(script));
