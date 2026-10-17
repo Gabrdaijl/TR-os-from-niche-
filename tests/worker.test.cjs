@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-function worker({ neverReady = false } = {}) {
+function worker({ neverReady = false, proxyHtml } = {}) {
   let loads = 0, initialized = false;
   class ProxyWorker {
     constructor() { this.config = { prefix: '/scramjet/' }; }
@@ -16,7 +16,7 @@ function worker({ neverReady = false } = {}) {
       return Promise.resolve();
     }
     route() { assert.ok(initialized, 'shared rewriter configuration must be initialized'); return true; }
-    fetch() { return Promise.resolve(new Response('<html><head></head><body>external page</body></html>', { headers: { 'content-type': 'text/html' } })); }
+    fetch() { return Promise.resolve(new Response(proxyHtml || '<html><head></head><body>external page</body></html>', { headers: { 'content-type': 'text/html' } })); }
     addEventListener() {}
   }
   const context = {
@@ -68,4 +68,17 @@ test('proxy ad rules match domain suffixes and wildcard paths without blocking u
  assert.equal(app.blocked('game.test', '/ads/banner.js'), true);
  assert.equal(app.blocked('notdoubleclick.net', '/game.wasm'), false);
  assert.equal(app.blocked('cdn.game.test', '/assets/game.wasm'), false);
+});
+
+test('Scramjet error HTML is replaced before returning to the iframe', async () => {
+ const response = await worker({proxyHtml:'<html>Uh oh! There was an error loading https://private.test Scramjet Stack: transport</html>'}).request('/scramjet/test');
+ const html = await response.text();
+ assert.equal(response.status, 502);
+ assert.match(html, /data-tros-proxy-error/);
+ assert.doesNotMatch(html, /Uh oh|private.test|Stack:|Scramjet/);
+});
+test('ordinary upstream error wording is not mistaken for a proxy error', async () => {
+ const response = await worker({proxyHtml:'<html><head></head><body>There was an error loading a picture</body></html>'}).request('/scramjet/test');
+ assert.equal(response.status, 200);
+ assert.match(await response.text(), /loading a picture/);
 });
