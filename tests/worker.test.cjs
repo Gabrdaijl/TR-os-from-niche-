@@ -99,9 +99,19 @@ test('Google verification without a query shows a choice without loading reCAPTC
  assert.doesNotMatch(html,/recaptcha|<script/i);
 });
 test('unrelated Google pages and subresources are not redirected',async()=>{
- for(const [target,destination] of [['https://www.google.com/maps','document'],['https://www.google.com/search?q=hello','script']]) {
+ for(const [target,destination] of [['https://www.google.com/maps','document'],['https://www.google.com/recaptcha/api.js','script']]) {
   const response=await worker().request('/scramjet/'+encodeURIComponent(target),destination);
   assert.equal(response.status,200);
   assert.equal(response.headers.get('location'),null);
  }
+});
+
+test('browser address bar normalizes Google search links before opening a frame',()=>{
+ const source=fs.readFileSync(require.resolve('../n1browseae24.js'),'utf8');
+ const code=source.slice(source.indexOf('  function buildUrl(raw)'),source.indexOf('  let tabs ='));
+ const context={URL};vm.createContext(context);vm.runInContext(code,context);
+ assert.equal(context.buildUrl('https://www.google.com/search?q=hello+world'),'https://duckduckgo.com/?q=hello%20world');
+ assert.equal(context.buildUrl('google.se'),'https://duckduckgo.com/');
+ assert.equal(context.buildUrl('https://www.google.com/maps'),'https://www.google.com/maps');
+ assert.equal(context.buildUrl('hello world'),'https://duckduckgo.com/?q=hello%20world');
 });
