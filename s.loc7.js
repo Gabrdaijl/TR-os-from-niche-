@@ -214,6 +214,13 @@ function goHome() {
 
 function navigate(raw) {
   if (!raw.trim()) return;
+  // The embedded start page uses the main browser's tab, address and favicon.
+  try {
+    if (parent !== window && typeof parent.trosBrowserNavigate === 'function') {
+      parent.trosBrowserNavigate(raw);
+      return;
+    }
+  } catch {}
   loadUrl(buildUrl(raw));
 }
 

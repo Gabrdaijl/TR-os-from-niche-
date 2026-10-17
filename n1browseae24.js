@@ -213,7 +213,7 @@
         im.className = 'shrink-0 rounded';
         im.style.cssText = 'width:16px;height:16px;';
         im.src = tab.favicon;
-        im.onerror = () => { tab.favicon = null; renderTabs(); };
+        im.onerror = () => { tab.failedIcon = im.src; tab.favicon = null; renderTabs(); };
         b.insertBefore(im, label);
       } else {
         const lt = document.createElement('span');
@@ -253,7 +253,7 @@
     framesWrap.appendChild(f);
     const tab = { id, frame: f, lastUrl: url || HOME };
     tabs.push(tab);
-    f.addEventListener('load', () => onFrameLoad(tab));
+    f.addEventListener('load', () => onFrameLoad(tab, true));
     activate(id);
     try {
       const btns = tabStrip.children;
@@ -352,7 +352,7 @@
       try {
         tab.lastUrl = buildUrl(raw);
         renderTabs();
-        syncAddress();
+        syncAddress(true);
       } catch {}
       return;
     }
@@ -367,15 +367,16 @@
       tab.lastUrl = url;
       try { recordHistory(tabLabel(tab), url); } catch (e2) {}
       renderTabs();
-      syncAddress();
+      syncAddress(true);
+      tab.navigating = true;
       tab.frame.src = __sj.encodeUrl(url);
     } catch (e) {}
   }
   window.trosBrowserNavigate = function (raw) { navigate(raw); };
 
-  function syncAddress() {
+  function syncAddress(force = false) {
     const tab = activeTab();
-    if (!tab || document.activeElement === input) return;
+    if (!tab || (!force && document.activeElement === input)) return;
     try {
       const u = tab.lastUrl || '';
       input.value = displayUrl(u);
@@ -383,14 +384,26 @@
     } catch {}
   }
 
-  function onFrameLoad(tab) {
+  function onFrameLoad(tab, loaded = false) {
     try {
+      if (loaded) tab.navigating = false;
+      if (tab.navigating) return;
       if (!__sj || !__sjReady || typeof __sj.decodeUrl !== "function") return;
       let href = "";
       try { href = tab.frame.contentWindow.location.href; } catch {}
       if (!href || href === "about:blank") href = tab.frame.getAttribute("src") || tab.frame.src;
       if (!href || href === "about:blank") return;
       let decoded = null;
+      const actual = new URL(href, location.href);
+      const homeUrl = new URL(HOME, location.href);
+      if (actual.origin === homeUrl.origin && actual.pathname === homeUrl.pathname) {
+        const changed = tab.lastUrl !== HOME || !!tab.favicon;
+        tab.lastUrl = HOME;
+        tab.favicon = null;
+        if (tab.id === activeId) syncAddress();
+        if (changed) renderTabs();
+        return;
+      }
       try { decoded = __sj.decodeUrl(href); } catch (e) { decoded = null; }
       if (!decoded || !/^https?:\/\//i.test(decoded)) {
         try {
@@ -399,18 +412,25 @@
           else return;
         } catch (e2) { return; }
       }
+      const previousUrl = tab.lastUrl;
+      const previousIcon = tab.favicon;
       tab.lastUrl = decoded;
       lockFor(decoded);
       try {
         const doc = tab.frame.contentWindow.document;
         const link = doc && doc.querySelector('link[rel*="icon"]');
         const iconHref = link && (link.href || link.getAttribute('href'));
-        tab.favicon = iconHref || null;
+        const host = new URL(decoded).hostname;
+        const candidate = /(^|\.)snapchat\.com$/i.test(host) ? new URL('snapchat.svg', location.href).href : iconHref;
+        tab.favicon = candidate && candidate !== tab.failedIcon ? candidate : null;
       } catch { tab.favicon = null; }
       if (tab.id === activeId) syncAddress();
-      renderTabs();
+      if (previousUrl !== tab.lastUrl || previousIcon !== tab.favicon) renderTabs();
     } catch {}
   }
+
+  // Same-document navigation (pushState/replaceState) does not fire iframe load.
+  setInterval(() => tabs.forEach(onFrameLoad), 1000);
 
   function frameOp(fn) {
     const tab = activeTab();
@@ -434,7 +454,13 @@
   });
   document.getElementById('nav-home').addEventListener('click', () => {
     const tab = activeTab();
-    if (tab) tab.frame.src = HOME;
+    if (tab) {
+      tab.lastUrl = HOME;
+      tab.favicon = null;
+      tab.frame.src = HOME;
+      renderTabs();
+      syncAddress(true);
+    }
   });
   const NTAB_HI = {
     dark:      { bg: '#4a4a4a', fg: '#ffffff' },
