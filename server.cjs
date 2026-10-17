@@ -261,6 +261,8 @@ function createApp(options = {}) {
     }
     const route = new URL(req.url, 'http://localhost').pathname;
     if (route === '/tros-ws') return chatWs.handleUpgrade(req, socket, head, ws => chatWs.emit('connection', ws, req));
+    // Movie playback must not depend on the reference site's VPN being online.
+    if (route === '/wisp-movies/') return wisp.routeRequest(req, socket, head);
     if (route === '/wisp-vps/') {
       if (env.PROXY_WISP_URL) return relayWisp(req, socket, head, env.PROXY_WISP_URL);
       return wisp.routeRequest(req, socket, head);

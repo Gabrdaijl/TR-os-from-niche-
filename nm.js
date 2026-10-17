@@ -53,8 +53,7 @@
       await client.init();
       await window.TR_OS.ensureServiceWorker();
       const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
-      try { await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(window.TR_OS.vpnConfigured === false ? "/wisp-vps/" : "/wisp-mullvad/") }]); }
-      catch (err) { await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(window.TR_OS.vpnConfigured === false ? "/wisp-vps/" : "/wisp-mullvad/") }]); }
+      await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl("/wisp-movies/") }]);
       __barePlay = conn;
       __sjPlay = client;
       __sjPlayReady = true;
