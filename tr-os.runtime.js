@@ -85,8 +85,8 @@
  if (window.top !== window) return;
  function credit() {
  const frame=document.getElementById('mainFrame'); if(!frame)return;
- const style=document.createElement('style'); style.textContent='#mainFrame{height:100%!important;bottom:0!important}#creator-credit{display:none!important;position:fixed;bottom:0;right:0;height:22px;display:flex;align-items:center;justify-content:center;padding:0 14px;color:#aeb9c5;background:#0d151f;font:11px system-ui;box-sizing:border-box;z-index:10;pointer-events:none}html:has(:fullscreen) #creator-credit{display:none}';document.head.append(style);
- const el=document.createElement('footer');el.id='creator-credit';el.textContent='skapad av gr';el.hidden=true;document.body.append(el);
+ const style=document.createElement('style'); style.textContent='#mainFrame{height:calc(100% - 22px)!important;bottom:22px!important}#creator-credit{position:fixed;bottom:0;right:0;height:22px;display:flex;align-items:center;justify-content:flex-end;padding:0 14px;color:#aeb9c5;background:#0d151f;font:11px system-ui;box-sizing:border-box;z-index:10;pointer-events:none}html:has(:fullscreen) #creator-credit{display:none}';document.head.append(style);
+ const el=document.createElement('footer');el.id='creator-credit';el.textContent='skapad av GR';document.body.append(el);
  function size(){el.style.left=frame.getBoundingClientRect().left+'px';}size();new ResizeObserver(size).observe(frame);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',credit);else credit();
