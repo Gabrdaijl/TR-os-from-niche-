@@ -3,11 +3,11 @@ const assert = require('node:assert/strict');
 const { WebSocket } = require('ws');
 const { createApp } = require('../server.cjs');
 
-async function exchange(hostname, sendHttp) {
-  const app = createApp({ env: {} });
+async function exchange(hostname, sendHttp, route = '/wisp-vps/', env = {}) {
+  const app = createApp({ env });
   await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
   const base = 'http://127.0.0.1:' + app.server.address().port;
-  const socket = new WebSocket(base.replace('http:', 'ws:') + '/wisp-vps/');
+  const socket = new WebSocket(base.replace('http:', 'ws:') + route);
   try {
     const result = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Wisp stream timed out')), 12000);
@@ -45,5 +45,14 @@ test('Wisp blocks private destinations without stopping the server', async () =>
 });
 test('outbound Wisp stream returns real HTTP bytes', { skip: process.env.TR_OS_NETWORK_TEST !== '1' }, async () => {
   const result = await exchange('example.com', true);
+  assert.match(result.response, /^HTTP\/1\.[01] \d{3}/);
+});
+
+test('movie proxy works independently of an unavailable reference proxy and still blocks private IPs', async () => {
+  assert.equal((await exchange('127.0.0.1', false, '/wisp-movies/', { PROXY_WISP_URL: 'wss://unavailable.invalid/', VPN_WISP_URL: 'wss://unavailable.invalid/' })).blocked, true);
+});
+
+test('movie proxy returns real outbound HTTP bytes without the reference service', { skip: process.env.TR_OS_NETWORK_TEST !== '1' }, async () => {
+  const result = await exchange('example.com', true, '/wisp-movies/', { PROXY_WISP_URL: 'wss://unavailable.invalid/' });
   assert.match(result.response, /^HTTP\/1\.[01] \d{3}/);
 });
