@@ -43,7 +43,7 @@ Spelens HTML filtreras före start och får ett annonsfilter för kända annonsd
 
 ## Cloud launcher
 
-Launchern innehåller alla 441 poster från användarens nya sparade launcher: 225 PC-titlar och 216 mobilspel/appar. Katalogen och mobilbilderna ligger i launcher-catalog.js. Det tidigare TR-os-launchergränssnittet har återställts med alla 441 poster. Den inbäddade officiella CloudMoon-sidan är borttagen. Mobilposterna kräver en ansluten kompatibel tjänst och PC-tjänsten använder det konfigurerade /cloud/v1-API:t. Katalogen innebär inte automatiskt tillgång till spelservrar. Importen omfattar inga inloggningsuppgifter eller körbar kod från den sparade filen. Listan innehåller metadata, inte spelservrar eller åtkomstnycklar. `/api/cloud/status` kontrollerar om leverantörens HTTP-server går att nå; det verifierar inte en spelström. Stängknappen fungerar även när leverantören är nere, och katalogen visas utan sparade felrutor eller dubblerade kort. Frontendens texter och länkar använder inte referensens varumärke; det valbara reference-läget i servern är fortfarande beroende av dess tjänster.
+Cloud-sidan visar nu endast Starta extern cloud i ett förenklat gränssnitt. Den externa launchern öppnas i en separat vy med Tillbaka-knapp. Spelkatalog, sökfält, antal och API-nyckelfält laddas inte på Cloud-sidan. Den äldre katalogfilen finns kvar i repot men används inte av sidan. Den externa tjänsten bestämmer spelåtkomst och köer; inga privata nycklar kopieras.
 
 ## Vercel
 
@@ -54,4 +54,5 @@ Välj projektets Settings → Domains för att koppla din domän efter en lyckad
 Vercel-funktioner kan startas om och köras i flera instanser. Nuvarande chatt/presens använder minne och behöver delad lagring för pålitlig produktion med flera användare. WebSocket-klienter kan behöva återansluta vid funktionens tidsgräns. VPN, AI och molnspel kräver fortfarande att respektive anslutna tjänst är tillgänglig och har giltig åtkomst. Vercel-publicering tar inte bort dessa krav.
 
 Lokal AI: TR-os lokal AI kör SmolLM2 360M med WebLLM på besökarens WebGPU. Modellfiler hämtas vid första meddelandet och cachelagras av WebLLM. Kräver några hundra MB nedladdning och cirka 580 MB GPU-minne. Det är ingen Duck.ai-API-integration. Serveralternativen kräver fortfarande AI_URL/AI_KEY/AI_MODEL. Cloud gaming kräver egna spelservrar; katalogen är ingen spelserver.
+
 
