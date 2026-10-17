@@ -491,7 +491,7 @@
       if (generation !== playerGeneration) return;
       try {
         const text = frame.contentDocument?.body?.innerText || '';
-        if (/fetching,? one moment|there was an error loading|this page could not be loaded through TR-os/i.test(text)) failedPlayerSource(generation);
+        if (frame.contentDocument?.querySelector('[data-tros-proxy-error]') || /there was an error loading|this page could not be loaded through TR-os/i.test(text)) failedPlayerSource(generation);
       } catch (_) {}
     }, 25000);
   }
