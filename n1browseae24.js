@@ -827,7 +827,7 @@
         var lg = document.getElementById('mv-logo-btn');
         if (!panel || panel.hidden) return;
         var tg = ev.target;
-        if (panel.contains(tg) || (lg && lg.contains(tg))) return;
+        if (panel.contains(tg) || (lg && lg.contains(tg)) || document.getElementById('mv-exit')?.contains(tg)) return;
         panel.hidden = true;
       });
       document.addEventListener('keydown', function (ev) {
@@ -871,7 +871,7 @@
   mvLoadRelays();
   try {
     var exb = document.getElementById('mv-exit');
-    if (exb) { exb.style.cursor = 'pointer'; exb.title = 'Click to re-check live exit'; exb.addEventListener('click', mvCheckExit); }
+    if (exb) { exb.style.cursor = 'pointer'; exb.title = 'Click to re-check live exit'; exb.setAttribute('role','button'); exb.tabIndex=0; const openProxyStatus=async()=>{if(window.TR_OS.vpnConfigured===false){const panel=document.getElementById('mv-panel');if(panel){panel.hidden=false;await mvBuildPanel();}}else await mvCheckExit();}; exb.addEventListener('click', openProxyStatus); exb.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openProxyStatus();}}); }
   } catch (e) {}
   setTimeout(mvCheckExit, 5000);
   mvInitPanel();

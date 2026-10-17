@@ -315,6 +315,7 @@
         </div>
         <select id="tros-player-source" class="tros-sel" aria-label="Video source" style="margin-left:auto"><option>VidFast</option><option>VidLink</option><option>VidSrc</option></select>
         <button id="tros-player-next" class="tros-sel">Next source</button>
+        <button id="tros-player-fullscreen" class="tros-sel" aria-pressed="false">⛶ Fullskärm</button>
       </div>
       <div id="tros-player-status" role="status" style="display:none;position:absolute;inset:70px 0 0;background:#080f16;color:#d7e8f4;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:2"></div>
       <iframe id="tros-frame"
@@ -328,6 +329,15 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     document.getElementById('tros-watch-btn').addEventListener('click', onWatchClick);
     document.getElementById('tros-player-back').addEventListener('click', closeFullscreen);
+    document.getElementById('tros-player-fullscreen').addEventListener('click', async () => {
+      try { if (document.fullscreenElement) await document.exitFullscreen(); else await player.requestFullscreen(); }
+      catch { document.getElementById('tros-player-sub').textContent = 'Fullskärm kunde inte öppnas. Prova F11.'; }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      const button = document.getElementById('tros-player-fullscreen');
+      button.textContent = document.fullscreenElement ? '⛶ Avsluta fullskärm' : '⛶ Fullskärm';
+      button.setAttribute('aria-pressed', String(!!document.fullscreenElement));
+    });
     document.getElementById('tros-player-source').addEventListener('change', e => changePlayerSource(e.target.selectedIndex));
     document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 3));
     document.getElementById('tros-frame').addEventListener('load', () => {

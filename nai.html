@@ -76,6 +76,7 @@
         <div class="pt-2 border-t border-blue-400 shrink-0">
             <div class="font-sans text-blue-800 text-xs font-bold px-1 pb-1">Provider</div>
             <select id="provider-selector" class="font-sans w-full h-10 rounded-xl border border-blue-500 bg-blue-400 text-blue-50 px-2 text-sm outline-none cursor-pointer hover:bg-blue-500 transition focus:ring-2 focus:ring-blue-600 mb-2">
+              <option value="reference">Extern AI · t9os offentlig tjänst</option>
               <option value="local">TR-os lokal AI</option>
               <option value="emis">Server-API (kräver anslutning)</option>
               <option value="nvidia">Nvidia</option>
@@ -97,7 +98,7 @@
     <div id="chat-container" class="flex-1 min-w-0 rounded-2xl bg-blue-300 border-2 border-blue-400 flex flex-col p-2 overflow-hidden shadow-lg">
         <div class="flex items-center gap-2 px-2 py-3 shrink-0">
             <button id="side-toggle" title="Toggle sidebar" class="w-9 h-9 shrink-0 rounded-xl border border-blue-500 bg-blue-400 text-blue-50 cursor-pointer transition hover:bg-blue-500 flex items-center justify-center text-lg">☰</button>
-            <span id="chat-title" class="font-sans text-blue-800 font-bold truncate">New chat</span>
+            <button id="ai-fullscreen" type="button" style="margin-left:auto;padding:7px 12px;border:1px solid #354964;border-radius:10px" aria-pressed="false">⛶ Fullskärm</button><span id="chat-title" class="font-sans text-blue-800 font-bold truncate">New chat</span>
         </div>
 
         <div id="chat-feed" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 w-full box-border relative">
@@ -194,6 +195,7 @@
     localStorage.setItem('tros-ai-provider', 'local');
     localStorage.setItem('tros-local-ai-introduced', '1');
   } } catch {}
+  try { if (!localStorage.getItem('tros-public-ai-introduced')) { localStorage.setItem('tros-ai-provider', 'reference'); localStorage.setItem('tros-public-ai-introduced', '1'); localStorage.setItem('tros-ai-model', 'gpt-5-nano'); } } catch {}
   function currentProvider() {
     try { return localStorage.getItem('tros-ai-provider') || 'local'; } catch { return 'local'; }
   }
@@ -202,7 +204,7 @@
     const prov = currentProvider();
     providerSelector.value = prov;
     const list = prov === 'local' ? [{ id: 'SmolLM2-360M-Instruct-q4f32_1-MLC', name: 'SmolLM2 360M · lokal textmodell' }] : prov === 'nvidia' ? NV_MODELS : MODELS;
-    localStatus.textContent = prov === 'local' ? 'Körs på din dator. Första meddelandet laddar ned några hundra MB modellfiler. Kräver WebGPU; enklare svar än stora servermodeller.' : 'Kräver en konfigurerad AI-tjänst på servern.';
+    localStatus.textContent = prov === 'local' ? 'Körs på din dator. Första meddelandet laddar ned några hundra MB modellfiler. Kräver WebGPU; enklare svar än stora servermodeller.' : prov === 'reference' ? 'Extern AI: meddelanden skickas till t9os offentliga AI-tjänst. Tillgänglighet och gränser styrs av leverantören.' : 'Kräver en konfigurerad AI-tjänst på servern.';
     modelSelector.innerHTML = '';
     list.forEach(m => {
       const opt = document.createElement('option');
@@ -278,7 +280,7 @@
     const title = first.length > 34 ? first.slice(0, 34) + '…' : first;
     const entry = {
       id: chatId || ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
-      title, model: modelSelector.value, updatedAt: Date.now(),
+      title, provider: currentProvider(), model: modelSelector.value, updatedAt: Date.now(),
       messages: turns.map(m => ({ role: m.role, content: msgText(m) }))
     };
     chatId = entry.id;
@@ -338,7 +340,7 @@
       const isNv = NV_MODELS.some(m => m.id === c.model);
       const isEm = MODELS.some(m => m.id === c.model);
       if (isNv || isEm) {
-        try { localStorage.setItem('tros-ai-provider', isNv ? 'nvidia' : 'emis'); } catch {}
+        try { localStorage.setItem('tros-ai-provider', ['local','reference','emis','nvidia'].includes(c.provider) ? c.provider : isNv ? 'nvidia' : 'reference'); } catch {}
         fillModels();
         modelSelector.value = c.model;
         try { localStorage.setItem(modelKey(), c.model); } catch {}
@@ -696,7 +698,7 @@
 
     const selectedModel = modelSelector.value;
     try { localStorage.setItem(modelKey(), selectedModel); } catch {}
-    const API_URL = currentProvider() === 'nvidia' ? '/api/nvidia/chat' : PROXY_URL;
+    const API_URL = currentProvider() === 'reference' ? 'https://empty-mountain-e557.t9osta.workers.dev/' : currentProvider() === 'nvidia' ? '/api/nvidia/chat' : PROXY_URL;
 
     // --- live typing: tokens buffer, characters reveal like ChatGPT ---
     let sBox = null, sEl = null, sText = null, gotToken = false, streamDone = false;
@@ -904,7 +906,7 @@
   mimicPoll();
 })();
 </script>
-<script src="online.js"></script>
+<script>document.getElementById('ai-fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{document.getElementById('ai-fullscreen').textContent='Prova F11';}};document.addEventListener('fullscreenchange',()=>{const b=document.getElementById('ai-fullscreen');b.textContent=document.fullscreenElement?'⛶ Avsluta fullskärm':'⛶ Fullskärm';b.setAttribute('aria-pressed',String(!!document.fullscreenElement));});</script><script src="online.js"></script>
 </body>
 
 

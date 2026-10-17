@@ -26,6 +26,8 @@ function createApp(options = {}) {
   const sessions = new Map(), messages = [], limits = new Map();
   const sockets = new Set();
   let lastStamp = Date.now();
+  const startedAt = Date.now();
+  let requestCount = 0, serverErrors = 0;
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
   const json = (res, status, data) => {
@@ -79,6 +81,8 @@ function createApp(options = {}) {
     return url;
   }
   async function handler(req, res) {
+    requestCount++;
+    res.once('finish', () => { if (res.statusCode >= 500) serverErrors++; });
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('referrer-policy', 'same-origin');
     const url = new URL(req.url, 'http://localhost');
@@ -87,6 +91,31 @@ function createApp(options = {}) {
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
     if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
+    if (route === '/api/admin/status') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
+      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 16) return json(res, 503, { error: 'Admin är låst. Sätt ADMIN_PASSWORD (minst 16 tecken) som Sensitive i Vercel och publicera igen.' });
+      const supplied = req.headers.authorization || '';
+      const expected = 'Basic ' + Buffer.from('admin:' + env.ADMIN_PASSWORD).toString('base64');
+      const digest = value => crypto.createHash('sha256').update(value).digest();
+      if (!crypto.timingSafeEqual(digest(supplied), digest(expected))) {
+        if (!allowed(req, 'admin-login', 5)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
+        return json(res, 401, { error: 'Fel lösenord eller utloggad.' });
+      }
+      return json(res, 200, {
+        checkedAt: new Date().toISOString(), startedAt: new Date(startedAt).toISOString(),
+        uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
+        activeSessions: activeCount(), websocketConnections: sockets.size,
+        requests: requestCount, serverErrors, memoryMB: Math.round(process.memoryUsage().rss / 1048576),
+        scope: 'Denna serverinstans. Sessioner är inte unika personer. Vercel kan köra flera instanser och nollställa räknarna vid omstart.',
+        services: {
+          server: 'Tillgänglig', proxy: 'Egen Wisp-server aktiverad; externa mål kan neka åtkomst',
+          ai: env.AI_URL ? 'Eget server-API konfigurerat; svar inte verifierat här' : 'Lokal AI och offentligt externt AI-alternativ i chatten',
+          vpn: env.VPN_API_URL && env.VPN_WISP_URL ? 'VPN-backend konfigurerad; tunnel inte verifierad här' : 'Ingen egen VPN-tunnel ansluten',
+          movies: env.TMDB_KEY ? 'Filmmetadata konfigurerad; uppspelning beror på extern källa' : 'Ingen egen TMDB-nyckel konfigurerad',
+          cloud: 'Extern Cloud-spelare; ingen egen spelserver', chat: 'Egen chatt och närvaro aktiverad'
+        }
+      });
+    }
     if (route === '/api/health') return json(res, 200, {
       ok: true, name: 'TR-os', services: {
         proxy: true, chat: true, online: true,
