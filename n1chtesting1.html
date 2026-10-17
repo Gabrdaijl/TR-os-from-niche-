@@ -24,7 +24,7 @@
             <h1 class="agbalumo text-center text-blue-500 bold-100 text-8xl mt-40 hop">TR-os</h1>
             <input type="text" placeholder="Search the web...." class="font-sans block mx-auto  h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl mt-10 w-[350px] transition-all duration-300 ease-out focus:w-[550px] flex items-center justify-center"/>
             <div class="flex justify-center items-center gap-3 mt-2">
-<a href="https://web.snapchat.com/" target="_blank" rel="noopener noreferrer" aria-label="Snapchat (öppnas i ny flik)" title="Öppna Snapchat i ny flik" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] p-2 flex items-center justify-center transition hover:-translate-y-1"><img src="snapchat.svg" alt="Snapchat" width="36" height="36"></a>
+<button type="button" aria-label="Snapchat" title="Öppna Snapchat i TR-os" onclick="if (parent !== window &amp;&amp; typeof parent.trosBrowserNavigate === 'function') { parent.trosBrowserNavigate('https://www.snapchat.com/'); } else { navigate('https://www.snapchat.com/'); }" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] p-2 flex items-center justify-center transition hover:-translate-y-1"><img src="snapchat.svg" alt="Snapchat" width="36" height="36"></button>
 
 <div onclick="navigate('https://tiktok.com/')" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] h-auto p-2 flex items-center justify-center transition hover:-translate-y-1">
               <img class="rounded-xl w-[85px] h-9 object-contain" src="tt.png">
