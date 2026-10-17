@@ -728,11 +728,17 @@
         const frame = document.getElementById('trosGameFrame');
         setStatus('Öppnar extern cloudtjänst…', 'Välj spelet i tjänstens katalog. Tillgång, köer och eventuella kontokrav bestäms av tjänsten.');
         document.getElementById('trosExternalCloudBtn').hidden = true;
+        const close = document.getElementById('trosCloseBtn');
+        close.textContent = 'Tillbaka till TR-os';
+        close.style.right = 'auto';
+        close.style.left = '16px';
         frame.onload = () => {
           document.getElementById('trosLoading').style.display = 'none';
           frame.style.display = 'block';
         };
         frame.src = 'https://t9os.space/launcher.html';
+        document.getElementById('trosLoading').style.display = 'none';
+        frame.style.display = 'block';
       };
 
       document.getElementById('trosCloseBtn').onclick = () => {
@@ -769,6 +775,10 @@
     document.getElementById('trosLoading').style.display = 'flex';
     document.getElementById('trosGameFrame').style.display = 'none';
     document.getElementById('trosExternalCloudBtn').hidden = true;
+    const close = document.getElementById('trosCloseBtn');
+    close.textContent = 'X';
+    close.style.left = 'auto';
+    close.style.right = '16px';
     document.body.style.overflow = 'hidden';
     setStatus(`Loading ${label}…`);
   }

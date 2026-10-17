@@ -39,6 +39,10 @@
       const src = platform.direct ? platform.url : (await ensureProxy()).encodeUrl(platform.url);
       if (current !== generation) return;
       frame.src = src;
+      // External pages can keep fetching optional assets after their controls
+      // are ready. Do not hide the usable page until every asset finishes.
+      frame.hidden = false;
+      status.hidden = true;
     } catch (error) {
       if (current !== generation) return;
       status.textContent = 'Sidan kunde inte anslutas. Använd Öppna separat för att prova direkt.';
