@@ -317,6 +317,7 @@
         <select id="tros-player-source" class="tros-sel" aria-label="Video source" style="margin-left:auto"><option>VidFast</option><option>VidLink</option><option>VidSrc</option></select>
         <button id="tros-player-next" class="tros-sel">Next source</button>
       </div>
+      <div id="tros-player-status" role="status" style="display:none;position:absolute;inset:70px 0 0;background:#080f16;color:#d7e8f4;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:2"></div>
       <iframe id="tros-frame"
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
@@ -470,9 +471,13 @@
       ++playerGeneration;
       frame.src = 'about:blank';
       document.getElementById('tros-player-sub').textContent = 'Ingen källa kunde laddas. Välj en källa för att försöka igen eller gå tillbaka.';
+      const status = document.getElementById('tros-player-status');
+      status.textContent = 'Ingen källa kunde laddas just nu. Välj en källa ovan för att försöka igen, eller gå tillbaka.';
+      status.style.display = 'flex';
     }
   }
   async function changePlayerSource(index) {
+    document.getElementById('tros-player-status').style.display = 'none';
     document.getElementById('tros-frame').style.visibility = 'hidden';
     playerSource = index;
     const generation = ++playerGeneration;
