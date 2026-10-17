@@ -13,7 +13,7 @@ test('admin rejects anonymous, forged and cross-origin requests and never leaks 
  const response=await fetch(base+'/api/admin/status',{headers:{authorization:'Basic '+Buffer.from('admin:'+password).toString('base64')}});
  assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
  const text=await response.text();assert.ok(!text.includes(password));assert.ok(!text.includes('private-ai-secret'));
- const data=JSON.parse(text);assert.equal(data.activeSessions,0);assert.ok(data.scope.includes('serverinstans'));assert.ok(data.requests>=3);
+ const data=JSON.parse(text);assert.equal(data.activeSessions,null);assert.equal(data.presence.source,'unconfigured');assert.ok(data.scope.includes('serverinstans'));assert.ok(data.requests>=3);
 });
 test('admin throttles failed password attempts',async t=>{
  const base=await app(t,{ADMIN_PASSWORD:'test-only-password-12345'});for(let i=0;i<5;i++)assert.equal((await fetch(base+'/api/admin/status')).status,401);assert.equal((await fetch(base+'/api/admin/status')).status,429);
