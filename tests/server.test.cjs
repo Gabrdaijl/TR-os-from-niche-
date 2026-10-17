@@ -164,3 +164,12 @@ test('cloud status distinguishes missing, reachable and offline providers withou
  assert.match(failed.data.error,/could not be reached/);
  assert.ok(!JSON.stringify(failed.data).includes(endpoint));
 });
+
+test('Vercel without an AI provider reports setup instead of attempting local Ollama', async t => {
+ const {request}=await fixture(t,{VERCEL:'1'});
+ assert.equal((await request('/api/health')).data.services.ai,'unconfigured');
+ const result=await request('/api/ai',{messages:[{role:'user',content:'hello'}]});
+ assert.equal(result.status,503);
+ assert.match(result.data.error,/AI-tjänst/);
+ assert.doesNotMatch(result.data.error,/Ollama|127\.0\.0\.1/);
+});
