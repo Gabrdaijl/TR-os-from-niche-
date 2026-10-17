@@ -27,9 +27,10 @@ test('Vercel exports the same HTTP server for API routes and bundled static fall
  t.after(()=>new Promise(resolve=>{server.closeAllConnections();server.close(resolve);}));
  const base='http://127.0.0.1:'+server.address().port;
  assert.equal((await (await fetch(base+'/api/health')).json()).name,'TR-os');
- assert.match(await (await fetch(base+'/launcher.html')).text(),/Starta extern cloud/);
+ assert.match(await (await fetch(base+'/launcher.html')).text(),/id="fullscreen"/);
  assert.match(await (await fetch(base+'/tr-os.config.js')).text(),/hasBackend/);
  for (const route of ['/api/index.js','/scripts/build-vercel.cjs','/.env','/server.cjs']) assert.equal((await fetch(base+route)).status,404);
  assert.ok(server.listenerCount('upgrade')>0);
 });
+
 
