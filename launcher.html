@@ -720,8 +720,20 @@
         </div>
         <iframe id="trosGameFrame" class="w-full h-full hidden bg-black" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen referrerpolicy="no-referrer"></iframe>
         <button id="trosCloseBtn" class="absolute top-4 right-4 bg-black-600 text-white px-4 py-2 rounded-lg hover:bg-black-700 font-bold">X</button>
+        <button id="trosExternalCloudBtn" hidden style="position:absolute;left:16px;top:16px;z-index:60;background:#132a38;color:#cfeaff;border:1px solid #24475b;border-radius:8px;padding:8px 14px;cursor:pointer">Öppna extern cloud</button>
       `;
       document.body.appendChild(overlay);
+      document.getElementById('trosExternalCloudBtn').onclick = () => {
+        resetState();
+        const frame = document.getElementById('trosGameFrame');
+        setStatus('Öppnar extern cloudtjänst…', 'Välj spelet i tjänstens katalog. Tillgång, köer och eventuella kontokrav bestäms av tjänsten.');
+        document.getElementById('trosExternalCloudBtn').hidden = true;
+        frame.onload = () => {
+          document.getElementById('trosLoading').style.display = 'none';
+          frame.style.display = 'block';
+        };
+        frame.src = 'https://t9os.space/launcher.html';
+      };
 
       document.getElementById('trosCloseBtn').onclick = () => {
         const closingUuid = activeUuid;
@@ -756,6 +768,7 @@
     overlay.style.display = 'flex';
     document.getElementById('trosLoading').style.display = 'flex';
     document.getElementById('trosGameFrame').style.display = 'none';
+    document.getElementById('trosExternalCloudBtn').hidden = true;
     document.body.style.overflow = 'hidden';
     setStatus(`Loading ${label}…`);
   }
@@ -775,7 +788,8 @@
     launchLog('launch', game, 'key: ' + game.key);
 
     if (game.provider === 'mobile') {
-      setStatus('Ingen mobilspelserver är ansluten.', 'TR-os behöver en dator/server som kör mobilspelen och strömmar bilden. Ingen sådan server finns ansluten ännu.', false);
+      setStatus('Ingen egen mobilspelserver är ansluten.', 'Öppna extern cloud ovan och välj spelet i tjänstens katalog. Tjänsten hanterar sina egna köer och kontokrav.', false);
+      document.getElementById('trosExternalCloudBtn').hidden = false;
       return;
     }
     if (LOCAL_GAMES[game.key]) {
@@ -789,15 +803,18 @@
     }
 
     if (window.TR_OS.cloudConfigured === false) {
-      setStatus("Ingen spelserver är ansluten till TR-os.", "Spelen i Games-menyn kan fortfarande användas. Cloud gaming kräver en dator/server som kör spelen.", false);
+      setStatus("Ingen egen spelserver är ansluten till TR-os.", "Öppna extern cloud ovan och välj spelet i tjänstens katalog.", false);
+      document.getElementById('trosExternalCloudBtn').hidden = false;
       return;
     }
     if (cloudAvailable === false) {
       setStatus("Cloud service is offline.", "Close this panel and try again later. Your game catalog is still available.", false);
+      document.getElementById('trosExternalCloudBtn').hidden = false;
       return;
     }
     if (!window.TR_OS.cloudKeyOnServer && !apiKey()) {
       setStatus("Cloud access key required.", "Close this panel and enter your cloud access key, then try again.", false);
+      document.getElementById('trosExternalCloudBtn').hidden = false;
       return;
     }
     setStatus(`Connecting to cloud service…`, game.name);
