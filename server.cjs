@@ -206,7 +206,7 @@ function createApp(options = {}) {
     if (!['GET', 'HEAD'].includes(req.method)) return json(res, 405, { error: 'Method is not allowed' });
     let decoded;
     try { decoded = decodeURIComponent(route); } catch { return json(res, 400, { error: 'Invalid path' }); }
-    if (decoded.split(/[\\/]/).some(part => part.startsWith('.') || ['node_modules', 'data', 'tests'].includes(part))) return json(res, 404, { error: 'Not found' });
+    if (decoded.split(/[\\/]/).some(part => part.startsWith('.') || ['node_modules', 'data', 'tests', 'api', 'scripts'].includes(part))) return json(res, 404, { error: 'Not found' });
     let file = path.resolve(root, '.' + decoded);
     if (!file.startsWith(root + path.sep) && file !== root) return json(res, 404, { error: 'Not found' });
     try { if (fs.statSync(file).isDirectory()) file = path.join(file, 'index.html'); } catch { return json(res, 404, { error: 'Not found' }); }

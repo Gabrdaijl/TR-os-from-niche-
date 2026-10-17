@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "node scripts/build-vercel.cjs",
+  "outputDirectory": "public",
+  "installCommand": "npm ci --omit=dev",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 300,
+      "includeFiles": "public/**"
+    }
+  },
+  "routes": [
+    { "src": "/tr-os.config.js", "dest": "/api/index" },
+    { "src": "/luncher.html", "status": 308, "headers": { "Location": "/launcher.html" } },
+    { "src": "/(api(?:/.*)?|online|chat(?:/.*)?|cloud/v1(?:/.*)?|tros-ws|wisp-[^/]+/|join)/?", "dest": "/api/index" },
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/api/index" }
+  ]
+}

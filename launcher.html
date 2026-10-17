@@ -718,10 +718,6 @@
           <div id="trosLoadingText" class="text-xl font-bold">Loading…</div>
           <div id="trosStatusSub" class="text-sm text-gray-400"></div>
         </div>
-        <div id="mobileProviderNotice" hidden style="position:absolute;left:12px;right:70px;top:10px;z-index:2;color:#cfe7f5;font-size:13px;">
-          <span>CloudMoon player · Sign in with your own account to play.</span>
-          <a id="mobileProviderLink" target="_blank" rel="noopener noreferrer" style="color:#70bfff;text-decoration:underline;margin-left:10px;">Open player separately ↗</a>
-        </div>
         <iframe id="trosGameFrame" class="w-full h-full hidden bg-black" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen referrerpolicy="no-referrer"></iframe>
         <button id="trosCloseBtn" class="absolute top-4 right-4 bg-black-600 text-white px-4 py-2 rounded-lg hover:bg-black-700 font-bold">X</button>
       `;
@@ -759,12 +755,6 @@
     document.getElementById('trosLoading').style.display = 'flex';
     document.getElementById('trosGameFrame').style.display = 'none';
     document.body.style.overflow = 'hidden';
-    const frame = document.getElementById('trosGameFrame');
-    frame.onload = null;
-    frame.style.position = '';
-    frame.style.top = '';
-    frame.style.height = '';
-    document.getElementById('mobileProviderNotice').hidden = true;
     setStatus(`Loading ${label}…`);
   }
 
@@ -783,24 +773,7 @@
     launchLog('launch', game, 'key: ' + game.key);
 
     if (game.provider === 'mobile') {
-      if (game.status === 4) { setStatus('Provider maintenance.', game.name + ' is temporarily unavailable.'); return; }
-      const url = new URL(game.playerUrl);
-      if (url.origin !== 'https://web.cloudmoonapp.com' || url.pathname !== '/game/' + encodeURIComponent(game.packageName) + '/') {
-        setStatus('Player address is unavailable.', 'Close and select another game.'); return;
-      }
-      const frame = document.getElementById('trosGameFrame');
-      document.getElementById('mobileProviderLink').href = url.href;
-      document.getElementById('mobileProviderNotice').hidden = false;
-      frame.style.position = 'absolute';
-      frame.style.top = '64px';
-      frame.style.height = 'calc(100% - 64px)';
-      frame.onload = () => {
-        if (document.getElementById('trosOverlay').style.display === 'none') return;
-        document.getElementById('trosLoading').style.display = 'none';
-        frame.style.display = 'block';
-      };
-      setStatus('Opening CloudMoon player…', 'Your account and session stay with the game provider.');
-      frame.src = url.href;
+      setStatus('Mobile cloud service is not connected.', 'The original TR-os launcher is restored. A compatible mobile game service is required to start this title.');
       return;
     }
     if (LOCAL_GAMES[game.key]) {
@@ -1012,7 +985,7 @@
     keyInput.hidden = window.TR_OS.cloudKeyOnServer;
     TR_OS.fetch('/api/cloud/status', { signal: AbortSignal.timeout(7000) }).then(response => response.json()).then(status => {
       cloudAvailable = status.configured && status.available;
-      serviceStatus.textContent = !status.configured ? 'PC cloud service is not connected. Mobile titles use the CloudMoon player.' : !status.available ? 'PC cloud service is offline. Mobile titles use the CloudMoon player.' : status.keyRequired ? 'Cloud service reachable. Enter your access key to start a game.' : 'Cloud service reachable. Choose a game to start.';
+      serviceStatus.textContent = !status.configured ? 'Cloud service is not connected. The catalog is available below.' : !status.available ? 'Cloud service is offline. Games cannot start right now.' : status.keyRequired ? 'Cloud service reachable. Enter your access key to start a game.' : 'Cloud service reachable. Choose a game to start.';
     }).catch(() => { serviceStatus.textContent = 'Cloud service could not be checked. Try again later.'; });
     const gsi = document.getElementById('gameSearch');
     if (gsi) gsi.addEventListener('input', () => renderGames(gsi.value));
