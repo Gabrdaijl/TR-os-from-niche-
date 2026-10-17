@@ -65,6 +65,7 @@
   var MV_LOCS = ['mullvad-us', 'mullvad-eu', 'mullvad-se'];
   var RELAY_RE = /^[a-z]{2}-[a-z]{2,4}-wg-[0-9]+\.conf$/;
   var MV_STATUS = null;
+  var MV_EXIT_STATE = null;
   function mvEnabled() {
     if (window.TR_OS.vpnConfigured === false) return false;
     try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (er) { return true; }
@@ -103,8 +104,11 @@
       var route = '';
       try { route = wispRoute(); } catch (e9) {}
       if (route === WISP_ROUTES.vps) {
-        ex.textContent = 'VPS direct';
-        ex.title = 'Traffic exits via VPS (server IP) - pick a Mullvad exit or press MV ON';
+        ex.textContent = 'Direct proxy';
+        ex.title = 'Proxy connection without the Mullvad tunnel';
+      } else if (MV_EXIT_STATE !== 'vpn') {
+        ex.textContent = MV_EXIT_STATE === 'direct' ? 'VPN verification failed' : 'Checking VPN…';
+        ex.title = 'The VPN exit has not been verified through the active proxy';
       } else if (on && MV_STATUS && (MV_STATUS.city || MV_STATUS.country || MV_STATUS.relay)) {
         ex.textContent = mvExitText();
         ex.title = 'Live proxy exit via Mullvad';
@@ -492,6 +496,7 @@
     locSel.value = cur;
   }
   function mvFirstRelay() {
+    if (MV_STATUS && RELAY_RE.test(MV_STATUS.relay) && Array.from(locSel.options).some(option => option.value === MV_STATUS.relay)) return MV_STATUS.relay;
     for (var i = 0; i < locSel.options.length; i++) {
       if (RELAY_RE.test(locSel.options[i].value)) return locSel.options[i].value;
     }
@@ -536,6 +541,7 @@
       try { localStorage.setItem('tros-loc', want); } catch (e4) {}
     }
     locSel.value = want;
+    if (want === 'vps') setMvEnabled(false);
     locSel.title = 'Mullvad exit (shared by all users)';
     try { if (RELAY_RE.test(locSel.value)) localStorage.setItem('tros-mvloc', locSel.value); } catch (e5) {}
     syncLocSel();
@@ -613,17 +619,19 @@
     try {
       if (!__sj || !__sjReady || typeof __sj.encodeUrl !== 'function') return;
       if (ex) { ex.title = 'Checking live exit through Scramjet...'; }
-      var url = __sj.encodeUrl('https://api.ipify.org/?t=' + Date.now());
+      var checkedRoute = wispRoute();
+      var url = __sj.encodeUrl('https://am.i.mullvad.net/json');
       var ctl = null;
       try { ctl = new AbortController(); } catch (e) { ctl = null; }
       var to = setTimeout(function () { try { ctl.abort(); } catch (e2) {} }, 15000);
-      var r = await window.TR_OS.fetch(url, { signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
-      clearTimeout(to);
-      var ip = ((await r.text()) || '').trim().split(/\s+/)[0] || '';
-      if (!ip) return;
-      var exp = null;
-      try { exp = MV_STATUS && MV_STATUS.exit_ip; } catch (e3) {}
-      if (!exp || ip !== exp) {
+      var r;
+      try { r = await window.TR_OS.fetch(url, { signal: ctl ? ctl.signal : undefined, cache: 'no-store' }); }
+      finally { clearTimeout(to); }
+      if (!r.ok) throw new Error('Exit check unavailable');
+      var exit = await r.json();
+      if (checkedRoute !== wispRoute()) return;
+      MV_EXIT_STATE = exit.mullvad_exit_ip === true ? 'vpn' : 'direct';
+      if (checkedRoute !== WISP_ROUTES.vps) {
         try {
           var sr = await window.TR_OS.fetch('api/mullvad/status');
           var st = await sr.json();
@@ -631,10 +639,10 @@
         } catch (e5) {}
       }
       syncMvUI();
-      if (ex) { ex.textContent = mvExitText(); }
-    } catch (e4) {}
+    } catch (e4) { MV_EXIT_STATE = null; syncMvUI(); if (ex) ex.title = 'Exit verification is unavailable. Click to retry.'; }
   }
   async function mvReapply() {
+    MV_EXIT_STATE = null;
     try { await applyTransport(); } catch (e5) {}
     try { syncMvUI(); } catch (e6) {}
     try { await mvCheckExit(); } catch (e7) {}
@@ -723,9 +731,9 @@
     try { on2 = mvEnabled(); } catch (e) {}
     var loc2 = '';
     try { loc2 = localStorage.getItem('tros-loc') || ''; } catch (e2) {}
-    if (on2 && MV_STATUS && MV_STATUS.relay) {
+    if (on2 && loc2 !== 'vps' && MV_STATUS && MV_STATUS.relay) {
       var parts = String(MV_STATUS.relay).split('-');
-      mc.textContent = 'vpn: ' + mvFlag(parts[0] || '') + ' ' + (parts[1] || '') + ' - ' + MV_STATUS.relay.replace(/\.conf$/, '');
+      mc.textContent = 'vpn: ' + (MV_EXIT_STATE === 'vpn' ? 'verified · ' : 'unverified · ') + mvFlag(parts[0] || '') + ' ' + (parts[1] || '') + ' - ' + MV_STATUS.relay.replace(/\.conf$/, '') + (window.TR_OS.proxyProvider === 'reference' ? ' · shared t9os.space exit' : ' · shared exit');
     } else if (!on2 || loc2 === 'vps') {
       mc.textContent = 'vpn: direct (VPS)';
     } else {
@@ -744,7 +752,7 @@
     if (!data || !data.relays || !data.relays.length) {
       var em = document.createElement('div');
       em.style.cssText = 'padding:16px 8px;color:#8e8e93;font-size:12px;';
-      em.textContent = 'could not load exits - check connection';
+      em.textContent = window.TR_OS.vpnConfigured === false ? 'No VPN service configured. Direct proxy remains available.' : 'Could not load VPN exits. Reopen this panel to retry.';
       list.appendChild(em);
       return;
     }
@@ -784,10 +792,11 @@
     var logo = document.getElementById('mv-logo-btn');
     if (logo && !logo.dataset.wired) {
       logo.dataset.wired = '1';
-      logo.addEventListener('click', async () => {
+      logo.addEventListener('click', async (event) => {
+        event.stopPropagation();
         var panel = document.getElementById('mv-panel');
         if (!panel) return;
-        if (panel.hidden) { await mvBuildPanel(); panel.hidden = false; }
+        if (panel.hidden) { panel.hidden = false; await mvBuildPanel(); }
         else { panel.hidden = true; }
       });
     }

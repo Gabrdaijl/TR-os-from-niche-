@@ -217,6 +217,12 @@
       display:flex;align-items:center;
       padding:0 18px;gap:14px;
     }
+    #tros-player-source,#tros-player-next{
+      flex:0 0 auto;min-width:0;width:auto;max-width:110px;
+      height:28px;padding:3px 8px;font-size:11px;border-radius:7px;
+    }
+    #tros-player-source{width:86px}
+    @media(max-width:600px){#tros-player-bar{padding:0 8px;gap:7px}#tros-player-title{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#tros-player-sub{display:none}}
     #tros-player-back{
       width:38px;height:38px;border-radius:50%;
       background:rgba(255,255,255,.15);

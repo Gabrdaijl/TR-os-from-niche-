@@ -7,6 +7,18 @@ const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 
+function proxyEnvironment(source) {
+  const env = { ...source };
+  if ((env.PROXY_PROVIDER || 'reference') === 'reference') {
+    env.PROXY_PROVIDER = 'reference';
+    env.PROXY_WISP_URL ||= 'wss://t9os.space/wisp-vps/';
+    env.VPN_WISP_URL ||= 'wss://t9os.space/wisp-mullvad/';
+    env.VPN_API_URL ||= 'https://t9os.space';
+    env.CLOUD_API_URL ||= 'https://t9os.space';
+  }
+  return env;
+}
+
 function createApp(options = {}) {
   const root = options.root || __dirname;
   const env = options.env || process.env;
@@ -83,7 +95,7 @@ function createApp(options = {}) {
     });
     if (route === '/tr-os.config.js') {
       res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' });
-      return res.end('window.TR_OS_CONFIG = ' + JSON.stringify({ apiBase: '', wispBase: '', aiUrl: '/api/ai', hasBackend: true, cloudKeyOnServer: !!env.CLOUD_API_KEY, cloudConfigured: !!env.CLOUD_API_URL, vpnConfigured: !!env.VPN_API_URL && !!env.VPN_WISP_URL }) + ';');
+      return res.end('window.TR_OS_CONFIG = ' + JSON.stringify({ apiBase: '', wispBase: '', aiUrl: '/api/ai', hasBackend: true, cloudKeyOnServer: !!env.CLOUD_API_KEY, cloudConfigured: !!env.CLOUD_API_URL, vpnConfigured: !!env.VPN_API_URL && !!env.VPN_WISP_URL, proxyProvider: env.PROXY_PROVIDER || (env.PROXY_WISP_URL ? 'custom' : 'direct') }) + ';');
     }
     if (route === '/online') {
       if (req.method === 'GET') return json(res, 200, { online: activeCount() });
@@ -195,6 +207,7 @@ function createApp(options = {}) {
     json(res, error.status || 502, { error: error.status ? error.message : 'The connected service could not be reached.' });
   }));
   const chatWs = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  const proxyWs = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 * 1024 });
   chatWs.on('connection', socket => {
     sockets.add(socket);
     socket.on('error', () => {});
@@ -207,6 +220,23 @@ function createApp(options = {}) {
   wisp.options.allow_private_ips = false;
   wisp.options.allow_loopback_ips = false;
   wisp.options.port_whitelist = [80, 443];
+  function relayWisp(req, socket, head, target) {
+    const upstream = new WebSocket(target);
+    const timer = setTimeout(() => { upstream.terminate(); socket.destroy(); }, 10000);
+    socket.once('close', () => upstream.terminate());
+    upstream.on('error', () => { clearTimeout(timer); socket.destroy(); });
+    upstream.on('open', () => {
+      clearTimeout(timer);
+      proxyWs.handleUpgrade(req, socket, head, client => {
+        sockets.add(client);
+        client.on('message', (data, binary) => { if (upstream.readyState === WebSocket.OPEN) upstream.send(data, { binary }); });
+        upstream.on('message', (data, binary) => { if (client.readyState === WebSocket.OPEN) client.send(data, { binary }); });
+        client.on('close', () => { sockets.delete(client); upstream.close(); });
+        client.on('error', () => upstream.close());
+        upstream.on('close', () => client.close());
+      });
+    });
+  }
   server.on('upgrade', (req, socket, head) => {
     socket.on('error', () => {});
     if (req.headers.origin) {
@@ -215,17 +245,12 @@ function createApp(options = {}) {
     }
     const route = new URL(req.url, 'http://localhost').pathname;
     if (route === '/tros-ws') return chatWs.handleUpgrade(req, socket, head, ws => chatWs.emit('connection', ws, req));
-    if (route === '/wisp-vps/') return wisp.routeRequest(req, socket, head);
+    if (route === '/wisp-vps/') {
+      if (env.PROXY_WISP_URL) return relayWisp(req, socket, head, env.PROXY_WISP_URL);
+      return wisp.routeRequest(req, socket, head);
+    }
     if (/^\/wisp-mullvad(?:-(?:us|eu|se))?\/$/.test(route) && env.VPN_WISP_URL) {
-      const upstream = new WebSocket(env.VPN_WISP_URL);
-      upstream.on('error', () => socket.destroy());
-      return upstream.on('open', () => chatWs.handleUpgrade(req, socket, head, client => {
-        client.on('message', (data, binary) => { if (upstream.readyState === WebSocket.OPEN) upstream.send(data, { binary }); });
-        upstream.on('message', (data, binary) => { if (client.readyState === WebSocket.OPEN) client.send(data, { binary }); });
-        client.on('close', () => upstream.close());
-        client.on('error', () => upstream.close());
-        upstream.on('close', () => client.close());
-      }));
+      return relayWisp(req, socket, head, env.VPN_WISP_URL);
     }
     socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n');
   });
@@ -236,15 +261,15 @@ function createApp(options = {}) {
     while (messages.length && messages[0].ts < cutoff) messages.shift();
   }, 60000);
   cleanup.unref();
-  server.on('close', () => { clearInterval(cleanup); chatWs.close(); });
+  server.on('close', () => { clearInterval(cleanup); chatWs.close(); proxyWs.close(); });
   return { server, close: () => { for (const socket of sockets) socket.terminate(); server.closeAllConnections(); return new Promise(resolve => server.close(resolve)); } };
 }
 
 function start() {
   if (typeof process.loadEnvFile === 'function') { try { process.loadEnvFile(path.join(__dirname, '.env')); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
-  const app = createApp();
+  const app = createApp({ env: proxyEnvironment(process.env) });
   app.server.listen(Number(process.env.PORT || 8173), process.env.HOST || '127.0.0.1', () => console.log('TR-os: http://localhost:' + app.server.address().port));
   return app;
 }
-module.exports = { createApp, start };
+module.exports = { createApp, start, proxyEnvironment };
 if (require.main === module) start();

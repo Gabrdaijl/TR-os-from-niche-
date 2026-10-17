@@ -17,15 +17,15 @@ npm start
 
 GitHub lagrar koden; GitHub Pages kan inte köra Node-backenden. Kör `npm start` på en Node-kompatibel host eller bygg den medföljande Dockerfilen. Sätt `HOST=0.0.0.0` på en host som kräver det, använd HTTPS och vidarebefordra WebSocket-uppgraderingar i reverse proxyn. Frontend, service worker och backend ska ligga på samma domän.
 
-Servern blockerar åtkomst till serverkod, miljöfiler och paketmappar. Direkt proxy tillåter webbportarna 80 och 443; privata och lokala IP-adresser blockeras.
+Servern blockerar åtkomst till serverkod, miljöfiler och paketmappar. Med PROXY_PROVIDER=direct tillåter den lokala direktproxyn webbportarna 80 och 443; privata och lokala IP-adresser blockeras.
 
 ## AI, VPN och molnspel
 
 Kopiera `.env.example` till `.env` lokalt och fyll i de tjänster du äger. Miljöfilen ska aldrig läggas på GitHub.
 
 - AI: ange `AI_URL` till en OpenAI-kompatibel chat-completions-endpoint, `AI_KEY` och eventuellt `AI_MODEL`. Alternativt används en lokal Ollama-server på `OLLAMA_URL` med modellen `OLLAMA_MODEL`; Ollama och modellen måste redan finnas och vara startade. Inga AI-svar simuleras.
-- VPN: ange `VPN_API_URL` för ett eget API med `/api/mullvad/relays`, `/status` och `/switch`, samt `VPN_WISP_URL` för dess proxyutgång. Utan detta används direkt proxy.
-- Molnspel: ange `CLOUD_API_URL` till en tjänst som implementerar frontendens `/cloud/v1/*`-kontrakt. `CLOUD_API_KEY` kan hållas på servern. En giltig leverantör och spelrättigheter krävs.
+- Proxy/VPN: standardläget `PROXY_PROVIDER=reference` använder de offentliga Wisp- och Mullvad-API:erna hos t9os.space. Både VPN-trafik och direkt proxy går då genom deras servrar. VPN-utgången delas och ett serverbyte påverkar andra användare av samma tjänst. TR-os äger inte dessa servrar och deras tillgänglighet kan inte garanteras. VPN verifieras genom Mullvads kontroll-API via den aktiva proxyn. Sätt `PROXY_PROVIDER=direct` för enbart lokal direktproxy. Med `PROXY_PROVIDER=custom` används egna `VPN_API_URL`, `VPN_WISP_URL` och eventuellt `PROXY_WISP_URL`.
+- Molnspel: referensläget ansluter samma `/cloud/v1/*`-API hos t9os.space; det kräver att tjänsten är tillgänglig och att en giltig åtkomstnyckel finns. Ange annars `CLOUD_API_URL` till en egen tjänst som implementerar frontendens `/cloud/v1/*`-kontrakt. `CLOUD_API_KEY` kan hållas på servern. En giltig leverantör och spelrättigheter krävs.
 - Cheats: `JOIN_URL` anger den spel-/undervisningstjänst som knappen ska öppna. Utan egen JOIN_URL öppnas den offentliga Cheats-sidan från t9os.space genom TR-os-proxyn. Den integrationen beror på originaloperatörens tillgänglighet.
 - Filmmetadata: `TMDB_API_KEY` kan sättas på servern. Filmplanschernas proxy följer samma API-bas som övriga anrop.
 

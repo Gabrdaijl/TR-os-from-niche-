@@ -2,7 +2,7 @@
 
 <html lang="en" class="fx-ready" data-tros-theme="dark"><head>
   <script src="tr-os.config.js"></script>
-  <script src="tr-os.runtime.js"></script><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <script src="tr-os.runtime.js"></script><script src="cloud-stream.js"></script><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script><style>/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
@@ -648,6 +648,7 @@
            <div class="bg-blue-300 rounded-2xl flex flex-col gap-2 p-2 items-center" style="width:100%;height:100dvh;min-height:100dvh;margin:0;border-radius:0;border:none;">
              <div class="flex justify-center w-full py-2">
                         <input id="gameSearch" type="text" placeholder="Search 225+ cloud titles..." class=" font-sans h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl transition-all duration-300 ease-out" style="width:min(350px,70vw);" onfocus="this.style.width='min(550px,92vw)'" onblur="this.style.width='min(350px,70vw)'">
+<input id="apiKeyInput" type="password" placeholder="Cloud access key" autocomplete="off" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none">
                         </div>
             <div id="gameGrid" class="flex gap-2 p-2 items-center justify-center" style="flex-wrap:wrap;overflow-y:auto;align-content:flex-start;width:100%;flex:1;min-height:0;"><div class="bg-blue-400 p-2 rounded-xl w-50 h-62 flex flex-col items-center justify-start cursor-pointer hover:bg-blue-500 transition-all m-1 relative fx-item">
           <img src="https://download-oss.raccoongame.com/uploads/image/20260304/20260304175808508.jpg" class="w-full h-34 object-cover rounded-md" alt="Grand Theft Auto V">
@@ -1552,7 +1553,7 @@
         </div></div>
            </div>
 
-                      <input id="apiKeyInput" type="password" placeholder="Cloud API key" autocomplete="off" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none">
+                      
 
           <script>
   const API_BASE = "";
@@ -1834,12 +1835,7 @@
     let input = document.getElementById('apiKeyInput');
     let key = input ? input.value.trim() : "";
 
-    if (!key) {
-      key = prompt("Enter your Cloud Gaming API Key to launch:");
-      if (input && key) {
-        input.value = key;
-      }
-    }
+
     return key;
   }
 
@@ -1924,6 +1920,10 @@
       setStatus("Cloud gaming is unavailable right now.", "You can still play games from the Games menu.");
       return;
     }
+    if (!window.TR_OS.cloudKeyOnServer && !apiKey()) {
+      setStatus("Cloud access key required.", "Close this panel and enter your cloud access key, then try again.");
+      return;
+    }
     setStatus(`Launching ${game.name}…`);
     let res;
     try {
@@ -1946,27 +1946,12 @@
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    let settled = false;
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, idx).trim();
-        buf = buf.slice(idx + 1);
-        if (!line) continue;
-        let msg;
-        try { msg = JSON.parse(line); } catch { continue; }
-        await handleStreamMsg(msg, game);
-        if (msg.status === "error" || msg.status === "finished_queue") { settled = true; return; }
-      }
+    try {
+      const status = await TR_OS_CLOUD.readSessionStream(res, msg => handleStreamMsg(msg, game), abortCtrl.signal);
+      if (!status) setStatus("Cloud server ended the connection.", "Close and try the game again.");
+    } catch (error) {
+      if (error.name !== 'AbortError') setStatus("Cloud connection interrupted.", "Close and try again.");
     }
-    if (!settled) setStatus("Stream ended before slot ready.", "Tap the game again to retry.");
   }
 
   async function handleStreamMsg(msg, game) {
@@ -2046,7 +2031,7 @@
     frame.onload = () => {
       document.getElementById('trosLoading').style.display = 'none';
       frame.style.display = 'block';
-      setStatus("Live", "Streaming — click inside to capture keyboard/mouse.");
+      setStatus("Player loaded", "Click inside to capture keyboard/mouse.");
       launchLog('loaded', game, 'uuid: ' + activeUuid);
     };
 

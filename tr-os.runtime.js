@@ -65,6 +65,7 @@
     apiBase,
     identity,
     vpnConfigured: cfg.vpnConfigured,
+    proxyProvider: cfg.proxyProvider,
     cloudKeyOnServer: !!cfg.cloudKeyOnServer,
     cloudConfigured: cfg.cloudConfigured,
     ensureServiceWorker,
