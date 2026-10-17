@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
+const { createPresence } = require('./presence.cjs');
 
 function proxyEnvironment(source) {
   const env = { ...source };
@@ -30,6 +31,7 @@ function createApp(options = {}) {
   let requestCount = 0, serverErrors = 0;
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
+  const presence = createPresence(env, activeCount);
   const json = (res, status, data) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
@@ -101,14 +103,15 @@ function createApp(options = {}) {
         if (!allowed(req, 'admin-login', 5)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
         return json(res, 401, { error: 'Fel lösenord eller utloggad.' });
       }
+      const livePresence = await presence.snapshot();
       return json(res, 200, {
         checkedAt: new Date().toISOString(), startedAt: new Date(startedAt).toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
-        activeSessions: activeCount(), websocketConnections: sockets.size,
+        activeSessions: livePresence.presence.source === 'redis' ? livePresence.online : null, recentVisitors: livePresence.recentVisitors, localSessions: activeCount(), presence: livePresence.presence, websocketConnections: sockets.size,
         requests: requestCount, serverErrors, memoryMB: Math.round(process.memoryUsage().rss / 1048576),
-        scope: 'Denna serverinstans. Sessioner är inte unika personer. Vercel kan köra flera instanser och nollställa räknarna vid omstart.',
+        scope: livePresence.presence.source === 'redis' ? 'Aktiva webbläsare räknas gemensamt i Redis över alla serverinstanser. Flera flikar i samma webbläsare räknas en gång. Aktiv = livssignal under de senaste 90 sekunderna. Övriga driftvärden gäller denna serverinstans.' : 'Gemensam besöksräkning är inte tillgänglig. Ingen lokal siffra visas som globalt antal. Övriga driftvärden gäller denna serverinstans.',
         services: {
-          server: 'Tillgänglig', proxy: 'Egen Wisp-server aktiverad; externa mål kan neka åtkomst',
+          server: 'Tillgänglig', database: livePresence.presence.source === 'redis' ? 'Redis ansluten · gemensam närvaro' : livePresence.presence.source === 'unavailable' ? 'Databasen svarar inte' : 'Gemensam databas inte ansluten', proxy: 'Egen Wisp-server aktiverad; externa mål kan neka åtkomst',
           ai: env.AI_URL ? 'Eget server-API konfigurerat; svar inte verifierat här' : 'Lokal AI och offentligt externt AI-alternativ i chatten',
           vpn: env.VPN_API_URL && env.VPN_WISP_URL ? 'VPN-backend konfigurerad; tunnel inte verifierad här' : 'Ingen egen VPN-tunnel ansluten',
           movies: env.TMDB_KEY ? 'Filmmetadata konfigurerad; uppspelning beror på extern källa' : 'Ingen egen TMDB-nyckel konfigurerad',
@@ -128,11 +131,12 @@ function createApp(options = {}) {
       return res.end('window.TR_OS_CONFIG = ' + JSON.stringify({ apiBase: '', wispBase: '', aiUrl: '/api/ai', hasBackend: true, cloudKeyOnServer: !!env.CLOUD_API_KEY, cloudConfigured: !!env.CLOUD_API_URL, vpnConfigured: !!env.VPN_API_URL && !!env.VPN_WISP_URL, proxyProvider: env.PROXY_PROVIDER || (env.PROXY_WISP_URL ? 'custom' : 'direct') }) + ';');
     }
     if (route === '/online') {
-      if (req.method === 'GET') return json(res, 200, { online: activeCount() });
+      if (req.method === 'GET') return json(res, 200, await presence.snapshot());
       if (req.method !== 'POST') return json(res, 405, { error: 'Use GET or POST' });
       const data = await body(req);
       let user = authenticated(data.token, data.secret);
-      if (data.leave) return json(res, 200, { online: activeCount() });
+      // A closing tab must not remove another tab using the same browser ID.
+      if (data.leave) return json(res, 200, await presence.snapshot());
       if (!user) {
         if (sessions.size >= 10000) return json(res, 503, { error: 'Server is busy' });
         const token = crypto.randomUUID();
@@ -141,7 +145,7 @@ function createApp(options = {}) {
       }
       user.seen = Date.now();
       broadcast();
-      return json(res, 200, { token: user.token, secret: user.secret, online: activeCount(), banned: false });
+      return json(res, 200, { token: user.token, secret: user.secret, ...await presence.snapshot(data.visitorId), banned: false });
     }
     if (route === '/chat/room' && req.method === 'GET') return json(res, 200, { messages: messages.filter(m => m.to === 'all' && m.ts > Number(url.searchParams.get('since') || 0)).slice(-100) });
     if (route === '/chat/inbox' && req.method === 'GET') {

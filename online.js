@@ -1,1 +1,47 @@
-(()=>{const run=async()=>{try{await window.TR_OS.identity()}catch(e){}const el=document.getElementById("online");const show=n=>{if(el&&typeof n==="number")el.textContent=n};const ORIGIN=window.TR_OS.apiBase;let apiBase=null;async function xfetch(path,opts){const o=Object.assign({cache:"no-store"},opts);const order=apiBase===ORIGIN?[ORIGIN,""]:["",ORIGIN];let err=null;for(const b of order){try{const r=await window.TR_OS.fetch(b+path,o);apiBase=b;return r}catch(e){err=e}}throw err}const WS_URL=window.TR_OS.wispUrl("/tros-ws");const KEY="tros-online-id";const SKEY="tros-online-secret";let token=null,secret="";try{token=localStorage.getItem(KEY)}catch(e){}try{secret=localStorage.getItem(SKEY)||""}catch(e){}if(!token){token=crypto.randomUUID?crypto.randomUUID():"t-"+Date.now()+"-"+Math.random().toString(36).slice(2);try{localStorage.setItem(KEY,token)}catch(e){}}let banShown=false;function setBanned(on){if(on===banShown)return;banShown=on;let ov=document.getElementById("_banned");if(on){if(!ov){ov=document.createElement("div");ov.id="_banned";ov.style.cssText="position:fixed;inset:0;z-index:99999;background:#0a0a0a;color:#e5e5e5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:inherit;text-align:center;padding:24px;";const t=document.createElement("div");t.style.cssText="font-size:28px;font-weight:800;";t.textContent="You are banned";const s=document.createElement("div");s.style.cssText="font-size:14px;opacity:.7;max-width:420px;";s.textContent="This IP has been blocked from TR-os. Contact the owner if this is a mistake.";ov.appendChild(t);ov.appendChild(s);document.body.appendChild(ov)}else ov.style.display="flex"}else if(ov)ov.style.display="none"}async function heartbeat(){try{token=localStorage.getItem(KEY)||token;secret=localStorage.getItem(SKEY)||secret}catch(e){}try{const r=await xfetch("/online",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token,secret:secret,page:location.pathname})});const d=await r.json();if(d&&d.banned)setBanned(true);else setBanned(false);if(d&&typeof d.online==="number")show(d.online);if(d&&typeof d.token==="string"&&d.token!==token){token=d.token;try{localStorage.setItem(KEY,token)}catch(e){}}if(d&&typeof d.secret==="string"&&d.secret!==secret){secret=d.secret;try{localStorage.setItem(SKEY,secret)}catch(e){}}}catch(e){try{const r=await xfetch("/online",{cache:"no-store"});const d=await r.json();if(d&&typeof d.online==="number")show(d.online)}catch(e2){}}}heartbeat();setInterval(heartbeat,1e4);let partyAudio=null,partyTrack=null,partyDisco=false;function ensureDisco(){let ov=document.getElementById("_disco");if(ov)return ov;ov=document.createElement("div");ov.id="_disco";ov.style.cssText="position:fixed;inset:0;z-index:99998;pointer-events:none;display:none;background:linear-gradient(124deg,#ff004c,#ff8a00,#ffee00,#00ff85,#00cfff,#8a00ff,#ff004c);background-size:600% 600%;mix-blend-mode:overlay;opacity:.55;animation:_discoShift 6s ease infinite,_discoBlink .5s steps(2) infinite;";const st=document.createElement("style");st.textContent="@keyframes _discoShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}@keyframes _discoBlink{0%{opacity:.55}100%{opacity:.25}}";document.head.appendChild(st);document.body.appendChild(ov);return ov}function setDisco(on){partyDisco=!!on;try{ensureDisco().style.display=partyDisco?"block":"none"}catch(e){}}function setTrack(track,startedAt){try{if(partyAudio){try{partyAudio.pause()}catch(e){}partyAudio=null}partyTrack=null;promptedTrack=null;const oldPop=document.getElementById("_musicpop");if(oldPop)oldPop.remove();return;if(!track){return}}catch(e){}}function unlockAudio(){}let promptedTrack=null;function askMusic(){try{const stale=document.getElementById("_musicpop");if(stale)stale.remove()}catch(e){}return}window.addEventListener("click",unlockAudio);window.addEventListener("keydown",unlockAudio);window.addEventListener("touchstart",unlockAudio,{passive:true});window.addEventListener("mousemove",unlockAudio);const AUD_ID=crypto.randomUUID?crypto.randomUUID():"a-"+Date.now()+"-"+Math.random().toString(36).slice(2);const AUD_KEY="tros-audio-leader";let audLeader=false;function audElect(){try{let cur=null;try{cur=JSON.parse(localStorage.getItem(AUD_KEY)||"null")}catch(e){}const now=Date.now();if(!cur||!cur.ts||now-cur.ts>6e3){try{localStorage.setItem(AUD_KEY,JSON.stringify({id:AUD_ID,ts:now}))}catch(e){}audLeader=true}else{audLeader=cur.id===AUD_ID;if(audLeader){try{localStorage.setItem(AUD_KEY,JSON.stringify({id:AUD_ID,ts:now}))}catch(e){}}}}catch(e){audLeader=true}try{if(partyAudio){try{partyAudio.pause()}catch(e){}partyAudio=null}}catch(e){}}setInterval(audElect,3e3);audElect();let partyBg=null;function setBg(url){try{if(partyBg===url)return;partyBg=url;if(!url){document.body.style.backgroundImage="";document.body.style.backgroundSize="";document.body.style.backgroundPosition="";document.body.style.backgroundAttachment="";return}document.body.style.backgroundImage='url("'+url+'")';document.body.style.backgroundSize="cover";document.body.style.backgroundPosition="center";document.body.style.backgroundAttachment="fixed"}catch(e){}}async function partySync(){try{const r=await xfetch("/party",{cache:"no-store"});const d=await r.json();if(!d||typeof d!=="object")return;setDisco(!!d.disco);setTrack(d.track||null,d.startedAt||0);setBg(d.bg||null)}catch(e){}}partySync();setInterval(partySync,1e4);let ws=null,pingTimer=null,retry=null,tokenTimer=null;function connect(){try{ws=new WebSocket(WS_URL)}catch(e){retry=setTimeout(connect,5e3);return}ws.addEventListener("open",()=>{try{ws.send(JSON.stringify({token:token}))}catch(e){}pingTimer=setInterval(()=>{if(ws.readyState===WebSocket.OPEN){try{ws.send("ping")}catch(e){}}},1e4);tokenTimer=setInterval(()=>{if(ws.readyState===WebSocket.OPEN){try{ws.send(JSON.stringify({token:token}))}catch(e){}}},3e4)});ws.addEventListener("message",e=>{try{const d=JSON.parse(e.data);if(d&&typeof d.online==="number")show(d.online)}catch(err){}});const backoff=()=>{clearInterval(pingTimer);clearInterval(tokenTimer);clearTimeout(retry);retry=setTimeout(connect,5e3)};ws.addEventListener("close",backoff);ws.addEventListener("error",()=>{try{ws.close()}catch(e){}})}connect();const leave=()=>{clearInterval(pingTimer);clearInterval(tokenTimer);clearTimeout(retry);try{if(ws)ws.close()}catch(e){}try{const data=JSON.stringify({token:token,secret:secret,leave:true});if(navigator.sendBeacon)navigator.sendBeacon(window.TR_OS.apiUrl("/online"),data)}catch(e){}};window.addEventListener("pagehide",leave);window.addEventListener("beforeunload",leave)};if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",run);else run()})();
+(() => {
+  function run() {
+    let runtime = window.TR_OS;
+    try { if (window.parent !== window && window.parent.TR_OS) runtime = window.parent.TR_OS; } catch {}
+    if (!runtime?.presence) return;
+    function show(data) {
+      const el = document.getElementById('online');
+      if (el) { el.textContent = typeof data.online === 'number' ? data.online : '—'; el.title = data.presence?.source === 'redis' ? 'Gemensamt antal aktiva webbläsare, senaste 90 sekunderna' : 'Gemensam besöksräkning är inte tillgänglig'; }
+    }
+    runtime.presence.subscribe(show);
+    // Embedded pages share their parent heartbeat rather than creating sessions.
+    if (runtime !== window.TR_OS || runtime.presence.started) return;
+    runtime.presence.started = true;
+    let pending = false;
+    async function heartbeat() {
+      if (pending) return;
+      pending = true;
+      try {
+        let cached;
+        try { cached = JSON.parse(localStorage.getItem('tros-presence-cache') || 'null'); } catch {}
+        if (cached && Date.now() - cached.at < 25000) { runtime.presence.publish(cached.data); return; }
+        await runtime.identity();
+        let token, secret;
+        try { token = localStorage.getItem('tros-online-id'); secret = localStorage.getItem('tros-online-secret'); } catch {}
+        const response = await runtime.fetch('/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret, visitorId: await runtime.visitorId() }), signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw Error('Presence unavailable');
+        const data = await response.json();
+        try {
+          if (data.token) localStorage.setItem('tros-online-id', data.token);
+          if (data.secret) localStorage.setItem('tros-online-secret', data.secret);
+          // Share only anonymous counts with other tabs, never session secrets.
+          localStorage.setItem('tros-presence-cache', JSON.stringify({ at: Date.now(), data: { online: data.online, recentVisitors: data.recentVisitors, presence: data.presence } }));
+        } catch {}
+        runtime.presence.publish(data);
+      } catch { runtime.presence.publish({ online: null, presence: { source: 'unavailable' } }); }
+      finally { pending = false; }
+    }
+    heartbeat();
+    const timer = setInterval(heartbeat, 30000);
+    window.addEventListener('pagehide', () => clearInterval(timer));
+    window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
+    window.addEventListener('storage', event => {
+      if (event.key === 'tros-presence-cache' && event.newValue) { try { runtime.presence.publish(JSON.parse(event.newValue).data); } catch {} }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();

@@ -20,6 +20,27 @@
   }
   let workerReady;
   let identityPromise;
+  let memoryVisitorId;
+  const presenceListeners = new Set();
+  const presence = {
+    latest: null,
+    publish(data) { this.latest = data; for (const listener of presenceListeners) listener(data); },
+    subscribe(listener) { presenceListeners.add(listener); if (this.latest) listener(this.latest); return () => presenceListeners.delete(listener); }
+  };
+  async function visitorId() {
+    const read = () => {
+      let id;
+      try { id = localStorage.getItem('tros-visitor-id'); } catch (_) {}
+      if (!id || !/^[a-f0-9-]{36}$/i.test(id)) {
+        id = memoryVisitorId || crypto.randomUUID();
+        memoryVisitorId = id;
+        try { localStorage.setItem('tros-visitor-id', id); } catch (_) {}
+      }
+      return id;
+    };
+    if (navigator.locks) return navigator.locks.request('tros-visitor-id', read);
+    return read();
+  }
   function identity() {
     try {
       if (window.parent !== window && window.parent.TR_OS) return window.parent.TR_OS.identity();
@@ -27,7 +48,7 @@
     if (!identityPromise) identityPromise = (async function () {
       let token, secret;
       try { token = localStorage.getItem('tros-online-id'); secret = localStorage.getItem('tros-online-secret'); } catch (_) {}
-      const response = await nativeFetch(apiUrl('/online'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret }), signal: AbortSignal.timeout(10000) });
+      const response = await nativeFetch(apiUrl('/online'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret, visitorId: await visitorId() }), signal: AbortSignal.timeout(10000) });
       if (!response.ok) throw new Error('Online service unavailable');
       const data = await response.json();
       if (typeof data.token !== 'string' || typeof data.secret !== 'string') throw new Error('Invalid online session');
@@ -64,6 +85,8 @@
   window.TR_OS = Object.freeze({
     apiBase,
     identity,
+    visitorId,
+    presence,
     vpnConfigured: cfg.vpnConfigured,
     proxyProvider: cfg.proxyProvider,
     cloudKeyOnServer: !!cfg.cloudKeyOnServer,

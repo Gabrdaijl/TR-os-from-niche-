@@ -57,3 +57,10 @@ Lokal AI: TR-os lokal AI kör SmolLM2 360M med WebLLM på besökarens WebGPU. Mo
 
 
 
+
+## Gemensam besöksräkning
+
+Närvaro lagras i Upstash Redis via serverns KV_REST_API_URL och KV_REST_API_TOKEN (eller UPSTASH_REDIS_REST_URL/TOKEN). Webbläsaren skickar ett anonymt ID var 30:e sekund. Redis räknar gemensamt över alla instanser: aktiva under 90 sekunder och unika webbläsare under ett rullande 30-minutersfönster. Flera flikar delar ID. Databasen sparar bara en hash av ID och senaste tidsstämpeln, inga IP-adresser eller chattmeddelanden. Gamla poster rensas och nyckeln löper ut efter en timme utan livssignaler. Vid databasfel visas okänt, inte falskt noll eller lokala sessionsantal.
+
+Adminens servervärden gäller fortfarande den aktuella serverinstansen. Chattmeddelanden och sessionsautentisering använder befintlig serverlagring och omfattas inte av närvarodatabasen. Production har databasanslutning; Preview delar inte besöksdata.
+

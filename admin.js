@@ -4,7 +4,7 @@
   function logout() {
     authorization = ''; clearInterval(timer); $('password').value = '';
     $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
-    $('login').hidden = false; $('logout').style.display = 'none';
+    $('login').hidden = false; $('logout').hidden = true;
   }
   async function refresh() {
     if (pending) return;
@@ -15,18 +15,30 @@
       const data = await response.json();
       if (!response.ok) { logout(); throw Error(data.error || 'Status kunde inte hämtas'); }
       $('message').textContent = '';
-      $('login').hidden = true; $('dashboard').hidden = false; $('logout').style.display = 'block';
-      const metrics = [['Aktiva sessioner', data.activeSessions], ['WebSocket-anslutningar', data.websocketConnections], ['Drifttid', Math.floor(data.uptimeSeconds / 60) + ' min'], ['Anrop', data.requests], ['Serverfel (5xx)', data.serverErrors], ['Minne', data.memoryMB + ' MB']];
+      $('login').hidden = true; $('dashboard').hidden = false; $('logout').hidden = false;
+      $('active-count').textContent = typeof data.activeSessions === 'number' ? data.activeSessions : '—';
+      $('recent-count').textContent = typeof data.recentVisitors === 'number' ? data.recentVisitors : '—';
+      const connected = data.presence?.source === 'redis';
+      $('traffic-state').textContent = connected ? '● LIVE' : 'VÄNTAR';
+      $('db-state').textContent = connected ? '● Live · Redis' : 'Databasen inte tillgänglig';
+      $('db-state').className = connected ? 'state' : 'state warning';
+      const metrics = [['WebSocket-anslutningar', data.websocketConnections], ['Drifttid', Math.floor(data.uptimeSeconds / 60) + ' min'], ['Anrop', data.requests], ['Serverfel (5xx)', data.serverErrors], ['Minne', data.memoryMB + ' MB']];
       $('cards').replaceChildren(...metrics.map(([label, value]) => {
         const card = document.createElement('div'); card.className = 'card';
         const title = document.createElement('h2'); title.textContent = label;
         const number = document.createElement('div'); number.className = 'number'; number.textContent = String(value);
         card.append(title, number); return card;
       }));
-      $('services').replaceChildren(...Object.entries(data.services).flatMap(([name, status]) => {
-        const term = document.createElement('dt'); term.textContent = name;
-        const description = document.createElement('dd'); description.textContent = status;
-        return [term, description];
+      const labels = { server: 'Server', database: 'Databas', proxy: 'Webbproxy', ai: 'AI-chatt', vpn: 'VPN-tunnel', movies: 'Filmer', cloud: 'Cloud gaming', chat: 'Chatt & närvaro' };
+      $('services').replaceChildren(...Object.entries(data.services).map(([name, status]) => {
+        const card = document.createElement('article'); card.className = 'service';
+        const top = document.createElement('div'); top.className = 'service-top';
+        const title = document.createElement('h3'); title.textContent = labels[name] || name;
+        const pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Info';
+        if (name === 'database') { pill.textContent = connected ? 'Ansluten' : 'Saknas'; pill.classList.add(connected ? 'ok' : 'warn'); }
+        if (name === 'server') { pill.textContent = 'Tillgänglig'; pill.classList.add('ok'); }
+        const description = document.createElement('p'); description.textContent = status;
+        top.append(title, pill); card.append(top, description); return card;
       }));
       $('scope').textContent = data.scope;
       $('updated').textContent = 'Senast kontrollerad ' + new Date(data.checkedAt).toLocaleTimeString('sv-SE') + ' · uppdateras var 15:e sekund';
