@@ -651,6 +651,7 @@
                         <input id="gameSearch" type="text" placeholder="Search 441 cloud titles…" class=" font-sans h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl transition-all duration-300 ease-out" style="width:min(350px,70vw);" onfocus="this.style.width='min(550px,92vw)'" onblur="this.style.width='min(350px,70vw)'">
 <p id="catalogCount" style="color:var(--tros-text,#cfe7f5);font-size:13px;order:3;width:100%;text-align:center;"></p>
 <p id="cloudServiceStatus" role="status" style="color:var(--tros-text,#cfe7f5);font-size:13px;text-align:center;padding:4px 12px;order:3;width:100%;">Checking cloud service…</p>
+<button id="externalCloudCatalogBtn" type="button" style="order:3;margin:6px auto;padding:9px 16px;background:#132a38;color:#cfeaff;border:1px solid #24475b;border-radius:8px;cursor:pointer">Starta extern cloud</button>
 <input aria-label="Cloud access key" id="apiKeyInput" type="password" placeholder="Cloud access key" autocomplete="off" class="mx-auto bg-blue-500 text-white px-2 py-1 rounded-lg border border-blue-200 w-40 text-xs outline-none">
                         </div>
             <div id="gameGrid" class="flex gap-2 p-2 items-center justify-center" style="flex-wrap:wrap;overflow-y:auto;align-content:flex-start;width:100%;flex:1;min-height:0;"></div>
@@ -1011,10 +1012,14 @@
     document.getElementById('gameSearch').placeholder = 'Search ' + GAMES.length + ' cloud titles…';
     const serviceStatus = document.getElementById('cloudServiceStatus');
     const keyInput = document.getElementById('apiKeyInput');
-    keyInput.hidden = window.TR_OS.cloudKeyOnServer;
+    keyInput.hidden = window.TR_OS.cloudKeyOnServer || window.TR_OS.cloudConfigured === false;
+    document.getElementById('externalCloudCatalogBtn').addEventListener('click', () => {
+      openOverlay('cloud');
+      document.getElementById('trosExternalCloudBtn').click();
+    });
     TR_OS.fetch('/api/cloud/status', { signal: AbortSignal.timeout(7000) }).then(response => response.json()).then(status => {
       cloudAvailable = status.configured && status.available;
-      serviceStatus.textContent = !status.configured ? 'Cloud service is not connected. The catalog is available below.' : !status.available ? 'Cloud service is offline. Games cannot start right now.' : status.keyRequired ? 'Cloud service reachable. Enter your access key to start a game.' : 'Cloud service reachable. Choose a game to start.';
+      serviceStatus.textContent = !status.configured ? 'Använd Starta extern cloud. Den externa tjänsten hanterar spel, köer och åtkomst.' : !status.available ? 'Cloud service is offline. Games cannot start right now.' : status.keyRequired ? 'Cloud service reachable. Enter your access key to start a game.' : 'Cloud service reachable. Choose a game to start.';
     }).catch(() => { serviceStatus.textContent = 'Cloud service could not be checked. Try again later.'; });
     const gsi = document.getElementById('gameSearch');
     if (gsi) gsi.addEventListener('input', () => renderGames(gsi.value));
