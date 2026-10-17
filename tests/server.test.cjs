@@ -148,3 +148,19 @@ test('cloud lifecycle forwards credentials, queue, player and quit to its provid
  assert.ok(calls.every(call=>call.key==='test-cloud-key'));
  assert.ok(!(await (await fetch(base+'/tr-os.config.js')).text()).includes('test-cloud-key'));
 });
+
+test('cloud status distinguishes missing, reachable and offline providers without exposing credentials', async t => {
+ const { request: missing } = await fixture(t, {});
+ assert.deepEqual((await missing('/api/cloud/status')).data, { configured:false, available:false, keyRequired:false });
+ const provider = http.createServer((req,res) => { res.writeHead(401); res.end(); });
+ await new Promise(resolve => provider.listen(0,'127.0.0.1',resolve));
+ const endpoint = 'http://127.0.0.1:' + provider.address().port;
+ const { request } = await fixture(t, { CLOUD_API_URL:endpoint, CLOUD_API_KEY:'private-cloud-key' });
+ assert.deepEqual((await request('/api/cloud/status')).data,{configured:true,available:true,keyRequired:false});
+ await new Promise(resolve=>provider.close(resolve));
+ assert.deepEqual((await request('/api/cloud/status')).data,{configured:true,available:false,keyRequired:false});
+ const failed = await request('/cloud/v1/createSession',{game_key:'test'});
+ assert.equal(failed.status,503);
+ assert.match(failed.data.error,/could not be reached/);
+ assert.ok(!JSON.stringify(failed.data).includes(endpoint));
+});
