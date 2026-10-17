@@ -6,60 +6,37 @@
   <meta name="color-scheme" content="dark">
   <title>TR-os Cloud</title>
   <style>
-    *{box-sizing:border-box} [hidden]{display:none!important}
-    html,body{margin:0;min-height:100%;background:#080d14;color:#eef5fc;font-family:system-ui,-apple-system,sans-serif}
-    body{min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 25%,#152b414d,transparent 62%),#080d14}
-    main{width:min(100% - 40px,580px);text-align:center;padding:64px 28px}
-    .icon{width:76px;height:76px;margin:0 auto 28px;border:1px solid #2b4056;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#192b3d,#101b29);box-shadow:0 18px 60px #0004;color:#a8d6ff}
-    .brand{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#8ba6be;margin:0 0 14px}
-    h1{font-size:clamp(32px,6vw,48px);font-weight:650;letter-spacing:-.045em;line-height:1.1;margin:0 0 18px}
-    .intro{font-size:16px;line-height:1.7;color:#a2b3c5;margin:0 auto 30px;max-width:360px}
-    button{font:inherit;cursor:pointer}
-    #start-cloud{display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:54px;padding:14px 25px;border:1px solid #aad7ff;border-radius:13px;background:#b8dfff;color:#0b1a29;font-size:15px;font-weight:650;box-shadow:0 8px 36px #7ac3ff1c;transition:background .15s,transform .15s}
-    #start-cloud:hover{background:#d2ebff;transform:translateY(-2px)}
-    button:focus-visible{outline:3px solid #76bfff;outline-offset:5px}
-    .note{max-width:340px;margin:22px auto 0;color:#71869b;font-size:12px;line-height:1.65}
-    #cloud-view{position:fixed;inset:0;background:#080d14;display:flex;flex-direction:column;z-index:10}
-    .toolbar{height:54px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid #223145;background:#0d151f}
-    #back{border:1px solid #2c4055;border-radius:9px;background:#172534;color:#e6f2ff;padding:7px 12px;font-size:13px}
-    .toolbar span{font-size:13px;color:#91a8be}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#080d14;color:#eaf4ff;font:14px system-ui,-apple-system,sans-serif}
+    body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+    header{height:52px;flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:0 16px;background:#0d151f;border-bottom:1px solid #223145}
+    .brand{font-weight:650;letter-spacing:-.02em}.service{color:#8097ad;font-size:12px}
+    button{margin-left:auto;border:1px solid #344f68;border-radius:9px;background:#172a3c;color:#eaf4ff;min-height:34px;padding:6px 13px;font:600 13px system-ui;cursor:pointer}
+    button:hover{background:#223c54}button:focus-visible{outline:3px solid #8acbff;outline-offset:3px}
+    #fullscreen-status{color:#c8d8e8;font-size:12px}
     iframe{display:block;border:0;width:100%;flex:1;min-height:0;background:#000}
-    @media(prefers-reduced-motion:reduce){#start-cloud{transition:none}}
+    @media(max-width:500px){header{padding:0 10px;gap:8px}.service{display:none}}
   </style>
 </head>
 <body>
-  <main id="cloud-home">
-    <div class="icon" aria-hidden="true"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a5 5 0 1 1 .8-9.94A6 6 0 0 1 19 10a4 4 0 0 1-1 8H7Z"/><path d="m10 11 5 3-5 3z" fill="currentColor" stroke="none"/></svg></div>
-    <p class="brand">TR-os Cloud</p>
-    <h1>Spela i molnet.</h1>
-    <p class="intro">Öppna cloudtjänsten och välj ditt spel.</p>
-    <button id="start-cloud" type="button">Starta extern cloud <span aria-hidden="true">↗</span></button>
-    <p class="note">Spel, köer och åtkomst hanteras av den externa tjänsten.</p>
-  </main>
-  <section id="cloud-view" aria-label="Extern cloudtjänst" hidden>
-    <div class="toolbar"><button id="back" type="button">← Tillbaka</button><span>TR-os Cloud · extern tjänst</span></div>
-    <iframe id="cloud-frame" title="Extern cloudspelare" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen referrerpolicy="no-referrer"></iframe>
-  </section>
+  <header><span class="brand">TR-os Cloud</span><span class="service">Extern tjänst</span><span id="fullscreen-status" role="status"></span><button id="fullscreen" type="button" aria-pressed="false">⛶ Fullskärm</button></header>
+  <iframe id="cloud-frame" src="https://t9os.space/launcher.html" title="Cloudspelare" allow="fullscreen; gamepad; autoplay; pointer-lock" allowfullscreen referrerpolicy="no-referrer"></iframe>
   <script>
-    const home = document.getElementById('cloud-home');
-    const view = document.getElementById('cloud-view');
-    const frame = document.getElementById('cloud-frame');
-    const start = document.getElementById('start-cloud');
-    const back = document.getElementById('back');
-    function closeCloud(){
-      view.hidden = true;
-      frame.src = 'about:blank';
-      home.hidden = false;
-      start.focus();
-    }
-    start.addEventListener('click',()=>{
-      home.hidden = true;
-      view.hidden = false;
-      frame.src = 'https://t9os.space/launcher.html';
-      back.focus();
+    const fullscreen = document.getElementById('fullscreen');
+    const status = document.getElementById('fullscreen-status');
+    fullscreen.addEventListener('click', async () => {
+      status.textContent = '';
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen();
+      } catch {
+        status.textContent = 'Fullskärm kunde inte öppnas. Prova F11 på datorn.';
+      }
     });
-    back.addEventListener('click',closeCloud);
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!view.hidden)closeCloud();});
+    document.addEventListener('fullscreenchange', () => {
+      const active = !!document.fullscreenElement;
+      fullscreen.textContent = active ? '⛶ Avsluta fullskärm' : '⛶ Fullskärm';
+      fullscreen.setAttribute('aria-pressed', String(active));
+    });
   </script>
 </body>
 </html>

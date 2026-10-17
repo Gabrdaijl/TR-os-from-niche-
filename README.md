@@ -43,7 +43,7 @@ Spelens HTML filtreras före start och får ett annonsfilter för kända annonsd
 
 ## Cloud launcher
 
-Cloud-sidan visar nu endast Starta extern cloud i ett förenklat gränssnitt. Den externa launchern öppnas i en separat vy med Tillbaka-knapp. Spelkatalog, sökfält, antal och API-nyckelfält laddas inte på Cloud-sidan. Den äldre katalogfilen finns kvar i repot men används inte av sidan. Den externa tjänsten bestämmer spelåtkomst och köer; inga privata nycklar kopieras.
+Cloud-sidan öppnar den externa launchern direkt utan startsida, spelkatalog eller API-nyckelfält. Fullskärmsknappen använder webbläsarens Fullscreen API och huvudramen tillåter fullskärm. Den externa tjänsten bestämmer spelåtkomst och köer; inga privata nycklar kopieras.
 
 ## Vercel
 
@@ -54,5 +54,6 @@ Välj projektets Settings → Domains för att koppla din domän efter en lyckad
 Vercel-funktioner kan startas om och köras i flera instanser. Nuvarande chatt/presens använder minne och behöver delad lagring för pålitlig produktion med flera användare. WebSocket-klienter kan behöva återansluta vid funktionens tidsgräns. VPN, AI och molnspel kräver fortfarande att respektive anslutna tjänst är tillgänglig och har giltig åtkomst. Vercel-publicering tar inte bort dessa krav.
 
 Lokal AI: TR-os lokal AI kör SmolLM2 360M med WebLLM på besökarens WebGPU. Modellfiler hämtas vid första meddelandet och cachelagras av WebLLM. Kräver några hundra MB nedladdning och cirka 580 MB GPU-minne. Det är ingen Duck.ai-API-integration. Serveralternativen kräver fortfarande AI_URL/AI_KEY/AI_MODEL. Cloud gaming kräver egna spelservrar; katalogen är ingen spelserver.
+
 
 
