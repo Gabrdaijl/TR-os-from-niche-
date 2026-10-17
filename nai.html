@@ -219,6 +219,7 @@
   providerSelector.addEventListener('change', () => {
     try { localStorage.setItem('tros-ai-provider', providerSelector.value); } catch {}
     fillModels();
+    updateQuotaUI();
   });
   modelSelector.addEventListener('change', () => { try { localStorage.setItem(modelKey(), modelSelector.value); } catch {} });
   fillModels();
@@ -559,17 +560,19 @@
     return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
   }
   function updateQuotaUI() {
+    const local = currentProvider() === 'local';
+    document.getElementById('quota-count').title = local ? 'Lokal AI har ingen meddelandegräns från TR-os' : 'Serverleverantörens gränser gäller';
     const left = unlimitedOk ? QUOTA_MAX : quotaLeft();
     const el = document.getElementById('quota-count');
     if (el) {
-      el.textContent = unlimitedOk ? '∞' : (left + '/' + QUOTA_MAX);
+      el.textContent = local ? '∞ lokal' : unlimitedOk ? '∞' : (left + '/' + QUOTA_MAX);
       el.style.opacity = 1;
       el.style.fontWeight = unlimitedOk ? 'bold' : (left > 0 ? 'normal' : 'bold');
     }
     const st = document.getElementById('quota-side-text');
-    if (st) { st.textContent = unlimitedOk ? 'unlimited' : (left + '/' + QUOTA_MAX + ' left'); }
+    if (st) { st.textContent = local ? 'Ingen meddelandegräns · lokal AI' : unlimitedOk ? 'unlimited' : (left + '/' + QUOTA_MAX + ' left'); }
     const bar = document.getElementById('quota-bar');
-    if (bar) { bar.style.width = (unlimitedOk ? 100 : Math.round((left / QUOTA_MAX) * 100)) + '%'; }
+    if (bar) { bar.style.width = (local || unlimitedOk ? 100 : Math.round((left / QUOTA_MAX) * 100)) + '%'; }
   }
   let speakCur = null;
   const SVG_COPY = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
@@ -656,7 +659,7 @@
   async function send() {
     const text = input.value.trim();
     if (!text && !pendingFile) return;
-    if (!unlimitedOk && quotaLeft() <= 0) {
+    if (currentProvider() !== 'local' && !unlimitedOk && quotaLeft() <= 0) {
       feed.appendChild(bubble('Message limit reached — 30 messages per 2 hours across both providers. Resets in ' + quotaResetIn() + '.', 'ai').row);
       feed.scrollTop = feed.scrollHeight;
       updateQuotaUI();
@@ -702,18 +705,9 @@
     function typePump() {
       typeTimer = null;
       if (!sText) return;
-      if (typeShown < typeBuf.length) {
-        var n = 2 + Math.floor(Math.random() * 3);
-        typeShown = Math.min(typeBuf.length, typeShown + n);
-        sText.textContent = typeBuf.slice(0, typeShown);
-        feed.scrollTop = feed.scrollHeight;
-        var ch = typeBuf.charAt(typeShown - 1);
-        var delay = 45;
-        if (ch === '.' || ch === '!' || ch === '?' || ch === '\n') delay = 280;
-        else if (ch === ',' || ch === ';' || ch === ':') delay = 140;
-        else if (ch === ' ') delay = 70;
-        typeTimer = setTimeout(typePump, delay);
-      }
+      typeShown = typeBuf.length;
+      sText.textContent = typeBuf;
+      feed.scrollTop = feed.scrollHeight;
     }
     function paintTokens(full) {
       if (!gotToken) {
@@ -845,7 +839,7 @@
       addAiActions(sEl, entry, reply);
     }
     if (requestSucceeded) {
-    if (!unlimitedOk) {
+    if (currentProvider() !== 'local' && !unlimitedOk) {
       try {
         const qa = quotaRead();
         qa.push(Date.now());
