@@ -373,6 +373,28 @@
     } catch (e) {}
   }
   window.trosBrowserNavigate = function (raw) { navigate(raw); };
+  window.trosOpenSnapchat = function () {
+    const tab = activeTab();
+    if (!tab) return;
+    tab.lastUrl = 'https://web.snapchat.com/';
+    tab.favicon = new URL('snapchat.svg', location.href).href;
+    tab.frame.src = 'snapchat.html';
+    renderTabs();
+    syncAddress(true);
+  };
+  window.addEventListener('message', event => {
+    if (event.origin !== location.origin || event.data?.type !== 'tros-snapchat-location') return;
+    const tab = tabs.find(item => item.frame.contentWindow === event.source);
+    if (!tab) return;
+    try {
+      const url = new URL(event.data.url);
+      if (!/^https:$/.test(url.protocol) || !/(^|\.)snapchat\.com$/i.test(url.hostname)) return;
+      tab.lastUrl = url.href;
+      tab.favicon = new URL('snapchat.svg', location.href).href;
+      if (tab.id === activeId) syncAddress();
+      renderTabs();
+    } catch {}
+  });
 
   function syncAddress(force = false) {
     const tab = activeTab();
@@ -395,6 +417,7 @@
       if (!href || href === "about:blank") return;
       let decoded = null;
       const actual = new URL(href, location.href);
+      if (actual.origin === location.origin && actual.pathname.endsWith('/snapchat.html')) return;
       const homeUrl = new URL(HOME, location.href);
       if (actual.origin === homeUrl.origin && actual.pathname === homeUrl.pathname) {
         const changed = tab.lastUrl !== HOME || !!tab.favicon;

@@ -64,3 +64,8 @@ Närvaro lagras i Upstash Redis via serverns KV_REST_API_URL och KV_REST_API_TOK
 
 Adminens servervärden gäller fortfarande den aktuella serverinstansen. Chattmeddelanden och sessionsautentisering använder befintlig serverlagring och omfattas inte av närvarodatabasen. Production har databasanslutning; Preview delar inte besöksdata.
 
+
+### Snapchat compatibility view
+The Snapchat shortcut uses `snapchat.html` with a separate Scramjet 2.0.67-alpha.2 controller (0.0.14) and Epoxy transport 3.0.1. The existing Scramjet/bare-mux proxy remains in place for other pages. The worker dispatches only the new controller's registered `/snap-proxy/` requests to that controller. See `snapchat-notices.html` for upstream source/license information.
+
+App startup and its automatic redirect to Snapchat Web's account login were verified. Account login, security verification and private chat still require user testing; this integration does not bypass Snapchat authentication or security checks.

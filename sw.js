@@ -1,4 +1,4 @@
-// TR-os proxy assets v4: absolute client paths on every frame.
+// TR-os proxy assets v6: independent Snapchat compatibility engine.
 /************************
  * swium dev
  * (literally first dev realize, most of the features arent here)
@@ -48,6 +48,7 @@ if (navigator.userAgent.includes("Firefox")) {
 }
 
 importScripts("scram/scramjet.all.js");
+importScripts("snap-controller.sw.js");
 
 const { ScramjetServiceWorker } = $scramjetLoadWorker();
 const scramjet = new ScramjetServiceWorker();
@@ -281,7 +282,8 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-	event.respondWith(handleRequest(event));
+	if ($scramjetController.shouldRoute(event)) event.respondWith($scramjetController.route(event));
+	else event.respondWith(handleRequest(event));
 });
 
 self.addEventListener("message", ({ data }) => {
