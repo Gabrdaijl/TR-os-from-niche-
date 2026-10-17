@@ -167,6 +167,15 @@
 
   function buildUrl(raw) {
     raw = raw.trim();
+    try {
+      const candidate = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw);
+      if (/^(?:www\.)?google\.(?:com|se|co\.uk|de|fr|es|it|nl|ca|com\.au)$/.test(candidate.hostname) && candidate.pathname === '/') {
+        return candidate.searchParams.has('q') ? 'https://duckduckgo.com/?q=' + encodeURIComponent(candidate.searchParams.get('q')) : 'https://duckduckgo.com/';
+      }
+      if (/^(?:www\.)?google\.(?:com|se|co\.uk|de|fr|es|it|nl|ca|com\.au)$/.test(candidate.hostname) && candidate.pathname === '/search' && candidate.searchParams.has('q')) {
+        return 'https://duckduckgo.com/?q=' + encodeURIComponent(candidate.searchParams.get('q'));
+      }
+    } catch {}
     if (/^https?:\/\//i.test(raw)) return raw;
     if (/\.\w{2,}/.test(raw) && !raw.includes(" ")) return "https://" + raw;
     return "https://duckduckgo.com/?q=" + encodeURIComponent(raw);

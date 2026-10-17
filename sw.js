@@ -187,10 +187,10 @@ async function handleRequest(event) {
     }
     // Shared proxy IPs frequently trigger Google's verification page. Use
     // another search engine instead of trying to load or bypass its CAPTCHA.
-    if (['document', 'iframe'].includes(event.request.destination) || event.request.mode === 'navigate') {
+    {
       const target = new URL(decodeURIComponent(url.pathname.slice(proxyPrefix.length)) + url.search);
       if (/^(?:www\.)?google\.(?:com|se|co\.uk|de|fr|es|it|nl|ca|com\.au)$/.test(target.hostname)) {
-        let query = target.pathname === '/search' ? target.searchParams.get('q') : null;
+        let query = target.pathname === '/search' || target.pathname === '/' ? target.searchParams.get('q') : null;
         const blocked = target.pathname.startsWith('/sorry');
         if (blocked) {
           try { query = new URL(target.searchParams.get('continue')).searchParams.get('q'); } catch {}
@@ -199,6 +199,7 @@ async function handleRequest(event) {
           const search = 'https://duckduckgo.com/?q=' + encodeURIComponent(query);
           return Response.redirect(self.location.origin + proxyPrefix + encodeURIComponent(search), 302);
         }
+        if (target.pathname === '/') return Response.redirect(self.location.origin + proxyPrefix + encodeURIComponent('https://duckduckgo.com/'), 302);
         if (blocked) {
           const search = proxyPrefix + encodeURIComponent('https://duckduckgo.com/');
           return new Response('<!doctype html><html lang="sv"><head><meta charset="utf-8"><title>TR-os</title></head><body style="background:#080f16;color:#d7e8f4;font:16px system-ui;text-align:center;padding:15vh 24px"><h2>Google blockerar proxyanslutningen</h2><p>Använd DuckDuckGo här eller öppna Google i en vanlig webbläsarflik.</p><a style="color:#68bfff" href="' + search + '">Öppna DuckDuckGo</a></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
