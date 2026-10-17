@@ -97,11 +97,14 @@ test('AI relays stream responses and keep provider credentials on the server', a
 
 test('reference proxy preset uses the same public endpoints and supports independent direct mode', () => {
  const { proxyEnvironment } = require('../server.cjs');
- const env = proxyEnvironment({});
+ const env = proxyEnvironment({ PROXY_PROVIDER: 'reference' });
  assert.equal(env.PROXY_WISP_URL, 'wss://t9os.space/wisp-vps/');
  assert.equal(env.VPN_WISP_URL, 'wss://t9os.space/wisp-mullvad/');
  assert.equal(env.VPN_API_URL, 'https://t9os.space');
  assert.equal(proxyEnvironment({ PROXY_PROVIDER: 'direct' }).VPN_API_URL, undefined);
+ assert.equal(proxyEnvironment({}).PROXY_PROVIDER, 'direct');
+ assert.equal(proxyEnvironment({}).PROXY_WISP_URL, undefined);
+ assert.equal(proxyEnvironment({}).CLOUD_API_URL, undefined);
  assert.equal(proxyEnvironment({ PROXY_PROVIDER: 'custom', VPN_API_URL: 'https://own.test' }).VPN_API_URL, 'https://own.test');
 });
 
