@@ -466,13 +466,12 @@
     if (generation !== playerGeneration || !playerPath) return;
     const frame = document.getElementById('tros-frame');
     frame.style.visibility = 'hidden';
-    if (playerSource < 2) changePlayerSource(playerSource + 1);
-    else {
+    {
       ++playerGeneration;
       frame.src = 'about:blank';
-      document.getElementById('tros-player-sub').textContent = 'Ingen källa kunde laddas. Välj en källa för att försöka igen eller gå tillbaka.';
+      document.getElementById('tros-player-sub').textContent = 'Källan kunde inte laddas. Välj en annan källa ovan.';
       const status = document.getElementById('tros-player-status');
-      status.textContent = 'Ingen källa kunde laddas just nu. Välj en källa ovan för att försöka igen, eller gå tillbaka.';
+      status.textContent = 'Den här källan kunde inte laddas just nu. Välj en annan källa ovan eller tryck på Next source. Inget byte sker automatiskt.';
       status.style.display = 'flex';
     }
   }
@@ -509,6 +508,7 @@
 
   function closeFullscreen() {
     ++playerGeneration;
+    playerPath = '';
     document.getElementById('tros-player').classList.remove('open');
     document.getElementById('tros-frame').src = 'about:blank';
     document.body.style.overflow = '';

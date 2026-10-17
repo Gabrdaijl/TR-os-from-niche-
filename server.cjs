@@ -89,7 +89,7 @@ function createApp(options = {}) {
     if (route === '/api/health') return json(res, 200, {
       ok: true, name: 'TR-os', services: {
         proxy: true, chat: true, online: true,
-        ai: env.AI_URL ? 'remote' : 'local-ollama', cloud: !!env.CLOUD_API_URL,
+        ai: env.AI_URL ? 'remote' : env.VERCEL ? 'unconfigured' : 'local-ollama', cloud: !!env.CLOUD_API_URL,
         vpn: !!env.VPN_API_URL && !!env.VPN_WISP_URL, cheats: !!env.JOIN_URL
       }
     });
@@ -150,6 +150,7 @@ function createApp(options = {}) {
       const validContent = content => typeof content === 'string' || (Array.isArray(content) && content.length <= 32 && content.every(part => part && (part.type === 'text' ? typeof part.text === 'string' : part.type === 'image_url' && typeof part.image_url?.url === 'string' && /^data:image\/(?:png|jpeg|webp|gif);base64,/.test(part.image_url.url))));
       if (!Array.isArray(data.messages) || data.messages.length > 100 || data.messages.some(m => !['user', 'assistant', 'system'].includes(m.role) || !validContent(m.content))) return json(res, 400, { error: 'Invalid chat messages' });
       if (env.AI_URL) return relay(res, configuredUrl(env.AI_URL, ''), { method: 'POST', headers: { 'content-type': 'application/json', ...(env.AI_KEY ? { authorization: 'Bearer ' + env.AI_KEY } : {}) }, body: JSON.stringify({ model: env.AI_MODEL || data.model, messages: data.messages, stream: !!data.stream }) });
+      if (env.VERCEL) return json(res, 503, { error: 'AI är inte ansluten ännu. En AI-tjänst behöver konfigureras för TR-os i Vercel.' });
       // Ollama runs locally; request a regular OpenAI-compatible response for
       // the frontend's non-stream fallback. No simulated AI replies are used.
       try {
