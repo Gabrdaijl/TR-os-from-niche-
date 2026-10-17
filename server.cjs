@@ -93,7 +93,7 @@ function createApp(options = {}) {
     if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
     if (route === '/api/admin/status') {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
-      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 16) return json(res, 503, { error: 'Admin är låst. Sätt ADMIN_PASSWORD (minst 16 tecken) som Sensitive i Vercel och publicera igen.' });
+      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) return json(res, 503, { error: 'Admin är låst. Sätt ADMIN_PASSWORD (minst 8 tecken) som Sensitive i Vercel och publicera igen.' });
       const supplied = req.headers.authorization || '';
       const expected = 'Basic ' + Buffer.from('admin:' + env.ADMIN_PASSWORD).toString('base64');
       const digest = value => crypto.createHash('sha256').update(value).digest();
