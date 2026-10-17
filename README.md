@@ -26,7 +26,7 @@ Kopiera `.env.example` till `.env` lokalt och fyll i de tjänster du äger. Milj
 - AI: ange `AI_URL` till en OpenAI-kompatibel chat-completions-endpoint, `AI_KEY` och eventuellt `AI_MODEL`. Alternativt används en lokal Ollama-server på `OLLAMA_URL` med modellen `OLLAMA_MODEL`; Ollama och modellen måste redan finnas och vara startade. Inga AI-svar simuleras.
 - Proxy/VPN: standardläget `PROXY_PROVIDER=reference` använder de offentliga Wisp- och Mullvad-API:erna hos t9os.space. Både VPN-trafik och direkt proxy går då genom deras servrar. VPN-utgången delas och ett serverbyte påverkar andra användare av samma tjänst. TR-os äger inte dessa servrar och deras tillgänglighet kan inte garanteras. VPN verifieras genom Mullvads kontroll-API via den aktiva proxyn. Sätt `PROXY_PROVIDER=direct` för enbart lokal direktproxy. Med `PROXY_PROVIDER=custom` används egna `VPN_API_URL`, `VPN_WISP_URL` och eventuellt `PROXY_WISP_URL`.
 - Molnspel: referensläget ansluter samma `/cloud/v1/*`-API hos t9os.space; det kräver att tjänsten är tillgänglig och att en giltig åtkomstnyckel finns. Ange annars `CLOUD_API_URL` till en egen tjänst som implementerar frontendens `/cloud/v1/*`-kontrakt. `CLOUD_API_KEY` kan hållas på servern. En giltig leverantör och spelrättigheter krävs.
-- Cheats: `JOIN_URL` anger den spel-/undervisningstjänst som knappen ska öppna. Utan egen JOIN_URL öppnas den offentliga Cheats-sidan från t9os.space genom TR-os-proxyn. Den integrationen beror på originaloperatörens tillgänglighet.
+- Cheats: `JOIN_URL` anger den spel-/undervisningstjänst som knappen ska öppna. Spelvalen öppnar officiella anslutningssidor. Inga cheats för Gimkit, Kahoot eller Blooket ingår.
 - Filmmetadata: `TMDB_API_KEY` kan sättas på servern. Filmplanschernas proxy följer samma API-bas som övriga anrop.
 
 Detta är en självständig implementation för TR-os, inte referenssidans privata serverkod. Frontendens flöden bevaras, men tillgång till privata VPN-, AI- och molnspelstjänster ingår inte automatiskt.
@@ -40,3 +40,7 @@ Den speglade Scramjet-filen är korrigerad på två ställen: service workerns I
 Sätt miljövariabeln `TR_OS_NETWORK_TEST=1` vid testkörning för det extra testet av en riktig utgående Wisp-ström. Övriga tester kräver ingen extern AI- eller molnspelsleverantör.
 
 Spelens HTML filtreras före start och får ett annonsfilter för kända annonsdomäner och popupfönster. Korsdomänsramar kan begränsa filtret. Filmspelaren erbjuder VidFast, VidLink och VidSrc; upptäckta proxyfelsidor växlar till nästa källa. Tredjepartskällors innehåll/tillgänglighet kan inte garanteras.
+
+## Cloud launcher
+
+Launchern innehåller alla 225 spelposter från den sparade originalfilen. Den aktuella spellistan hos referenstjänsten kunde inte hämtas när dess server var offline. Listan innehåller metadata, inte spelservrar eller åtkomstnycklar. `/api/cloud/status` kontrollerar om leverantörens HTTP-server går att nå; det verifierar inte en spelström. Stängknappen fungerar även när leverantören är nere, och katalogen visas utan sparade felrutor eller dubblerade kort. Frontendens texter och länkar använder inte referensens varumärke; det valbara reference-läget i servern är fortfarande beroende av dess tjänster.

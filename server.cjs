@@ -164,12 +164,27 @@ function createApp(options = {}) {
         return json(res, 200, { choices: [{ message: { role: 'assistant', content: result.message?.content || '' } }] });
       } catch { return json(res, 503, { error: 'Connect an AI service or start Ollama with the configured model.' }); }
     }
+    if (route === '/api/cloud/status') {
+      if (!env.CLOUD_API_URL) return json(res, 200, { configured: false, available: false, keyRequired: false });
+      let available = false;
+      try {
+        const response = await fetch(configuredUrl(env.CLOUD_API_URL, '/cloud/v1/'), { method: 'HEAD', redirect: 'error', signal: AbortSignal.timeout(5000) });
+        available = response.status < 500;
+        await response.body?.cancel();
+      } catch {}
+      return json(res, 200, { configured: true, available, keyRequired: !env.CLOUD_API_KEY });
+    }
     if (route.startsWith('/cloud/v1/')) {
       if (!env.CLOUD_API_URL) return json(res, 503, { error: 'Connect your cloud-gaming provider to start a session.' });
       const headers = { 'content-type': req.headers['content-type'] || 'application/json' };
       const key = env.CLOUD_API_KEY || req.headers['x-api-key'];
       if (key) headers['x-api-key'] = key;
-      return relay(res, configuredUrl(env.CLOUD_API_URL, route + url.search), { method: req.method, headers, ...(mutating ? { body: JSON.stringify(await body(req)) } : {}) });
+      try {
+        return await relay(res, configuredUrl(env.CLOUD_API_URL, route + url.search), { method: req.method, headers, ...(mutating ? { body: JSON.stringify(await body(req)) } : {}) });
+      } catch (error) {
+        if (error.status) throw error;
+        return json(res, 503, { error: 'The cloud service could not be reached. Please try again later.' });
+      }
     }
     if (route.startsWith('/api/mullvad/')) {
       if (env.VPN_API_URL) return relay(res, configuredUrl(env.VPN_API_URL, route + url.search), { method: req.method, headers: { 'content-type': 'application/json' }, ...(mutating ? { body: JSON.stringify(await body(req)) } : {}) });

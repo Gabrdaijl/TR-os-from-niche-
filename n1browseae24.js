@@ -733,7 +733,7 @@
     try { loc2 = localStorage.getItem('tros-loc') || ''; } catch (e2) {}
     if (on2 && loc2 !== 'vps' && MV_STATUS && MV_STATUS.relay) {
       var parts = String(MV_STATUS.relay).split('-');
-      mc.textContent = 'vpn: ' + (MV_EXIT_STATE === 'vpn' ? 'verified · ' : 'unverified · ') + mvFlag(parts[0] || '') + ' ' + (parts[1] || '') + ' - ' + MV_STATUS.relay.replace(/\.conf$/, '') + (window.TR_OS.proxyProvider === 'reference' ? ' · shared t9os.space exit' : ' · shared exit');
+      mc.textContent = 'vpn: ' + (MV_EXIT_STATE === 'vpn' ? 'verified · ' : 'unverified · ') + mvFlag(parts[0] || '') + ' ' + (parts[1] || '') + ' - ' + MV_STATUS.relay.replace(/\.conf$/, '') + ' · shared exit';
     } else if (!on2 || loc2 === 'vps') {
       mc.textContent = 'vpn: direct (VPS)';
     } else {
