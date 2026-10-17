@@ -30,7 +30,7 @@ function worker({ neverReady = false, proxyHtml } = {}) {
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(require.resolve('../sw.js'), 'utf8'), context);
-  return { request: route => context.handleRequest({ request: { url: 'https://site.test' + route } }), loads: () => loads, blocked: context.isBlocked };
+  return { request: (route, destination = 'document') => context.handleRequest({ request: { url: 'https://site.test' + route, destination } }), loads: () => loads, blocked: context.isBlocked };
 }
 test('repeat visits bypass proxy initialization for app files', async () => {
   const app = worker({ neverReady: true });
@@ -81,4 +81,27 @@ test('ordinary upstream error wording is not mistaken for a proxy error', async 
  const response = await worker({proxyHtml:'<html><head></head><body>There was an error loading a picture</body></html>'}).request('/scramjet/test');
  assert.equal(response.status, 200);
  assert.match(await response.text(), /loading a picture/);
+});
+
+test('proxied Google searches use DuckDuckGo without requesting a CAPTCHA page', async () => {
+ const app = worker({neverReady:true});
+ for (const target of ['https://www.google.com/search?q=hello+world', 'https://www.google.se/sorry/index?continue='+encodeURIComponent('https://www.google.se/search?q=hello+world')]) {
+  const response=await app.request('/scramjet/'+encodeURIComponent(target));
+  assert.equal(response.status,302);
+  assert.equal(decodeURIComponent(new URL(response.headers.get('location')).pathname.slice('/scramjet/'.length)),'https://duckduckgo.com/?q=hello%20world');
+ }
+ assert.equal(app.loads(),0);
+});
+test('Google verification without a query shows a choice without loading reCAPTCHA',async()=>{
+ const response=await worker({neverReady:true}).request('/scramjet/'+encodeURIComponent('https://www.google.com/sorry/index'));
+ const html=await response.text();
+ assert.match(html,/Öppna DuckDuckGo/);
+ assert.doesNotMatch(html,/recaptcha|<script/i);
+});
+test('unrelated Google pages and subresources are not redirected',async()=>{
+ for(const [target,destination] of [['https://www.google.com/maps','document'],['https://www.google.com/search?q=hello','script']]) {
+  const response=await worker().request('/scramjet/'+encodeURIComponent(target),destination);
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('location'),null);
+ }
 });
