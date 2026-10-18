@@ -7,6 +7,7 @@
   document.getElementById('retry').onclick = () => location.reload();
   try {
     await TR_OS.ensureServiceWorker();
+    TR_OS_SNAP_WORKER.install($scramjetController);
     const transport = new EpoxyTransport.default({ wisp: TR_OS.wispUrl('/wisp-vps/') });
     await transport.init();
     const controller = new $scramjetController.Controller({
