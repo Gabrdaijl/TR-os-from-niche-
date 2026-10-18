@@ -4,7 +4,8 @@ const { WebSocket } = require('ws');
 
 const MAX_STARTS = 10;
 const SESSION_SECONDS = 240;
-const RESERVE = `if redis.call('EXISTS',KEYS[1])==1 then return {0,0} end
+const RESERVE = `if #KEYS==3 and redis.call('EXISTS',KEYS[3])==1 then return {-2,0} end
+if redis.call('EXISTS',KEYS[1])==1 then return {0,0} end
 local used=tonumber(redis.call('GET',KEYS[2]) or '0')
 if used>=tonumber(ARGV[2]) then return {-1,used} end
 redis.call('SET',KEYS[1],ARGV[1],'EX',300)
@@ -24,6 +25,35 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
   const scope = crypto.createHash('sha256').update(project || '').digest('hex');
   const lockKey = 'tros:snap:hosted:v1:' + scope + ':lock';
   const budgetKey = 'tros:snap:hosted:v1:' + scope + ':starts';
+  const deviceCookieName = env.VERCEL ? '__Host-tros-snap-device' : 'tros_snap_device';
+  const profileKey = device => 'tros:snap:profile:v1:' + scope + ':' + crypto.createHash('sha256').update(device).digest('hex');
+  const validId = id => typeof id === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(id);
+  function deviceCookie(req) {
+    const raw = req.headers?.cookie;
+    if (!raw) return null;
+    if (typeof raw !== 'string') throw new SafeError('Enhetens profilkod är ogiltig.', 400);
+    const values = raw.split(';').map(value => value.trim()).filter(value => value.startsWith(deviceCookieName + '='));
+    if (!values.length) return null;
+    if (values.length !== 1 || !new RegExp('^' + deviceCookieName + '=[a-f0-9]{64}$', 'i').test(values[0])) throw new SafeError('Enhetens profilkod är ogiltig.', 400);
+    return values[0].slice(deviceCookieName.length + 1).toLowerCase();
+  }
+  function setDeviceCookie(res, device, forget = false) {
+    if (res.destroyed || res.writableEnded) return;
+    res.setHeader('set-cookie', deviceCookieName + '=' + device + '; Path=' + (env.VERCEL ? '/' : '/api/admin/snapchat') + '; HttpOnly; SameSite=Strict; Max-Age=' + (forget ? '0' : '31536000') + (env.VERCEL ? '; Secure' : ''));
+  }
+  function clientToken(req) {
+    const value = req.headers?.['x-tros-snap-stop'];
+    return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value) ? value.toLowerCase() : null;
+  }
+  function ownerKeys(owner) {
+    const prefix = 'tros:snap:hosted:v1:' + scope + ':' + crypto.createHash('sha256').update(owner).digest('hex');
+    return { session: prefix + ':session', cancel: prefix + ':cancel', profile: prefix + ':profile' };
+  }
+  function reply(res, status, data) {
+    if (res.destroyed || res.writableEnded) return;
+    res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(data));
+  }
 
   async function request(url, init, signal, message) {
     try {
@@ -32,6 +62,7 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(5000)
       });
       if (!response.ok) throw Error('Upstream rejected request');
+      if (response.status === 204) return null;
       return await response.json();
     } catch { throw new SafeError(message); }
   }
@@ -41,6 +72,12 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
       headers: { 'content-type': 'application/json', 'X-BB-API-Key': apiKey },
       ...(data ? { body: JSON.stringify(data) } : {})
     }, signal, 'Den hostade webbläsaren svarar inte. Testet kan vara upptaget eller gratiskvoten slut.');
+  }
+  function contexts(route, data, signal, method = 'POST') {
+    return request('https://api.browserbase.com/v1/contexts' + route, {
+      method, headers: { 'content-type': 'application/json', 'X-BB-API-Key': apiKey },
+      ...(data ? { body: JSON.stringify(data) } : {})
+    }, signal, 'Enhetsprofilen stöds inte eller kunde inte anslutas just nu. Ingen betalplan aktiveras.');
   }
   async function redis(command, signal) {
     const endpoint = new URL(redisUrl);
@@ -64,13 +101,14 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
   }
 
   async function handle(req, res) {
-    const fail = (status, message) => {
-      if (res.destroyed || res.writableEnded) return;
-      res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
-      res.end(JSON.stringify({ error: message }));
-    };
+    const fail = (status, message) => reply(res, status, { error: message });
     if (req.method !== 'POST') return fail(405, 'Använd POST för att starta testet.');
     if (!apiKey || !project || !redisUrl || !redisToken) return fail(503, 'Det privata webbläsartestet är inte anslutet.');
+    if (req.headers?.['x-tros-snap-stop'] !== undefined && !clientToken(req)) return fail(400, 'Testets avslutningskod är ogiltig.');
+    const remember = req.headers?.['x-tros-snap-remember'] === '1';
+    let device;
+    try { if (remember) device = deviceCookie(req) || crypto.randomBytes(32).toString('hex'); }
+    catch (error) { return fail(error.status, error.message); }
 
     const life = new AbortController();
     const deadline = Date.now() + SESSION_SECONDS * 1000;
@@ -80,7 +118,12 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
     timer.unref?.();
     res.once('close', disconnected);
     req.once('aborted', disconnected);
-    const owner = crypto.randomUUID();
+    const owner = clientToken(req) || crypto.randomBytes(32).toString('hex');
+    const keys = ownerKeys(owner);
+    const cooldown = remember ? profileKey(device) + ':cooldown' : null;
+    const checkCancelled = async () => {
+      if (await redis(['GET', keys.cancel], life.signal)) throw new SafeError('Testet avslutades.');
+    };
     let reserved = false, sessionId, ws, streaming = false;
     const pending = new Map();
     life.signal.addEventListener('abort', () => {
@@ -94,22 +137,48 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
       else life.signal.addEventListener('abort', resolve, { once: true });
     });
     try {
-      const reservation = await redis(['EVAL', RESERVE, 2, lockKey, budgetKey, owner, MAX_STARTS], life.signal);
-      if (!Array.isArray(reservation) || reservation.length !== 2 || ![0, 1, -1].includes(reservation[0]) || !Number.isSafeInteger(reservation[1])) throw new SafeError('Testets databas gav ett ogiltigt svar.');
+      const reservation = await redis(['EVAL', RESERVE, cooldown ? 3 : 2, lockKey, budgetKey, ...(cooldown ? [cooldown] : []), owner, MAX_STARTS], life.signal);
+      if (!Array.isArray(reservation) || reservation.length !== 2 || ![0, 1, -1, -2].includes(reservation[0]) || !Number.isSafeInteger(reservation[1])) throw new SafeError('Testets databas gav ett ogiltigt svar.');
+      if (reservation[0] === -2) throw new SafeError('Profilen sparas. Vänta några sekunder och försök igen.', 409);
       if (reservation[0] === 0) throw new SafeError('Ett privat webbläsartest körs redan. Vänta tills det avslutas.', 409);
       if (reservation[0] === -1) throw new SafeError('Gratisprovets tio starter är förbrukade. Inga betalda starter görs.', 429);
       reserved = true;
       if (life.signal.aborted) throw life.signal.reason;
+      await checkCancelled();
+      let context;
+      if (remember) {
+        const key = profileKey(device);
+        let id = await redis(['GET', key], life.signal);
+        if (!id) {
+          const created = await contexts('', { projectId: project }, life.signal);
+          if (!validId(created?.id)) throw new SafeError('Enhetsprofilen kunde inte skapas säkert. Ingen betalplan aktiveras.');
+          id = created.id;
+          try { await redis(['SET', key, id], life.signal); }
+          catch (error) {
+            // A new, unused profile must not be orphaned if its device mapping cannot be saved.
+            try { await contexts('/' + encodeURIComponent(id), null, null, 'DELETE'); } catch {}
+            throw error;
+          }
+        }
+        if (!validId(id)) throw new SafeError('Enhetsprofilens koppling är ogiltig.');
+        context = { id, persist: true };
+        setDeviceCookie(res, device);
+      }
+      await checkCancelled();
       const session = await api('', {
         projectId: project, timeout: SESSION_SECONDS,
         browserSettings: {
           recordSession: false, logSession: false, solveCaptchas: false,
           advancedStealth: false, verified: false, ignoreCertificateErrors: false,
-          viewport: { width: 1280, height: 800 }
+          viewport: { width: 1280, height: 800 },
+          ...(context ? { context } : {})
         }
       }, life.signal);
       if (typeof session.id !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(session.id)) throw new SafeError('Webbläsaren kunde inte startas säkert.');
       sessionId = session.id;
+      if (cooldown) await redis(['SET', keys.profile, cooldown, 'EX', 300], life.signal);
+      await redis(['SET', keys.session, sessionId, 'EX', 300], life.signal);
+      await checkCancelled();
       let connect;
       try { connect = new URL(session.connectUrl); } catch { throw new SafeError('Webbläsarens anslutning är ogiltig.'); }
       if (connect.protocol !== 'wss:' || !(connect.hostname === 'connect.browserbase.com' || connect.hostname.endsWith('.browserbase.com')) || connect.username || connect.password) throw new SafeError('Webbläsarens anslutning är ogiltig.');
@@ -151,6 +220,7 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
         if (!page && attempt < 2) await new Promise(resolve => setTimeout(resolve, 200));
       }
       const liveUrl = validLiveUrl(page?.debuggerFullscreenUrl);
+      await checkCancelled();
       if (life.signal.aborted) throw life.signal.reason;
       res.writeHead(200, {
         'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store',
@@ -173,12 +243,75 @@ function createHostedSnap({ env, fetchImpl = fetch, WebSocketImpl = WebSocket })
       req.off('aborted', disconnected);
       for (const entry of pending.values()) { clearTimeout(entry.timer); entry.reject(new SafeError('Testet avslutades.')); }
       pending.clear();
+      let released = !sessionId;
+      if (sessionId) { try { await api('/' + encodeURIComponent(sessionId), { status: 'REQUEST_RELEASE' }); released = true; } catch {} }
+      // Keep the CDP owner connected until release is accepted. Closing it first can
+      // end the provider session and make an otherwise valid release look like a failure.
       try { ws?.terminate(); } catch {}
-      if (sessionId) { try { await api('/' + encodeURIComponent(sessionId), { status: 'REQUEST_RELEASE' }); } catch {} }
-      if (reserved) { try { await redis(['EVAL', UNLOCK, 1, lockKey, owner]); } catch {} }
+      if (released && sessionId && cooldown) {
+        try { await redis(['SET', cooldown, '1', 'EX', 8]); }
+        catch { released = false; }
+      }
+      if (reserved && released) {
+        try { await redis(['DEL', keys.session, keys.cancel, keys.profile]); } catch {}
+        try { await redis(['EVAL', UNLOCK, 1, lockKey, owner]); } catch {}
+      }
       if (!res.destroyed && !res.writableEnded) res.end();
     }
   }
-  return { handle };
+  async function stop(req, res) {
+    if (req.method !== 'POST') return reply(res, 405, { error: 'Använd POST för att avsluta testet.' });
+    if (!apiKey || !project || !redisUrl || !redisToken) return reply(res, 503, { error: 'Det privata webbläsartestet är inte anslutet.' });
+    const owner = clientToken(req);
+    if (!owner) return reply(res, 400, { error: 'Testets avslutningskod saknas eller är ogiltig.' });
+    const keys = ownerKeys(owner);
+    try {
+      // Retain cancellation through the create/map race. The owner handler removes it.
+      await redis(['SET', keys.cancel, '1', 'EX', 300]);
+      const sessionId = await redis(['GET', keys.session]);
+      if (!sessionId) return reply(res, 202, { ok: true, pending: true });
+      if (typeof sessionId !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(sessionId)) throw new SafeError('Testets anslutning kunde inte valideras.');
+      await api('/' + encodeURIComponent(sessionId), { status: 'REQUEST_RELEASE' });
+      const cooldown = await redis(['GET', keys.profile]);
+      if (cooldown) {
+        if (typeof cooldown !== 'string' || !new RegExp('^tros:snap:profile:v1:' + scope + ':[a-f0-9]{64}:cooldown$').test(cooldown)) throw new SafeError('Enhetsprofilens koppling är ogiltig.');
+        await redis(['SET', cooldown, '1', 'EX', 8]);
+      }
+      await redis(['DEL', keys.session]);
+      await redis(['EVAL', UNLOCK, 1, lockKey, owner]);
+      return reply(res, 200, { ok: true, pending: false });
+    } catch (error) {
+      return reply(res, error instanceof SafeError ? error.status : 503, { error: error instanceof SafeError ? error.message : 'Webbläsartestet kunde inte avslutas just nu.' });
+    }
+  }
+  async function forget(req, res) {
+    if (req.method !== 'POST') return reply(res, 405, { error: 'Använd POST för att radera enhetsprofilen.' });
+    if (!apiKey || !project || !redisUrl || !redisToken) return reply(res, 503, { error: 'Det privata webbläsartestet är inte anslutet.' });
+    let device;
+    try { device = deviceCookie(req); }
+    catch (error) { return reply(res, error.status, { error: error.message }); }
+    if (!device) return reply(res, 400, { error: 'Ingen sparad enhetsprofil finns i den här webbläsaren.' });
+    const owner = crypto.randomBytes(32).toString('hex');
+    let locked = false, outcome;
+    try {
+      // Serialize deletion with browser creation to avoid deleting an active profile.
+      locked = await redis(['SET', lockKey, owner, 'NX', 'EX', 300]) === 'OK';
+      if (!locked) return reply(res, 409, { error: 'Avsluta det aktiva webbläsartestet innan du raderar profilen.' });
+      const key = profileKey(device), id = await redis(['GET', key]);
+      if (id) {
+        if (!validId(id)) throw new SafeError('Enhetsprofilens koppling är ogiltig.');
+        await contexts('/' + encodeURIComponent(id), null, null, 'DELETE');
+        await redis(['DEL', key, key + ':cooldown']);
+      }
+      setDeviceCookie(res, '', true);
+      outcome = { status: 200, data: { ok: true, forgotten: true } };
+    } catch (error) {
+      outcome = { status: error instanceof SafeError ? error.status : 503, data: { error: error instanceof SafeError ? error.message : 'Enhetsprofilen kunde inte raderas just nu.' } };
+    } finally {
+      if (locked) { try { await redis(['EVAL', UNLOCK, 1, lockKey, owner]); } catch {} }
+    }
+    return reply(res, outcome.status, outcome.data);
+  }
+  return { handle, stop, forget };
 }
 module.exports = { createHostedSnap };

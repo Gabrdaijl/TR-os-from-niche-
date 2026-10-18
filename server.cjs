@@ -107,9 +107,11 @@ function createApp(options = {}) {
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
     if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
-    if (route === '/api/admin/snapchat') {
+    if (route === '/api/admin/snapchat' || route === '/api/admin/snapchat/stop' || route === '/api/admin/snapchat/forget') {
       if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
       if (!adminAuthorized(req, res)) return;
+      if (route.endsWith('/stop')) return hostedSnap.stop(req, res);
+      if (route.endsWith('/forget')) return hostedSnap.forget(req, res);
       return hostedSnap.handle(req, res);
     }
     if (route === '/api/admin/status') {
