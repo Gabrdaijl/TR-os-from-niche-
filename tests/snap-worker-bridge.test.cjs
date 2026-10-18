@@ -51,7 +51,7 @@ function scriptsFrom(frame, kind) {
   else frame.context.interface.getInjectScripts({}, {}, { headers: [], history: [] }, capture);
   return scripts;
 }
-function setup(t, { changedCookie = false } = {}) {
+function setup(t, { changedCookie = false, selectedProtocol = '' } = {}) {
   const host = runtime('https://tr-os.test/snapchat.html');
   vm.runInContext(api, host, { filename: 'actual-snap-controller.api.js' });
   vm.runInContext(bridge, host);
@@ -88,7 +88,7 @@ function setup(t, { changedCookie = false } = {}) {
       transport: {
         async request(url, method, body, headers) { requests.push({ url: url.href, method, body, headers }); return { status: 200, statusText: 'OK', headers: [], body: new TextEncoder().encode('fixture').buffer }; },
         connect(url, protocols, headers, open, message, close) {
-          connections.push({ url: url.href, protocols, headers }); queueMicrotask(() => open('', ''));
+          connections.push({ url: url.href, protocols, headers }); queueMicrotask(() => open(selectedProtocol, ''));
           return [data => message(data), (code, reason) => close(code, reason)];
         }
       },
@@ -158,6 +158,18 @@ test('socket authentication uses current owner cookies even when worker snapshot
   });
   await opened;
   assert.deepEqual(Array.from(h.connections[0].headers, header => Array.from(header)), [['x-fixture', 'preserved'], ['Cookie', 'session=newer-fixture']]);
+});
+
+test('worker transport forwards the actual second protocol and binary data', { timeout: 2000 }, async t => {
+  const h = setup(t, { selectedProtocol: 'second' });
+  let opened, received;
+  const open = new Promise(resolve => { opened = (...args) => resolve(args); });
+  const message = new Promise(resolve => { received = resolve; });
+  const [send, close] = h.client.bare.transport.connect(new URL('wss://www.snapchat.com/controlled'), ['first', 'second'], [], opened, received, () => {}, error => assert.fail(error));
+  assert.deepEqual(await open, ['second', '']);
+  send(Uint8Array.of(0, 128, 255));
+  assert.deepEqual(Array.from(await message), [0, 128, 255]);
+  close(1000, 'done');
 });
 
 test('socket cookie lookup follows target host and ws security semantics instead of caller header', { timeout: 2000 }, async t => {
