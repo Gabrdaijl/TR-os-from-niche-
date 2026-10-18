@@ -7,6 +7,7 @@ const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 const { createPresence } = require('./presence.cjs');
+const { createHostedSnap } = require('./hosted-snap.cjs');
 
 function proxyEnvironment(source) {
   const env = { ...source };
@@ -32,6 +33,7 @@ function createApp(options = {}) {
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
   const presence = createPresence(env, activeCount);
+  const hostedSnap = createHostedSnap({ env });
   const json = (res, status, data) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
@@ -82,6 +84,18 @@ function createApp(options = {}) {
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported service URL');
     return url;
   }
+  function adminAuthorized(req, res) {
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) {
+      json(res, 503, { error: 'Admin är låst. Sätt ADMIN_PASSWORD (minst 8 tecken) som Sensitive i Vercel och publicera igen.' });
+      return false;
+    }
+    const expected = 'Basic ' + Buffer.from('admin:' + env.ADMIN_PASSWORD).toString('base64');
+    const digest = value => crypto.createHash('sha256').update(value).digest();
+    if (crypto.timingSafeEqual(digest(req.headers.authorization || ''), digest(expected))) return true;
+    if (!allowed(req, 'admin-login', 5)) json(res, 429, { error: 'För många försök. Vänta en minut.' });
+    else json(res, 401, { error: 'Fel lösenord eller utloggad.' });
+    return false;
+  }
   async function handler(req, res) {
     requestCount++;
     res.once('finish', () => { if (res.statusCode >= 500) serverErrors++; });
@@ -93,16 +107,14 @@ function createApp(options = {}) {
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
     if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
+    if (route === '/api/admin/snapchat') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      if (!adminAuthorized(req, res)) return;
+      return hostedSnap.handle(req, res);
+    }
     if (route === '/api/admin/status') {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
-      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) return json(res, 503, { error: 'Admin är låst. Sätt ADMIN_PASSWORD (minst 8 tecken) som Sensitive i Vercel och publicera igen.' });
-      const supplied = req.headers.authorization || '';
-      const expected = 'Basic ' + Buffer.from('admin:' + env.ADMIN_PASSWORD).toString('base64');
-      const digest = value => crypto.createHash('sha256').update(value).digest();
-      if (!crypto.timingSafeEqual(digest(supplied), digest(expected))) {
-        if (!allowed(req, 'admin-login', 5)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
-        return json(res, 401, { error: 'Fel lösenord eller utloggad.' });
-      }
+      if (!adminAuthorized(req, res)) return;
       const livePresence = await presence.snapshot();
       return json(res, 200, {
         checkedAt: new Date().toISOString(), startedAt: new Date(startedAt).toISOString(),
