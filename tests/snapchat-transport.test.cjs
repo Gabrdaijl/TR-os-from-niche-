@@ -70,7 +70,9 @@ async function startup(diagnostics = false, options = {}) {
     setInterval() { return 1; }, clearInterval() {},
     setTimeout(fn, milliseconds) { timers.set(++nextTimer, { fn, milliseconds }); return nextTimer; },
     clearTimeout(id) { timers.delete(id); },
-    window: { addEventListener() {}, TR_OS_SNAP_DIAGNOSTICS: options.observer, TR_OS_SNAP_COMPAT: options.compat }, parent: { postMessage() {} }
+    window: { addEventListener() {}, TR_OS_SNAP_DIAGNOSTICS: options.observer, TR_OS_SNAP_COMPAT: options.missingCompat ? undefined : {
+      release: '20261018.2', response: value => value, ...options.compat
+    } }, parent: { postMessage() {} }
   };
   await vm.runInNewContext(source, sandbox, { filename: 'actual-snapchat.js' });
   if (options.expectFailure) {
@@ -81,7 +83,7 @@ async function startup(diagnostics = false, options = {}) {
     assert.equal(elements.get('message').textContent, '', 'Startup should reach the frame rather than catch an error');
     assert.deepEqual(navigation, ['https://web.snapchat.com/']);
   }
-  assert.deepEqual(bridgeInstalls, [controller]);
+  assert.deepEqual(bridgeInstalls, options.missingCompat || options.compat?.release === 'old' ? [] : [controller]);
   return { transport: instance, configuration, nativeClient, tuple, logs, connects, requests,
     elements, scripts, curlInstance, curlConnects, curlRequests, curlSends, curlCloses, timers,
     fireTimeout(milliseconds) {
@@ -116,6 +118,25 @@ test('notification compatibility is enabled normally, has explicit comparison op
     assert.equal(inspected.length, enabled === false ? 0 : 1);
     assert.equal(h.requests[1][2], body);
   }
+});
+
+test('missing or mismatched compatibility helper stops before network/controller instead of opening broken app', async () => {
+  for (const options of [{ missingCompat: true }, { compat: { release: 'old' } }]) {
+    const h = await startup(false, { ...options, actualDefault: true, expectFailure: true });
+    assert.equal(h.scripts.length, 0);
+    assert.equal(h.transport, undefined);
+    assert.match(h.elements.get('message').textContent, /Ladda om TR-os/);
+  }
+});
+
+test('opt-in startup metadata and compatibility outcomes contain only fixed technical fields', async () => {
+  const h = await startup(true, { compat: { response(value, _url, report) { report('applied'); return value; } } });
+  await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/fixture.js?PRIVATE_QUERY'), 'GET', null, []);
+  const start = JSON.parse(h.logs.find(([name]) => name === 'TR-os Snapchat startup')[1]);
+  assert.deepEqual(start, { release: '20261018.2', compatibilityEnabled: true, compatibilityReady: true });
+  const outcome = JSON.parse(h.logs.find(([name]) => name === 'TR-os Snapchat compatibility')[1]);
+  assert.deepEqual(outcome, { release: '20261018.2', outcome: 'applied' });
+  assert.doesNotMatch(JSON.stringify(h.logs), /PRIVATE_QUERY/);
 });
 
 test('Snapchat startup removes duplicate caller UA only and preserves Epoxy default and socket callbacks', async () => {
@@ -170,7 +191,7 @@ test('normal Snapchat entry loads curl sockets and keeps HTTP on initialized Epo
 
 test('curl sockets preserve original WS URL and auth while HTTP stays on initialized Epoxy', async () => {
   const h = await startup(true, { curl: true });
-  assert.equal(h.scripts.length, 1); assert.equal(h.scripts[0].src, '/snap-curl-transport.js');
+  assert.equal(h.scripts.length, 1); assert.equal(h.scripts[0].src, '/snap-curl-transport.js?v=20261018.2');
   assert.equal(h.curlInstance.ready, true);
   assert.equal(h.curlInstance.opts.wisp, h.transport.opts.wisp);
   const target = new URL('wss://chat.example.test:8443/socket?token=URL_QUERY_SECRET');
