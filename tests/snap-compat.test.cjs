@@ -9,10 +9,10 @@ const expectedHash = 'd68750cc94dde81cd3d6daabf39b913381b2ff4c4d3a5bc6aad8451edb
 const target = new URL('https://cf-st.sc-cdn.net/dw/127ca002fe3599f56576.js');
 // Exact optional-effect expression in the pinned public Snapchat asset.
 const effect = 'function effect(n){return navigator.serviceWorker.addEventListener("message",n),()=>navigator.serviceWorker.removeEventListener("message",n)}';
-function setup({ wrongHash = false, clock, code = source } = {}) {
+function setup({ wrongHash = false, clock, code = source, encoder = TextEncoder, digest } = {}) {
   const window = {};
-  vm.runInNewContext(code, { window, URL, Uint8Array, TextDecoder, TextEncoder, setTimeout: clock?.setTimeout || setTimeout, clearTimeout: clock?.clearTimeout || clearTimeout, Promise,
-    crypto: { subtle: { digest: async () => Uint8Array.from(Buffer.from(wrongHash ? '0'.repeat(64) : expectedHash, 'hex')).buffer } } });
+  vm.runInNewContext(code, { window, URL, Uint8Array, TextDecoder, TextEncoder: encoder, setTimeout: clock?.setTimeout || setTimeout, clearTimeout: clock?.clearTimeout || clearTimeout, Promise,
+    crypto: { subtle: { digest: digest || (async () => Uint8Array.from(Buffer.from(wrongHash ? '0'.repeat(64) : expectedHash, 'hex')).buffer) } } });
   return window.TR_OS_SNAP_COMPAT;
 }
 function clock() {
@@ -70,6 +70,19 @@ test('hash mismatch and changed source expressions preserve every original byte 
     const original = response(body), result = await compat.response(original, target);
     assert.equal(await new Response(result.body).text(), body);
     assert.equal(result.headers, original.headers);
+  }
+});
+test('output allocation and hashing failures keep the original stream usable and report only a fixed category', async () => {
+  for (const [options, outcome] of [
+    [{ encoder: class { encode() { throw new RangeError('PRIVATE_ALLOCATION'); } } }, 'encode-error'],
+    [{ digest: async () => { throw new Error('PRIVATE_DIGEST'); } }, 'hash-error']
+  ]) {
+    const outcomes = [], original = response();
+    const result = await setup(options).response(original, target, value => outcomes.push(value));
+    assert.equal(await new Response(result.body).text(), effect);
+    assert.equal(result.headers, original.headers);
+    assert.deepEqual(outcomes, [outcome]);
+    assert.doesNotMatch(JSON.stringify(outcomes), /PRIVATE/);
   }
 });
 test('oversize copy does not consume or truncate the forwarded original', async () => {

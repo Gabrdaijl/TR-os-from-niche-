@@ -70,8 +70,8 @@ async function startup(diagnostics = false, options = {}) {
     setInterval() { return 1; }, clearInterval() {},
     setTimeout(fn, milliseconds) { timers.set(++nextTimer, { fn, milliseconds }); return nextTimer; },
     clearTimeout(id) { timers.delete(id); },
-    window: { addEventListener() {}, TR_OS_SNAP_DIAGNOSTICS: options.observer, TR_OS_SNAP_COMPAT: options.missingCompat ? undefined : {
-      release: '20261018.2', response: value => value, ...options.compat
+    window: { addEventListener() {}, TR_OS_SNAP_REPORT: options.report, TR_OS_SNAP_DIAGNOSTICS: options.observer, TR_OS_SNAP_COMPAT: options.missingCompat ? undefined : {
+      release: '20261018.3', response: value => value, ...options.compat
     } }, parent: { postMessage() {} }
   };
   await vm.runInNewContext(source, sandbox, { filename: 'actual-snapchat.js' });
@@ -107,6 +107,25 @@ test('crash-body inspection requires explicit diagnostics and exact Sentry desti
     assert.equal(h.logs.filter(args => args[0] === 'TR-os Snapchat crash location').length, diagnostics ? 1 : 0);
   }
 });
+test('an optional report initialization failure cannot prevent Snapchat startup', async () => {
+  const h = await startup(false, { actualDefault: true, report: { release: '20261018.3', create() { throw new Error('PRIVATE_REPORT_ERROR'); } } });
+  assert.equal(h.elements.get('message').textContent, '');
+  assert.doesNotMatch(JSON.stringify(h.logs), /PRIVATE_REPORT_ERROR/);
+});
+test('safe report receives compatibility, public script and socket outcomes only in opt-in mode', async () => {
+  const events = [];
+  const h = await startup(true, { actualDefault: true, report: { release: '20261018.3', create(enabled, ready, options) {
+    assert.equal(enabled, true); assert.equal(ready, true); assert.equal(options.compatibilityEnabled, true); assert.equal(options.socketMode, 'curl');
+    return { stage: value => events.push(['stage', value]), compatibility: value => events.push(['compatibility', value]),
+      asset: (url, status) => events.push(['asset', url, status]), socket: value => events.push(['socket', value]), crash() {} };
+  } }, compat: { response(value, _url, report) { report('applied'); return value; } } });
+  await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/127ca002fe3599f56576.js'), 'GET', null, []);
+  h.transport.connect(new URL('wss://aws.duplex.snapchat.com/'), [], [], () => {}, () => {}, () => {}, () => {});
+  h.curlConnects[0][3]('PRIVATE_PROTOCOL');
+  assert.ok(events.some(item => item[0] === 'compatibility' && item[1] === 'applied'));
+  assert.ok(events.some(item => item[0] === 'socket' && item[1] === 'open'));
+  assert.doesNotMatch(JSON.stringify(events), /PRIVATE_PROTOCOL/);
+});
 
 test('notification compatibility is enabled normally, has explicit comparison opt-out and never inspects POST', async () => {
   for (const enabled of [false, undefined, true]) {
@@ -133,9 +152,9 @@ test('opt-in startup metadata and compatibility outcomes contain only fixed tech
   const h = await startup(true, { compat: { response(value, _url, report) { report('applied'); return value; } } });
   await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/fixture.js?PRIVATE_QUERY'), 'GET', null, []);
   const start = JSON.parse(h.logs.find(([name]) => name === 'TR-os Snapchat startup')[1]);
-  assert.deepEqual(start, { release: '20261018.2', compatibilityEnabled: true, compatibilityReady: true });
+  assert.deepEqual(start, { release: '20261018.3', compatibilityEnabled: true, compatibilityReady: true });
   const outcome = JSON.parse(h.logs.find(([name]) => name === 'TR-os Snapchat compatibility')[1]);
-  assert.deepEqual(outcome, { release: '20261018.2', outcome: 'applied' });
+  assert.deepEqual(outcome, { release: '20261018.3', outcome: 'applied' });
   assert.doesNotMatch(JSON.stringify(h.logs), /PRIVATE_QUERY/);
 });
 
@@ -191,7 +210,7 @@ test('normal Snapchat entry loads curl sockets and keeps HTTP on initialized Epo
 
 test('curl sockets preserve original WS URL and auth while HTTP stays on initialized Epoxy', async () => {
   const h = await startup(true, { curl: true });
-  assert.equal(h.scripts.length, 1); assert.equal(h.scripts[0].src, '/snap-curl-transport.js?v=20261018.2');
+  assert.equal(h.scripts.length, 1); assert.equal(h.scripts[0].src, '/snap-curl-transport.js?v=20261018.3');
   assert.equal(h.curlInstance.ready, true);
   assert.equal(h.curlInstance.opts.wisp, h.transport.opts.wisp);
   const target = new URL('wss://chat.example.test:8443/socket?token=URL_QUERY_SECRET');
