@@ -17,4 +17,5 @@ test('hosted Snapchat creation requires admin authentication and same-origin POS
   const response = await fetch(base + '/api/admin/snapchat', { method: 'POST', headers: { authorization } });
   assert.equal(response.status, 503);
   assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal((await fetch(base + '/api/admin/snapchat/stop', { method: 'POST' })).status, 401);
 });
