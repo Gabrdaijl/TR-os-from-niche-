@@ -76,7 +76,7 @@
     }
     // Opt-in connection metadata only: never log cookies, URLs with queries,
     // protocol values, request bodies or message contents.
-    if (query.get('optionalNotifications') === '1' && window.TR_OS_SNAP_COMPAT) {
+    if (query.get('optionalNotifications') !== '0' && window.TR_OS_SNAP_COMPAT) {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
         const response = await request(...args);
