@@ -31,10 +31,12 @@ test('Snapchat routing is isolated from the original proxy and normal app assets
   async function request(url) {
     let response;
     listeners.fetch({ request: new Request('https://tr-os.test' + url), respondWith(value) { response = value; } });
-    return (await response).text();
+    return response ? (await response).text() : null;
   }
   assert.equal(await request('/snap-proxy/controller/frame/https%3A%2F%2Fweb.snapchat.com%2F'), 'snapchat-proxy');
   assert.equal(await request('/scramjet/https%3A%2F%2Fexample.com%2F'), 'legacy-proxy');
-  assert.equal(await request('/index.html'), 'normal-asset');
-  assert.equal(await request('/snap-engine.wasm'), 'normal-asset');
+  assert.equal(await request('/'), null, 'home navigation stays with the native browser loader');
+  assert.equal(await request('/index.html'), null);
+  assert.equal(await request('/snap-engine.wasm'), null);
+  assert.equal(await request('/api/health'), null);
 });
