@@ -7,7 +7,6 @@ const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 const { createPresence } = require('./presence.cjs');
-const { createHostedSnap } = require('./hosted-snap.cjs');
 
 function proxyEnvironment(source) {
   const env = { ...source };
@@ -33,7 +32,6 @@ function createApp(options = {}) {
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
   const presence = createPresence(env, activeCount);
-  const hostedSnap = createHostedSnap({ env });
   const json = (res, status, data) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
@@ -108,11 +106,7 @@ function createApp(options = {}) {
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
     if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
     if (route === '/api/admin/snapchat' || route === '/api/admin/snapchat/stop' || route === '/api/admin/snapchat/forget') {
-      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
-      if (!adminAuthorized(req, res)) return;
-      if (route.endsWith('/stop')) return hostedSnap.stop(req, res);
-      if (route.endsWith('/forget')) return hostedSnap.forget(req, res);
-      return hostedSnap.handle(req, res);
+      return json(res, 410, { error: 'Snapchat-testet är borttaget.' });
     }
     if (route === '/api/admin/status') {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
