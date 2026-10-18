@@ -1,11 +1,11 @@
 // Device-local, opt-in support report. No requests, storage, account data or
 // raw errors enter this report. It never inspects the Snapchat document.
 (() => {
-  const release = '20261018.3';
+  const release = '20261018.4';
   const outcomes = new Set(['applied', 'skipped-status', 'skipped-body', 'oversize', 'idle-timeout', 'total-timeout', 'hash-mismatch', 'source-mismatch', 'read-error', 'hash-error', 'decode-error', 'source-error', 'encode-error']);
   const stages = new Set(['starting', 'service-worker', 'transport', 'engine', 'page-loaded', 'startup-failed']);
   const categories = new Set(['structured-clone', 'cross-origin', 'storage', 'missing-api', 'null-property', 'wasm', 'socket', 'url', 'worker', 'unknown']);
-  const types = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'DOMException', 'AssertionError', 'InvariantViolation', 'DataCloneError', 'SecurityError', 'InvalidStateError', 'NotSupportedError', 'NotAllowedError', 'AbortError', 'QuotaExceededError', 'NetworkError', 'OperationError', 'UnhandledRejection', 'Other']);
+  const types = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'DOMException', 'AssertionError', 'InvariantViolation', 'DataCloneError', 'SecurityError', 'InvalidStateError', 'NotSupportedError', 'NotAllowedError', 'AbortError', 'QuotaExceededError', 'NetworkError', 'OperationError', 'UnhandledRejection', 'Other', 'CompileError', 'LinkError', 'RuntimeError']);
   function publicAsset(value) {
     try {
       const url = new URL(value);
@@ -68,7 +68,13 @@
             Number.isSafeInteger(frame.column) && frame.column >= 0 && frame.column <= 100000000 ?
             [{ asset, line: frame.line, column: frame.column }] : [];
         }) : [];
-        state.crashes.push({ type: value.type, category: value.category, frames });
+        const crash={ type: value.type, category: value.category, frames };
+        if(['memory-allocation','memory-growth','table-growth','stack-overflow','compile','link','instantiate','unknown'].includes(value.wasmFailure)){
+          crash.wasmFailure=value.wasmFailure;
+          if(Number.isSafeInteger(value.frameCount) && value.frameCount>=0 && value.frameCount<=16)crash.frameCount=value.frameCount;
+          crash.components=Array.isArray(value.components)?[...new Set(value.components.filter(item=>['wasm','rewriter','http-transport','socket-transport','worker-bridge','controller'].includes(item)))]:[];
+        }
+        state.crashes.push(crash);
         if (state.crashes.length > 3) state.crashes.shift();
       })
     };

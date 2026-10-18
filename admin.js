@@ -1,18 +1,57 @@
 (() => {
   const $ = id => document.getElementById(id);
   let authorization = '', timer, expires = 0, pending = false;
+  const imageUrls = new Set();
+  let reportSignature = '', authGeneration = 0;
+  function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
   function logout() {
+    authGeneration++;pending=false;clearImages();reportSignature='';$('reports-list').replaceChildren();$('reports-state').textContent='';
     authorization = ''; clearInterval(timer); $('password').value = '';
     $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
     $('login').hidden = false; $('logout').hidden = true;
+  }
+  async function refreshReports() {
+    const generation=authGeneration;
+    try {
+      const response=await fetch('/api/admin/reports',{headers:{authorization},cache:'no-store',signal:AbortSignal.timeout(10000)});
+      const data=await response.json();
+      if(generation!==authGeneration || !authorization)return;
+      if(!response.ok)throw Error(data.error || 'Rapporterna kunde inte hämtas.');
+      $('reports-state').textContent=data.reports.length?'':'Inga felrapporter ännu.';
+      const signature=JSON.stringify(data.reports);if(signature===reportSignature)return;reportSignature=signature;clearImages();
+      const labels={home:'Startsidan',games:'Games',movies:'Movies',ai:'AI',browser:'Webbläsaren',snapchat:'Snapchat',cloud:'Cloud',other:'Annat'};
+      $('reports-list').replaceChildren(...data.reports.map(report=>{
+        const card=document.createElement('article');card.className='report-card';
+        const top=document.createElement('div');top.className='report-card-top';
+        const title=document.createElement('strong');title.textContent=labels[report.category] || 'Annat';
+        const time=document.createElement('time');time.dateTime=new Date(report.createdAt).toISOString();time.textContent=new Date(report.createdAt).toLocaleString('sv-SE');
+        top.append(title,time);const message=document.createElement('p');message.className='report-text';message.textContent=report.message;card.append(top,message);
+        if(report.hasImage){
+          const button=document.createElement('button');button.textContent='Visa bifogad bild';
+          button.onclick=async()=>{
+            button.disabled=true;
+            try{
+              const imageResponse=await fetch('/api/admin/reports/'+encodeURIComponent(report.id)+'/image',{headers:{authorization},cache:'no-store',signal:AbortSignal.timeout(10000)});
+              if(!imageResponse.ok)throw Error('Bilden kunde inte hämtas.');
+              const blob=await imageResponse.blob();if(generation!==authGeneration || !authorization || !card.isConnected)return;
+              const url=URL.createObjectURL(blob);imageUrls.add(url);
+              const image=document.createElement('img');image.alt='Besökarens bifogade felbild';image.src=url;image.className='report-image';button.replaceWith(image);
+            }catch(error){if(generation===authGeneration){button.textContent=error.message;button.disabled=false;}}
+          };card.append(button);
+        }
+        return card;
+      }));
+    }catch(error){if(generation===authGeneration && authorization)$('reports-state').textContent=error.message;}
   }
   async function refresh() {
     if (pending) return;
     if (!authorization || Date.now() >= expires) return logout();
     pending = true;
+    const generation=authGeneration;
     try {
       const response = await fetch('/api/admin/status', { headers: { authorization }, cache: 'no-store', signal: AbortSignal.timeout(10000) });
       const data = await response.json();
+      if(generation!==authGeneration || !authorization)return;
       if (!response.ok) { logout(); throw Error(data.error || 'Status kunde inte hämtas'); }
       $('message').textContent = '';
       $('login').hidden = true; $('dashboard').hidden = false; $('logout').hidden = false;
@@ -42,8 +81,9 @@
       }));
       $('scope').textContent = data.scope;
       $('updated').textContent = 'Senast kontrollerad ' + new Date(data.checkedAt).toLocaleTimeString('sv-SE') + ' · uppdateras var 15:e sekund';
+      await refreshReports();
     } catch (error) { $('message').textContent = error.message; }
-    finally { pending = false; }
+    finally { if(generation===authGeneration)pending = false; }
   }
   $('login').addEventListener('submit', async event => {
     event.preventDefault();

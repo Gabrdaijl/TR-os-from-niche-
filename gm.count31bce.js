@@ -63,34 +63,25 @@ class LumiSDK {
             this.colors = { ...this.colors, ...options.colors };
         }
 
+        if (!options.headless && options.container) {
+            this.container = document.querySelector(this.config.container);
+            if (this.container && !this.wrapper) {
+                this.injectStyles();
+                this.buildUI();
+                this.applyFilters();
+            }
+        }
         try {
             if (!this.loaded) {
-                await this.loadGames();
-                this.loaded = true;
+                this._loadPromise ||= this.loadGames().then(() => { this.loaded = true; });
+                await this._loadPromise;
             }
         } catch (err) {
-            if (typeof options.onError === 'function') {
-                options.onError(err);
-                return;
-            }
+            this._loadPromise = null;
+            if (typeof options.onError === 'function') { options.onError(err); return; }
             throw err;
         }
-
-        if (options.headless || !options.container) {
-            if (typeof options.onReady === 'function') options.onReady();
-            return;
-        }
-
-        this.container = document.querySelector(this.config.container);
-        if (!this.container) {
-            if (typeof options.onReady === 'function') options.onReady();
-            return;
-        }
-
-        this.injectStyles();
-        this.buildUI();
-        this.applyFilters();
-
+        this.updateView();
         if (typeof options.onReady === 'function') options.onReady();
     }
 
@@ -179,31 +170,36 @@ class LumiSDK {
     }
 
     async warmGame(game) {
-        if (!game || game._html || game._warming) return;
+        if (!game) return null;
+        if (game._html) return game._html;
+        if (game._warming) return game._warming;
         if (game._resolvedUrl && LumiSDK.htmlCache.has(game._resolvedUrl)) {
             game._html = LumiSDK.htmlCache.get(game._resolvedUrl);
-            return;
+            return game._html;
         }
-        game._warming = true;
-        try {
+        game._warming = (async () => {
             let url = game.url;
             if (game.source === "Lumin") {
                 const playUrl = await this.resolveLuminUrl(game.url);
-                if (!playUrl) return;
+                if (!playUrl) return null;
                 game._resolvedUrl = playUrl;
                 url = playUrl;
             }
+            if (LumiSDK.htmlCache.has(url)) return game._html = LumiSDK.htmlCache.get(url);
             const response = await fetch(url);
+            if (!response.ok) throw new Error('Game download failed');
             game._html = this.prepareGameHtml(await response.text(), game, url);
             LumiSDK.htmlCache.set(url, game._html);
             if (LumiSDK.htmlCache.size > 20) {
                 LumiSDK.htmlCache.delete(LumiSDK.htmlCache.keys().next().value);
             }
-        } catch (e) {}
+            return game._html;
+        })().catch(() => null).finally(() => { game._warming = null; });
+        return game._warming;
     }
 
     async loadGame(id) {
-        if (!this.loaded) {
+        if (!this.loaded && !this.games.length) {
             await this.init({ headless: true });
         }
 
@@ -213,14 +209,7 @@ class LumiSDK {
             return null;
         }
 
-        if (game.source === "Lumin") {
-            const playUrl = await this.resolveLuminUrl(game.url);
-            if (!playUrl) {
-                console.error("Lumin game failed to resolve:", id);
-                return null;
-            }
-            game = { ...game, url: playUrl };
-        }
+        const playRequest = this._playRequest = (this._playRequest || 0) + 1;
 
         let targetIframe;
         let playerWrapper = document.querySelector('.lumin-player');
@@ -252,6 +241,7 @@ class LumiSDK {
                 closeBtn.innerHTML = '&times;';
                 closeBtn.style.cssText = 'position:absolute;top:20px;right:20px;width:40px;height:40px;background:#fff;color:#000;border:none;border-radius:50%;font-size:24px;cursor:pointer;z-index:10000;display:flex;align-items:center;justify-content:center;';
                 closeBtn.onclick = () => {
+                    this._playRequest = (this._playRequest || 0) + 1;
                     playerWrapper.style.display = 'none';
                     targetIframe.srcdoc = '';
                     targetIframe.src = '';
@@ -262,6 +252,7 @@ class LumiSDK {
                 backBtn.innerHTML = '&#8592;';
                 backBtn.style.cssText = 'position:absolute;top:20px;left:20px;width:40px;height:40px;background:#fff;color:#000;border:none;border-radius:50%;font-size:24px;cursor:pointer;z-index:10000;display:flex;align-items:center;justify-content:center;';
                 backBtn.onclick = () => {
+                    this._playRequest = (this._playRequest || 0) + 1;
                     playerWrapper.style.display = 'none';
                     targetIframe.srcdoc = '';
                     targetIframe.src = '';
@@ -290,22 +281,13 @@ class LumiSDK {
             playerWrapper.style.display = 'block';
         }
 
-        if (game._html) {
-            this.currentGameHtml = game._html;
-            targetIframe.srcdoc = game._html;
-            return game._resolvedUrl || game.url;
-        }
-
-        try {
-            const response = await fetch(game.url);
-            game._html = this.prepareGameHtml(await response.text(), game, game.url);
-            this.currentGameHtml = game._html;
-            targetIframe.srcdoc = game._html;
-        } catch (e) {
-            targetIframe.src = game.url;
-        }
-
-        return game.url;
+        const html = await this.warmGame(game);
+        if (playRequest !== this._playRequest) return null;
+        const url = game._resolvedUrl || (game.source !== 'Lumin' ? game.url : null);
+        this.currentGameUrl = url || '';
+        if (html) { this.currentGameHtml = html; targetIframe.srcdoc = html; }
+        else if (url) { targetIframe.removeAttribute('srcdoc'); targetIframe.src = url; }
+        return url;
     }
 
     injectStyles() {
@@ -464,7 +446,10 @@ class LumiSDK {
 
     async ensureLuminReady() {
         if (this._luminReady) return;
-        if (!window.Lumin) throw new Error("Lumin SDK not loaded");
+        if (this._luminInitPromise) return this._luminInitPromise;
+        this._luminInitPromise = (async () => {
+        if (window.TR_OS_LUMIN_READY) await this.withDeadline(window.TR_OS_LUMIN_READY, 20000, 'Lumin SDK timeout');
+        if (!window.Lumin || window.Lumin === this) throw new Error("Lumin SDK not loaded");
         if (typeof window.Lumin.init === 'function') {
             const initP = (async () => {
                 try {
@@ -475,20 +460,26 @@ class LumiSDK {
                     });
                 }
             })();
-            await Promise.race([
-                initP,
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Lumin init timeout")), 20000))
-            ]);
+            await this.withDeadline(initP, 20000, 'Lumin init timeout');
         }
+        this._luminProvider = window.Lumin;
         this._luminReady = true;
+        })().catch(error => { this._luminInitPromise = null; throw error; });
+        return this._luminInitPromise;
+    }
+
+    async withDeadline(promise, milliseconds, message) {
+        let timer;
+        try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })]); }
+        finally { clearTimeout(timer); }
     }
 
     async resolveLuminUrl(id) {
         if (LumiSDK.urlCache.has(id)) return LumiSDK.urlCache.get(id);
         try { await this.ensureLuminReady(); } catch { return null; }
         try {
-            if (typeof window.Lumin.getGameUrl === 'function') {
-                const r = await window.Lumin.getGameUrl(id);
+            if (typeof this._luminProvider.getGameUrl === 'function') {
+                const r = await this._luminProvider.getGameUrl(id);
                 const out = (typeof r === 'string') ? r : (r && r.url) || null;
                 if (out) {
                     LumiSDK.urlCache.set(id, out);
@@ -504,9 +495,11 @@ class LumiSDK {
 
     prefetchVisible() {
         try {
-            if (document.hidden) return;
+            if (document.hidden || this._prefetchPending) return;
+            this._prefetchPending = true;
             const idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 800); };
             idle(() => {
+                this._prefetchPending = false;
                 try {
                     const cards = this.grid ? this.grid.querySelectorAll('.lumi-game-card') : [];
                     let n = 0;
@@ -524,7 +517,7 @@ class LumiSDK {
     }
 
     async loadGames() {
-        let loadedGames = [];
+        const sources = Array.from({ length: 6 }, () => []);
         const fetchJSON = async (url) => {
             try {
                 return await (await fetch(url)).json();
@@ -533,16 +526,19 @@ class LumiSDK {
             }
         };
         const publish = () => {
-            this.games = loadedGames
+            this.games = sources.flat()
                 .filter(game => game.url && game.title)
                 .sort((a, b) => (b.source === "Lumin") - (a.source === "Lumin"));
-            this.applyFilters();
+            this.applyFilters(false);
         };
-
+        await Promise.allSettled([
+        (async () => {
+        const loadedGames = sources[0];
         try {
             const iconMap = {};
+            const files = fetchJSON('https://api.github.com/repos/carbonicality/ChickenKingsVault/contents/gamefiles/');
             try {
-                const iconRes = await fetch(`${CKV_ICONS_URL}/games.json?t=${Date.now()}`);
+                const iconRes = await fetch(`${CKV_ICONS_URL}/games.json`);
                 const iconJson = await iconRes.json();
                 iconJson.forEach(g => {
                     const key = g.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -550,9 +546,7 @@ class LumiSDK {
                 });
             } catch (e) {}
 
-            const apiUrl = `https://api.github.com/repos/carbonicality/ChickenKingsVault/contents/gamefiles/`;
-            const res = await fetch(apiUrl);
-            const json = await res.json();
+            const json = await files;
             let htmlFiles = json.filter(f => f.type === 'file' && f.name.endsWith('.html') && f.name !== 'index-2.html');
             const prettyFiles = htmlFiles.filter(f => /[A-Z\s]/.test(f.name));
             if (prettyFiles.length > 0) htmlFiles = prettyFiles;
@@ -570,7 +564,9 @@ class LumiSDK {
             console.error('Failed CKV fetch:', e);
         }
         publish();
-
+        })(),
+        (async () => {
+        const loadedGames = sources[1];
         const gnmathData = await fetchJSON(GNMATH_API);
         gnmathData.forEach(g => {
             const cleanUrlParam = this.cleanPath(g.url);
@@ -584,7 +580,9 @@ class LumiSDK {
             });
         });
         publish();
-
+        })(),
+        (async () => {
+        const loadedGames = sources[2];
         const ugsData = await fetchJSON(UGS_API);
         ugsData.forEach(g => {
             let ugsHtmlBase = UGS_HTML_URL1;
@@ -619,7 +617,9 @@ class LumiSDK {
             });
         });
         publish();
-
+        })(),
+        (async () => {
+        const loadedGames = sources[3];
         const daknuxData = await fetchJSON(DAKNUX_API);
         daknuxData.forEach(g => {
             const cleanUrlParam = this.cleanPath(g.url);
@@ -633,7 +633,9 @@ class LumiSDK {
             });
         });
         publish();
-
+        })(),
+        (async () => {
+        const loadedGames = sources[4];
         const nebulaData = await fetchJSON(NEBULA_API);
         const nebulaGames = Array.isArray(nebulaData) ? nebulaData : (nebulaData.games || []);
         nebulaGames.forEach(g => {
@@ -647,44 +649,46 @@ class LumiSDK {
             });
         });
         publish();
-
+        })(),
+        (async () => {
+        const loadedGames = sources[5];
         try {
             await this.ensureLuminReady();
-            const luminResult = await Promise.race([
-                window.Lumin.getGames({ limit: 999 }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Lumin timeout")), 25000))
-            ]);
-            const luminGames = luminResult.games || luminResult || [];
-            luminGames.forEach((g) => {
-                loadedGames.push({
+            const luminResult = await this.withDeadline(this._luminProvider.getGames({ page: 1, limit: 999 }), 25000, 'Lumin timeout');
+            const mapPage = result => (result.games || result || []).map(g => ({
                     title: g.name || g.title || "Unknown Game",
                     cover: FALLBACK_IMAGE,
                     url: g.id,
                     source: "Lumin",
                     image_token: g.image_token || ""
-                });
-            });
-            publish();
-            const pending = loadedGames.filter((g) => g.source === "Lumin" && g.image_token && g.cover === FALLBACK_IMAGE);
-            const BATCH = 12;
-            for (let i = 0; i < pending.length; i += BATCH) {
-                await Promise.allSettled(pending.slice(i, i + BATCH).map(async (g) => {
-                    try {
-                        if (typeof window.Lumin.getImageUrl === 'function') {
-                            const cover = await window.Lumin.getImageUrl(g.image_token);
-                            if (cover) g.cover = cover;
-                        }
-                    } catch {}
                 }));
-                if (this.currentPage === 1) this.updateView();
-            }
-            this.updateView();
+            const pages = [mapPage(luminResult)];
+            const publishLumin = () => {
+                loadedGames.length = 0;
+                for(const game of pages.flat())loadedGames.push(game);
+                publish();
+            };
+            publishLumin();
+            const pageCount = Number.isSafeInteger(luminResult.pages) ? luminResult.pages : 1;
+            let nextPage = 2;
+            await Promise.all(Array.from({ length: Math.min(4, Math.max(0, pageCount - 1)) }, async () => {
+                while (nextPage <= pageCount) {
+                    const page = nextPage++;
+                    try {
+                        const result = await this.withDeadline(this._luminProvider.getGames({ page, limit: 999 }), 25000, 'Lumin timeout');
+                        pages[page - 1] = mapPage(result);
+                        publishLumin();
+                    } catch {}
+                }
+            }));
         } catch (e) {
             console.error('Failed Lumin fetch:', e);
         }
+        })()
+        ]);
     }
 
-    applyFilters() {
+    applyFilters(resetPage = true) {
         const lowerQuery = this.currentSearch.toLowerCase();
 
         this.filteredGames = this.games.filter(game => {
@@ -693,8 +697,49 @@ class LumiSDK {
             return matchesSearch && matchesSource;
         });
 
-        this.currentPage = 1;
+        this.currentPage = resetPage ? 1 : Math.min(this.currentPage, Math.max(1, Math.ceil(this.filteredGames.length / this.config.gamesPerPage)));
         this.updateView();
+    }
+
+    queueCover(game, card) {
+        if (game.source !== 'Lumin' || !game.image_token || game.cover !== FALLBACK_IMAGE) return;
+        game._coverCards ||= new Set();
+        game._coverCards.add(card);
+        if (!game._coverPromise) {
+            this._coverQueue ||= [];
+            game._coverPromise = new Promise(resolve => this._coverQueue.push({ game, resolve }));
+            this.drainCovers();
+        }
+        game._coverPromise.then(() => {
+            if (!card.isConnected || game.cover === FALLBACK_IMAGE) return;
+            const placeholder = card.querySelector('.lumi-noimg');
+            if (!placeholder) return;
+            const image = document.createElement('img');
+            image.src = game.cover; image.alt = game.title; image.className = 'lumi-game-img'; image.loading = 'lazy'; image.decoding = 'async';
+            image.onerror = () => { image.src = FALLBACK_IMAGE; image.onerror = null; };
+            placeholder.replaceWith(image);
+        });
+    }
+
+    drainCovers() {
+        this._activeCovers ||= 0;
+        while (this._activeCovers < 6 && this._coverQueue?.length) {
+            const { game, resolve } = this._coverQueue.shift();
+            if (![...game._coverCards].some(card => card.isConnected)) {
+                game._coverPromise = null; game._coverCards = null; resolve(); continue;
+            }
+            this._activeCovers++;
+            (async () => {
+                try {
+                    const cover = await this._luminProvider.getImageUrl(game.image_token);
+                    if (cover) game.cover = cover;
+                } catch {} finally {
+                    this._activeCovers--; game._coverCards = null; resolve();
+                    if (game.cover === FALLBACK_IMAGE) game._coverPromise = null;
+                    this.drainCovers();
+                }
+            })();
+        }
     }
 
     renderGrid() {
@@ -721,6 +766,7 @@ class LumiSDK {
         });
 
         this.grid.appendChild(fragment);
+        for (const card of this.grid.children) this.queueCover(card._game, card);
         this.prefetchVisible();
     }
 
@@ -758,7 +804,7 @@ class LumiSDK {
     }
 
     updateView() {
-        if (this.gameCount) this.gameCount.textContent = `${this.games.length} games`;
+        if (this.gameCount) this.gameCount.textContent = !this.games.length && !this.loaded ? 'Laddar spel…' : `${this.games.length} games`;
         this.renderGrid();
         this.renderPagination();
     }
@@ -792,6 +838,7 @@ class LumiSDK {
     }
 
     closeGame() {
+        this._playRequest = (this._playRequest || 0) + 1;
         this.gameView.style.display = 'none';
         this.menuView.style.display = 'flex';
         this.iframe.removeAttribute('srcdoc');
@@ -802,4 +849,6 @@ class LumiSDK {
     }
 }
 
-window.Lumin = new LumiSDK();
+// The upstream loader owns window.Lumin (including its async bootstrap setter).
+// Keep our combined catalog separate so neither API can overwrite the other.
+window.TR_OS_GAMES = new LumiSDK();

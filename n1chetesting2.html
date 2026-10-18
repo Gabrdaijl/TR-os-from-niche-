@@ -9,7 +9,17 @@
   <title>TR-os</title>
   <script src="theme.black5ce31.js?v=19"></script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net/" crossorigin>
-  <script src="https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js"></script>
+  <script>
+    window.TR_OS_LUMIN_READY = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://cdn.jsdelivr.net/gh/luminsdk/script@latest/lumin.min.js';
+      script.onload = () => resolve(window.Lumin);
+      script.onerror = () => reject(new Error('Lumin SDK could not load'));
+      document.head.appendChild(script);
+    });
+    window.TR_OS_LUMIN_READY.catch(() => {});
+  </script>
   <link rel="stylesheet" href="g.css">
   <link rel="stylesheet" href="page-fx5e1f.css?v=2">
   <script src="page-fx7b30.js?v=4" defer></script>
@@ -18,9 +28,9 @@
 <body>
   <div id="tros"></div>
 
-  <script src="gm.count31bce.js?v=6"></script>
+  <script src="gm.count31bce.js?v=7"></script>
   <script>
-    Lumin.init({
+    TR_OS_GAMES.init({
       container: "#tros",
       columns: 8,
       rows: 4,

@@ -7,6 +7,7 @@ const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 const { createPresence } = require('./presence.cjs');
+const { createReports } = require('./reports.cjs');
 
 function proxyEnvironment(source) {
   const env = { ...source };
@@ -32,6 +33,7 @@ function createApp(options = {}) {
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
   const presence = createPresence(env, activeCount);
+  const reports = createReports(env);
   const json = (res, status, data) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
@@ -126,6 +128,22 @@ function createApp(options = {}) {
           cloud: 'Extern Cloud-spelare; ingen egen spelserver', chat: 'Egen chatt och närvaro aktiverad'
         }
       });
+    }
+    if (route === '/api/reports') {
+      if (req.method !== 'POST') return json(res, 405, {error:'Use POST'});
+      if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) return json(res,415,{error:'Use application/json'});
+      if (!allowed(req,'reports',5)) return json(res,429,{error:'För många rapporter. Försök senare.'});
+      return json(res,201,await reports.submit(await body(req,150000)));
+    }
+    if (route === '/api/admin/reports' || route.startsWith('/api/admin/reports/')) {
+      if (req.method !== 'GET') return json(res,405,{error:'Use GET'});
+      if (!adminAuthorized(req,res)) return;
+      if (route === '/api/admin/reports') return json(res,200,await reports.list());
+      const match=route.match(/^\/api\/admin\/reports\/([a-f0-9-]{36})\/image$/i);
+      if (!match) return json(res,404,{error:'Not found'});
+      const image=await reports.image(match[1]);
+      res.writeHead(200,{'content-type':'image/jpeg','cache-control':'no-store','content-length':image.length,'content-disposition':'inline; filename="report.jpg"'});
+      return res.end(image);
     }
     if (route === '/api/health') return json(res, 200, {
       ok: true, name: 'TR-os', services: {
