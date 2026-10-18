@@ -49,7 +49,8 @@ async function startup(diagnostics = false) {
 
 test('Snapchat startup removes duplicate caller UA only and preserves Epoxy default and socket callbacks', async () => {
   const h = await startup();
-  const target = new URL('wss://chat.example.test/socket?token=URL_QUERY_SECRET');
+  const target = new URL('wss://chat.example.test:8443/socket/path?token=URL_QUERY_SECRET');
+  const originalUrl = target.href;
   const protocols = ['PROTOCOL_VALUE_SECRET'];
   const origin = ['Origin', 'https://origin.example.test'];
   const cookie = ['Cookie', 'COOKIE_VALUE_SECRET'];
@@ -63,7 +64,12 @@ test('Snapchat startup removes duplicate caller UA only and preserves Epoxy defa
   ];
   assert.equal(h.transport.connect(target, protocols, headers, ...callbacks), h.tuple);
   const sent = h.connects[0];
-  assert.equal(sent[0], target); assert.equal(sent[1], protocols);
+  assert.notEqual(sent[0], target, 'Only a backend URL copy may be normalized');
+  assert.equal(sent[0].protocol, 'https:');
+  assert.equal(sent[0].hostname, target.hostname); assert.equal(sent[0].port, '8443');
+  assert.equal(sent[0].pathname, target.pathname); assert.equal(sent[0].search, target.search);
+  assert.equal(target.href, originalUrl, 'The frontend WebSocket URL must stay wss');
+  assert.equal(sent[1], protocols);
   assert.equal(sent[2].length, 3);
   assert.equal(sent[2][0], origin); assert.equal(sent[2][1], cookie); assert.equal(sent[2][2], other);
   assert.deepEqual(headers, originalHeaders, 'The caller header array must remain intact');
@@ -75,6 +81,28 @@ test('Snapchat startup removes duplicate caller UA only and preserves Epoxy defa
   assert.equal(h.transport.opts.wisp, 'wss://tr-os.test/wisp-vps/');
   assert.equal(h.configuration.transport, h.transport);
   assert.deepEqual(h.logs, []);
+});
+
+test('socket backend scheme mapping preserves endpoint and original URL for secure and plaintext sockets', async () => {
+  const h = await startup();
+  for (const [input, scheme] of [
+    ['wss://chat.example.test:9443/socket/secure?token=SECURE_QUERY_SECRET', 'https:'],
+    ['ws://chat.example.test:9080/socket/plain?token=PLAIN_QUERY_SECRET', 'http:']
+  ]) {
+    const target = new URL(input);
+    const headers = [['Origin', 'https://origin.example.test'], ['Cookie', 'COOKIE_VALUE_SECRET']];
+    const protocols = ['PROTOCOL_VALUE_SECRET'];
+    h.transport.connect(target, protocols, headers, () => {}, () => {}, () => {}, () => {});
+    const [backend, passedProtocols, passedHeaders] = h.connects.at(-1);
+    assert.notEqual(backend, target);
+    assert.equal(backend.protocol, scheme);
+    assert.equal(backend.hostname, target.hostname); assert.equal(backend.port, target.port);
+    assert.equal(backend.pathname, target.pathname); assert.equal(backend.search, target.search);
+    assert.equal(target.href, input);
+    assert.equal(passedProtocols, protocols);
+    assert.equal(passedHeaders[0], headers[0]); assert.equal(passedHeaders[1], headers[1]);
+  }
+  assert.equal(h.transport.client, h.nativeClient, 'URL normalization must not replace native TLS/client configuration');
 });
 
 test('UA fix leaves HTTP request headers, body and response untouched when diagnostics are off', async () => {
@@ -109,7 +137,11 @@ test('opt-in diagnostics contain connection metadata and forward all payloads wi
   sent[6]('Invalid websocket response status code: 400 != 101 RAW_ERROR_SECRET');
   const body = 'REQUEST_BODY_SECRET';
   await h.transport.request(new URL('https://http.example.test/private?token=HTTP_QUERY_SECRET'), 'POST', body, headers);
-  const start = h.logs.find(([label]) => label === 'TR-os Snapchat socket start')?.[1];
+  const metadata = h.logs.map(([label, payload]) => {
+    assert.equal(typeof payload, 'string', 'Browser-readable diagnostics must serialize metadata as JSON');
+    return [label, JSON.parse(payload)];
+  });
+  const start = metadata.find(([label]) => label === 'TR-os Snapchat socket start')?.[1];
   assert.ok(start);
   assert.deepEqual(Object.keys(start).sort(), ['headers', 'host', 'originHost', 'protocols', 'scheme']);
   assert.equal(start.host, 'chat.example.test'); assert.equal(start.scheme, 'wss:');
@@ -118,7 +150,7 @@ test('opt-in diagnostics contain connection metadata and forward all payloads wi
   assert.equal(JSON.stringify(h.logs).includes('SECRET'), false);
   assert.ok(h.logs.some(([label]) => label === 'TR-os Snapchat socket open'));
   assert.ok(h.logs.some(([label]) => label === 'TR-os Snapchat socket failed'));
-  assert.ok(h.logs.some(([label, info]) => label === 'TR-os Snapchat HTTP' && info.host === 'http.example.test' && info.status === 403));
+  assert.ok(metadata.some(([label, info]) => label === 'TR-os Snapchat HTTP' && info.host === 'http.example.test' && info.status === 403));
   assert.equal(received[1][1], 'CHAT_MESSAGE_SECRET');
   assert.equal(received[2][2], 'CLOSE_REASON_SECRET');
   assert.equal(received[3][1], 'Invalid websocket response status code: 400 != 101 RAW_ERROR_SECRET');
