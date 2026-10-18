@@ -13,18 +13,24 @@
     const epoxyConnect = transport.connect.bind(transport);
     // Epoxy already supplies the browser's UA. A second copy from Scramjet
     // produces duplicate User-Agent fields in the upstream upgrade request.
-    transport.connect = (url, protocols, headers, ...callbacks) => epoxyConnect(
-      url, protocols, headers.filter(header => header[0].toLowerCase() !== 'user-agent'), ...callbacks
-    );
+    transport.connect = (url, protocols, headers, ...callbacks) => {
+      // The pinned Epoxy writes an absolute HTTP request target. RFC 6455
+      // allows HTTP(S) here; retain the same TLS, host, port, path and query.
+      const requestUrl = new URL(url.href);
+      if (requestUrl.protocol === 'wss:') requestUrl.protocol = 'https:';
+      else if (requestUrl.protocol === 'ws:') requestUrl.protocol = 'http:';
+      return epoxyConnect(requestUrl, protocols,
+        headers.filter(header => header[0].toLowerCase() !== 'user-agent'), ...callbacks);
+    };
     // Opt-in connection metadata only: never log cookies, URLs with queries,
     // protocol values, request bodies or message contents.
     if (new URL(location.href).searchParams.get('diagnostics') === '1') {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
         const response = await request(...args);
-        if (response.status >= 400) console.info('TR-os Snapchat HTTP', {
+        if (response.status >= 400) console.info('TR-os Snapchat HTTP', JSON.stringify({
           host: args[0].hostname, status: response.status
-        });
+        }));
         return response;
       };
       const connect = transport.connect.bind(transport);
@@ -34,11 +40,11 @@
           protocols: Array.isArray(protocols) ? protocols.length : Number(!!protocols) };
         const origin = headers.find(header => header[0].toLowerCase() === 'origin');
         try { info.originHost = origin ? new URL(origin[1]).hostname : ''; } catch { info.originHost = 'opaque'; }
-        console.info('TR-os Snapchat socket start', info);
+        console.info('TR-os Snapchat socket start', JSON.stringify(info));
         return connect(url, protocols, headers,
-          (...args) => { console.info('TR-os Snapchat socket open', { host: url.hostname }); open(...args); },
+          (...args) => { console.info('TR-os Snapchat socket open', JSON.stringify({ host: url.hostname })); open(...args); },
           data, close,
-          (...args) => { console.info('TR-os Snapchat socket failed', { host: url.hostname }); error(...args); });
+          (...args) => { console.info('TR-os Snapchat socket failed', JSON.stringify({ host: url.hostname })); error(...args); });
       };
     }
     const controller = new $scramjetController.Controller({
