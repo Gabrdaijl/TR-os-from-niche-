@@ -79,6 +79,10 @@
     if (new URL(location.href).searchParams.get('diagnostics') === '1') {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
+        if (args[0].hostname === 'sentry.sc-prod.net' && window.TR_OS_SNAP_DIAGNOSTICS) {
+          args[2] = window.TR_OS_SNAP_DIAGNOSTICS.observe(args[2], value =>
+            console.info('TR-os Snapchat crash location', JSON.stringify(value)));
+        }
         const response = await request(...args);
         if (response.status >= 400) console.info('TR-os Snapchat HTTP', JSON.stringify({
           host: args[0].hostname, status: response.status
