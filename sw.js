@@ -1,4 +1,4 @@
-// TR-os proxy assets v6: independent Snapchat compatibility engine.
+// TR-os proxy assets v7: native navigation for the app, isolated proxy routes.
 /************************
  * swium dev
  * (literally first dev realize, most of the features arent here)
@@ -282,8 +282,15 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-	if ($scramjetController.shouldRoute(event)) event.respondWith($scramjetController.route(event));
-	else event.respondWith(handleRequest(event));
+  // Ordinary app navigations and assets must use the browser's native loader.
+  // A failed proxy/controller must never take the TR-os homepage offline.
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+  if ($scramjetController.shouldRoute(event)) {
+    event.respondWith($scramjetController.route(event));
+  } else if (url.pathname.startsWith(new URL('scramjet/', self.registration.scope).pathname)) {
+    event.respondWith(handleRequest(event));
+  }
 });
 
 self.addEventListener("message", ({ data }) => {
