@@ -34,7 +34,6 @@
     status.hidden = false;
     status.textContent = 'Laddar ' + name + '…';
     info.textContent = platform.label;
-    document.getElementById('open-platform').href = platform.url;
     try {
       const src = platform.direct ? platform.url : (await ensureProxy()).encodeUrl(platform.url);
       if (current !== generation) return;
@@ -45,7 +44,7 @@
       status.hidden = true;
     } catch (error) {
       if (current !== generation) return;
-      status.textContent = 'Sidan kunde inte anslutas. Använd Öppna separat för att prova direkt.';
+      status.textContent = 'Sidan kunde inte anslutas. Välj en annan flik ovan eller ladda om sidan.';
       console.error('TR-os game tools:', error);
     }
   }
