@@ -51,6 +51,7 @@ async function startup(diagnostics = false, options = {}) {
   if (options.curl) location.searchParams.set('socket', 'curl');
   else if (!options.actualDefault) location.searchParams.set('socket', 'epoxy');
   if (options.tlsCheck) location.searchParams.set('tlsCheck', '1');
+  if (options.notificationCompat === false) location.searchParams.set('optionalNotifications', '0');
   const sandbox = {
     URL, navigator: { serviceWorker: { controller: Object.freeze({ type: 'actual-worker-object' }) } }, location,
     document: { getElementById: id => elements.get(id), createElement: name => {
@@ -69,7 +70,7 @@ async function startup(diagnostics = false, options = {}) {
     setInterval() { return 1; }, clearInterval() {},
     setTimeout(fn, milliseconds) { timers.set(++nextTimer, { fn, milliseconds }); return nextTimer; },
     clearTimeout(id) { timers.delete(id); },
-    window: { addEventListener() {} }, parent: { postMessage() {} }
+    window: { addEventListener() {}, TR_OS_SNAP_DIAGNOSTICS: options.observer, TR_OS_SNAP_COMPAT: options.compat }, parent: { postMessage() {} }
   };
   await vm.runInNewContext(source, sandbox, { filename: 'actual-snapchat.js' });
   if (options.expectFailure) {
@@ -89,6 +90,33 @@ async function startup(diagnostics = false, options = {}) {
       timers.delete(match[0]); match[1].fn();
     } };
 }
+
+test('crash-body inspection requires explicit diagnostics and exact Sentry destination', async () => {
+  for (const diagnostics of [false, true]) {
+    const inspected = [], body = new Uint8Array([1, 2, 3]);
+    const h = await startup(diagnostics, { observer: { observe(value, report) {
+      inspected.push(value); report({ type: 'TypeError', frames: [] }); return value;
+    } } });
+    await h.transport.request(new URL('https://sentry.sc-prod.net/envelope'), 'POST', body, []);
+    await h.transport.request(new URL('https://www.snapchat.com/private'), 'POST', body, []);
+    await h.transport.request(new URL('https://sentry.sc-prod.net.attacker.invalid/envelope'), 'POST', body, []);
+    assert.equal(inspected.length, diagnostics ? 1 : 0);
+    assert.ok(h.requests.every(args => args[2] === body));
+    assert.equal(h.logs.filter(args => args[0] === 'TR-os Snapchat crash location').length, diagnostics ? 1 : 0);
+  }
+});
+
+test('notification compatibility is enabled normally, has explicit comparison opt-out and never inspects POST', async () => {
+  for (const enabled of [false, undefined, true]) {
+    const inspected = [];
+    const h = await startup(false, { notificationCompat: enabled, compat: { response(value, url) { inspected.push(url.hostname); return value; } } });
+    const body = new Uint8Array([9, 8, 7]);
+    await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/fixture.js'), 'GET', null, []);
+    await h.transport.request(new URL('https://www.snapchat.com/private'), 'POST', body, []);
+    assert.equal(inspected.length, enabled === false ? 0 : 1);
+    assert.equal(h.requests[1][2], body);
+  }
+});
 
 test('Snapchat startup removes duplicate caller UA only and preserves Epoxy default and socket callbacks', async () => {
   const h = await startup();
