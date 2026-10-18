@@ -1,7 +1,7 @@
 // Snapchat uses a separate Scramjet 2 controller; the existing proxy is unchanged.
 // Upstream source and pinned versions: see snapchat-notices.html.
 (async () => {
-  const release = '20261018.2';
+  const release = '20261018.3';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -9,12 +9,19 @@
   const message = document.getElementById('message');
   const element = document.getElementById('player');
   document.getElementById('retry').onclick = () => location.reload();
+  let support;
   try {
     const compatibilityReady = window.TR_OS_SNAP_COMPAT?.release === release && typeof window.TR_OS_SNAP_COMPAT?.response === 'function';
+    try {
+      if (window.TR_OS_SNAP_REPORT?.release === release) support = window.TR_OS_SNAP_REPORT.create(diagnostics, compatibilityReady,
+        { compatibilityEnabled, socketMode: query.get('socket') === 'epoxy' ? 'epoxy' : 'curl' });
+    } catch {}
     if (diagnostics) console.info('TR-os Snapchat startup', JSON.stringify({ release, compatibilityEnabled, compatibilityReady }));
     if (compatibilityEnabled && !compatibilityReady) throw new Error('Snapchat-filerna kunde inte uppdateras. Ladda om TR-os och försök igen.');
+    support?.stage('service-worker');
     await TR_OS.ensureServiceWorker();
     TR_OS_SNAP_WORKER.install($scramjetController);
+    support?.stage('transport');
     const transport = new EpoxyTransport.default({ wisp: TR_OS.wispUrl('/wisp-vps/') });
     await transport.init();
     const epoxyConnect = transport.connect.bind(transport);
@@ -86,18 +93,23 @@
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
         const response = await request(...args);
-        return args[1] === 'GET' ? window.TR_OS_SNAP_COMPAT.response(response, args[0], diagnostics ? outcome =>
-          console.info('TR-os Snapchat compatibility', JSON.stringify({ release, outcome })) : undefined) : response;
+        return args[1] === 'GET' ? window.TR_OS_SNAP_COMPAT.response(response, args[0], outcome => {
+          support?.compatibility(outcome);
+          if (diagnostics) console.info('TR-os Snapchat compatibility', JSON.stringify({ release, outcome }));
+        }) : response;
       };
     }
     if (diagnostics) {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
         if (args[0].hostname === 'sentry.sc-prod.net' && window.TR_OS_SNAP_DIAGNOSTICS) {
-          args[2] = window.TR_OS_SNAP_DIAGNOSTICS.observe(args[2], value =>
-            console.info('TR-os Snapchat crash location', JSON.stringify(value)));
+          args[2] = window.TR_OS_SNAP_DIAGNOSTICS.observe(args[2], value => {
+            support?.crash(value);
+            console.info('TR-os Snapchat crash location', JSON.stringify(value));
+          });
         }
         const response = await request(...args);
+        if (args[1] === 'GET') support?.asset(args[0].href, response.status);
         if (response.status >= 400) console.info('TR-os Snapchat HTTP', JSON.stringify({
           host: args[0].hostname, status: response.status
         }));
@@ -111,12 +123,14 @@
         const origin = headers.find(header => header[0].toLowerCase() === 'origin');
         try { info.originHost = origin ? new URL(origin[1]).hostname : ''; } catch { info.originHost = 'opaque'; }
         console.info('TR-os Snapchat socket start', JSON.stringify(info));
+        support?.socket('opening');
         return connect(url, protocols, headers,
-          (...args) => { console.info('TR-os Snapchat socket open', JSON.stringify({ host: url.hostname, hasProtocol: !!args[0] })); open(...args); },
-          data, close,
-          (...args) => { console.info('TR-os Snapchat socket failed', JSON.stringify({ host: url.hostname })); error(...args); });
+          (...args) => { support?.socket('open'); console.info('TR-os Snapchat socket open', JSON.stringify({ host: url.hostname, hasProtocol: !!args[0] })); open(...args); },
+          data, (...args) => { support?.socket('closed'); close(...args); },
+          (...args) => { support?.socket('failed'); console.info('TR-os Snapchat socket failed', JSON.stringify({ host: url.hostname })); error(...args); });
       };
     }
+    support?.stage('engine');
     const controller = new $scramjetController.Controller({
       serviceworker: navigator.serviceWorker.controller,
       transport,
@@ -127,7 +141,7 @@
     });
     await TR_OS.withTimeout(controller.wait(), 20000, 'Snapchat-motorn kunde inte startas. Ladda om TR-os och försök igen.');
     const frame = controller.createFrame(element);
-    element.addEventListener('load', () => { status.hidden = true; });
+    element.addEventListener('load', () => { status.hidden = true; support?.stage('page-loaded'); });
     let lastLocation = '';
     function syncLocation() {
       try {
@@ -145,6 +159,7 @@
     window.addEventListener('pagehide', () => clearInterval(timer));
     frame.go('https://web.snapchat.com/');
   } catch (error) {
+    support?.stage('startup-failed');
     message.textContent = error.message || 'Snapchat kunde inte startas.';
     document.getElementById('retry').hidden = false;
   }
