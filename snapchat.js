@@ -1,11 +1,18 @@
 // Snapchat uses a separate Scramjet 2 controller; the existing proxy is unchanged.
 // Upstream source and pinned versions: see snapchat-notices.html.
 (async () => {
+  const release = '20261018.2';
+  const query = new URL(location.href).searchParams;
+  const compatibilityEnabled = query.get('optionalNotifications') !== '0';
+  const diagnostics = query.get('diagnostics') === '1';
   const status = document.getElementById('status');
   const message = document.getElementById('message');
   const element = document.getElementById('player');
   document.getElementById('retry').onclick = () => location.reload();
   try {
+    const compatibilityReady = window.TR_OS_SNAP_COMPAT?.release === release && typeof window.TR_OS_SNAP_COMPAT?.response === 'function';
+    if (diagnostics) console.info('TR-os Snapchat startup', JSON.stringify({ release, compatibilityEnabled, compatibilityReady }));
+    if (compatibilityEnabled && !compatibilityReady) throw new Error('Snapchat-filerna kunde inte uppdateras. Ladda om TR-os och försök igen.');
     await TR_OS.ensureServiceWorker();
     TR_OS_SNAP_WORKER.install($scramjetController);
     const transport = new EpoxyTransport.default({ wisp: TR_OS.wispUrl('/wisp-vps/') });
@@ -24,11 +31,10 @@
     };
     // Use libcurl's origin-form socket handshake; HTTP and cookie ownership
     // stay with this controller. socket=epoxy remains a controlled comparison.
-    const query = new URL(location.href).searchParams;
     if (query.get('socket') !== 'epoxy') {
       await TR_OS.withTimeout(new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = '/snap-curl-transport.js';
+        script.src = '/snap-curl-transport.js?v=' + release;
         script.onload = resolve;
         script.onerror = () => reject(new Error('Snapchat-transporten kunde inte laddas.'));
         document.head.append(script);
@@ -76,14 +82,15 @@
     }
     // Opt-in connection metadata only: never log cookies, URLs with queries,
     // protocol values, request bodies or message contents.
-    if (query.get('optionalNotifications') !== '0' && window.TR_OS_SNAP_COMPAT) {
+    if (compatibilityEnabled) {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
         const response = await request(...args);
-        return args[1] === 'GET' ? window.TR_OS_SNAP_COMPAT.response(response, args[0]) : response;
+        return args[1] === 'GET' ? window.TR_OS_SNAP_COMPAT.response(response, args[0], diagnostics ? outcome =>
+          console.info('TR-os Snapchat compatibility', JSON.stringify({ release, outcome })) : undefined) : response;
       };
     }
-    if (new URL(location.href).searchParams.get('diagnostics') === '1') {
+    if (diagnostics) {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
         if (args[0].hostname === 'sentry.sc-prod.net' && window.TR_OS_SNAP_DIAGNOSTICS) {
@@ -114,8 +121,8 @@
       serviceworker: navigator.serviceWorker.controller,
       transport,
       config: {
-        prefix: '/snap-proxy/', scramjetPath: '/snap-engine.js',
-        injectPath: '/snap-controller.inject.js', wasmPath: '/snap-engine.wasm'
+        prefix: '/snap-proxy/', scramjetPath: '/snap-engine.js?v=' + release,
+        injectPath: '/snap-controller.inject.js?v=' + release, wasmPath: '/snap-engine.wasm?v=' + release
       }
     });
     await TR_OS.withTimeout(controller.wait(), 20000, 'Snapchat-motorn kunde inte startas. Ladda om TR-os och försök igen.');

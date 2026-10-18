@@ -378,7 +378,7 @@
     if (!tab) return;
     tab.lastUrl = 'https://web.snapchat.com/';
     tab.favicon = new URL('snapchat.svg', location.href).href;
-    tab.frame.src = 'snapchat.html';
+    tab.frame.src = 'snapchat.html?v=20261018.2';
     renderTabs();
     syncAddress(true);
   };
