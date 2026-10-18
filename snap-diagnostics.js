@@ -43,7 +43,8 @@
       try { header = JSON.parse(lines[i]); } catch { continue; }
       if (header?.type !== 'event') continue;
       try { payload = JSON.parse(lines[i + 1]); } catch { continue; }
-      const value = payload?.exception?.values?.[0];
+      const values = payload?.exception?.values;
+      const value = Array.isArray(values) ? values.slice(0, 3).find(item => types.has(item?.type)) || values[0] : null;
       if (!value || typeof value !== 'object') continue;
       const frames = Array.isArray(value.stacktrace?.frames) ? value.stacktrace.frames.slice(-16).map(frame).filter(Boolean).slice(-8) : [];
       return { type: types.has(value.type) ? value.type : 'Other', category: category(value.value), frames };
