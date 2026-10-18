@@ -4,7 +4,7 @@ const vm=require('node:vm');
 const fs=require('node:fs');
 test('Gimkit tools load the actual public integration without waiting for proxy startup',()=>{
  const elements={};
- for(const id of ['cheats-frame','status','platform-info','open-platform']) elements[id]={hidden:true,addEventListener(event,fn){this[event]=fn;}};
+ for(const id of ['cheats-frame','status','platform-info']) elements[id]={hidden:true,addEventListener(event,fn){this[event]=fn;}};
  const buttons=['gimkit','kahoot','blooket'].map(platform=>({dataset:{platform},addEventListener(event,fn){this[event]=fn;}}));
  const context={document:{getElementById:id=>elements[id],querySelectorAll:()=>buttons},$scramjetLoadController(){throw Error('Proxy must not be required for the direct integration');},console};
  vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../cheats.js'),'utf8'),context);
