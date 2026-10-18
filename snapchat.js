@@ -22,6 +22,58 @@
       return epoxyConnect(requestUrl, protocols,
         headers.filter(header => header[0].toLowerCase() !== 'user-agent'), ...callbacks);
     };
+    // Use libcurl's origin-form socket handshake; HTTP and cookie ownership
+    // stay with this controller. socket=epoxy remains a controlled comparison.
+    const query = new URL(location.href).searchParams;
+    if (query.get('socket') !== 'epoxy') {
+      await TR_OS.withTimeout(new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = '/snap-curl-transport.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Snapchat-transporten kunde inte laddas.'));
+        document.head.append(script);
+      }), 20000, 'Snapchat-transporten tog för lång tid att starta.');
+      const curl = new LibcurlTransport.LibcurlClient({ wisp: TR_OS.wispUrl('/wisp-vps/') });
+      await TR_OS.withTimeout(curl.init(), 20000, 'Snapchat-transporten tog för lång tid att starta.');
+      if (query.get('tlsCheck') === '1') {
+        let rejectedCertificate = false;
+        try { await TR_OS.withTimeout(curl.request(new URL('https://self-signed.badssl.com/'), 'GET', null, []), 20000, 'TLS-kontrollen tog för lång tid.'); }
+        catch (failure) { rejectedCertificate = /certificate|cert verify|ssl peer/i.test(String(failure)); }
+        if (!rejectedCertificate) throw new Error('Transportens certifikatkontroll kunde inte verifieras.');
+        const valid = await TR_OS.withTimeout(curl.request(new URL('https://example.com/'), 'GET', null, []), 20000, 'TLS-kontrollen tog för lång tid.');
+        if (valid.status !== 200) throw new Error('Transportens giltiga HTTPS-anslutning kunde inte verifieras.');
+        console.info('TR-os Snapchat TLS check: untrusted certificate rejected; valid HTTPS accepted');
+      }
+      transport.connect = (url, protocols, headers, open, data, close, error) => {
+        let phase = 'opening', callbacks;
+        const timer = setTimeout(() => {
+          if (phase !== 'opening') return;
+          phase = 'failed';
+          try { Promise.resolve(callbacks?.[1](1000, '')).catch(() => {}); } catch {}
+          error('Snapchat socket handshake timed out');
+        }, 15000);
+        const fail = (...args) => {
+          clearTimeout(timer);
+          if (phase === 'failed' || phase === 'closed') return;
+          if (phase === 'opening') phase = 'failed';
+          error(...args);
+        };
+        try {
+          callbacks = curl.connect(url, protocols, headers,
+            (...args) => {
+              if (phase !== 'opening') return;
+              clearTimeout(timer); phase = 'open'; open(...args);
+            },
+            (...args) => { if (phase === 'open') data(...args); },
+            (...args) => {
+              if (phase === 'opening') return fail('Snapchat socket closed before handshake');
+              clearTimeout(timer);
+              if (phase === 'open') { phase = 'closed'; close(...args); }
+            }, fail);
+          return callbacks;
+        } catch (failure) { clearTimeout(timer); throw failure; }
+      };
+    }
     // Opt-in connection metadata only: never log cookies, URLs with queries,
     // protocol values, request bodies or message contents.
     if (new URL(location.href).searchParams.get('diagnostics') === '1') {
