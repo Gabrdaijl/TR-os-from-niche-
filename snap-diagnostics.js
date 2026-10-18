@@ -2,7 +2,22 @@
 // this parser; forwarding keeps the original bytes, including on parser failure.
 (() => {
   const limit = 262144;
-  const types = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'DOMException', 'AssertionError', 'InvariantViolation']);
+  const types = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'DOMException', 'AssertionError', 'InvariantViolation', 'DataCloneError', 'SecurityError', 'InvalidStateError', 'NotSupportedError', 'NotAllowedError', 'AbortError', 'QuotaExceededError', 'NetworkError', 'OperationError', 'UnhandledRejection']);
+  function category(value) {
+    if (typeof value !== 'string') return 'unknown';
+    for (const [name, pattern] of [
+      ['structured-clone', /could not be cloned|cannot be cloned|not transferable|DataCloneError/i],
+      ['cross-origin', /cross.origin|Blocked a frame|Permission denied to access/i],
+      ['storage', /Failed to read.*(?:local|session)Storage|StorageAccess/i],
+      ['missing-api', /is not defined|is not a function/i],
+      ['null-property', /Cannot (?:read|set) properties of (?:undefined|null)/i],
+      ['wasm', /WebAssembly|CompileError|LinkError/i],
+      ['socket', /WebSocket|socket/i],
+      ['url', /wrong URL|invalid URL/i],
+      ['worker', /Worker|postMessage/i]
+    ]) if (pattern.test(value)) return name;
+    return 'unknown';
+  }
   function frame(value) {
     try {
       let url = new URL(value.filename);
@@ -31,7 +46,7 @@
       const value = payload?.exception?.values?.[0];
       if (!value || typeof value !== 'object') continue;
       const frames = Array.isArray(value.stacktrace?.frames) ? value.stacktrace.frames.slice(-16).map(frame).filter(Boolean).slice(-8) : [];
-      return { type: types.has(value.type) ? value.type : 'Other', frames };
+      return { type: types.has(value.type) ? value.type : 'Other', category: category(value.value), frames };
     }
     return null;
   }
