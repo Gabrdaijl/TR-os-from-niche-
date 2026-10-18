@@ -94,7 +94,7 @@
         try { info.originHost = origin ? new URL(origin[1]).hostname : ''; } catch { info.originHost = 'opaque'; }
         console.info('TR-os Snapchat socket start', JSON.stringify(info));
         return connect(url, protocols, headers,
-          (...args) => { console.info('TR-os Snapchat socket open', JSON.stringify({ host: url.hostname })); open(...args); },
+          (...args) => { console.info('TR-os Snapchat socket open', JSON.stringify({ host: url.hostname, hasProtocol: !!args[0] })); open(...args); },
           data, close,
           (...args) => { console.info('TR-os Snapchat socket failed', JSON.stringify({ host: url.hostname })); error(...args); });
       };

@@ -1,3 +1,4 @@
+// TR-os patch 2026-10-18: validate and forward the actual server-selected socket protocol; no WASM/TLS changes. Upstream libcurl-transport 2.0.5; see snapchat-notices.html.
 (function(g,f){if(typeof exports=="object"&&typeof module<"u"){module.exports=f(require)}else if("function"==typeof define && define.amd){define("LibcurlTransport",["fs","path"],function(_d_0,_d_1){var d={"fs": _d_0,"path": _d_1},r=function(m){if(m in d) return d[m];if(typeof require=="function") return require(m);throw new Error("Cannot find module '"+m+"'")};return f(r)})}else {var gN={"fs":"fs","path":"path"},gReq=function(r){var mod = r in gN ? g[gN[r]] : g[r]; return mod };g["LibcurlTransport"]=f(gReq)}}(typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : this,function(require){var exports={};var __exports=exports;var module={exports};
 "use strict";
 var __defProp = Object.defineProperty;
@@ -5953,6 +5954,8 @@ Several C libraries are used, and their licenses are listed below:
       this.onclose = () => {
       };
       this.connected = false;
+      // TR-os compatibility patch: expose the server-selected protocol only.
+      this.selectedProtocol = "";
       this.recv_loop = null;
       this.http_handle = null;
       this.recv_buffer = [];
@@ -5968,11 +5971,47 @@ Several C libraries are used, and their licenses are listed below:
     connect() {
       let data_callback = () => {
       };
-      let headers_callback = () => {
+      let buffer = "", bytes = 0, status = 0, complete = false;
+      let selected = "", selections = 0, invalid = false, extension = false;
+      let headers_callback = (chunk) => {
+        bytes += chunk.byteLength;
+        if (bytes > 65536) { invalid = true; return; }
+        buffer += new TextDecoder().decode(chunk);
+        let end;
+        while ((end = buffer.indexOf("\r\n")) !== -1) {
+          const line = buffer.slice(0, end);
+          buffer = buffer.slice(end + 2);
+          const start = /^HTTP\/\S+\s+(\d{3})(?:\s|$)/.exec(line);
+          if (start) {
+            status = Number(start[1]); complete = false;
+            selected = ""; selections = 0; extension = false;
+          } else if (line === "") {
+            complete = true;
+          } else if (status === 101) {
+            const separator = line.indexOf(":");
+            if (separator <= 0 || /^[ \t]/.test(line)) { invalid = true; continue; }
+            const name = line.slice(0, separator).toLowerCase();
+            if (name === "sec-websocket-protocol") {
+              selections++;
+              selected = line.slice(separator + 1).trim();
+            } else if (name === "sec-websocket-extensions") {
+              extension = true; // This client has not offered any extensions.
+            }
+          }
+        }
       };
       let finish_callback = (error) => {
         if (error === 0) {
           this.connected = true;
+          const offered = typeof this.protocols === "string" ? [this.protocols] : this.protocols || [];
+          const token = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+          if (invalid || !complete || buffer || status !== 101 || extension || selections > 1 ||
+              (selections === 1 && (!token.test(selected) || !offered.includes(selected))) ||
+              (offered.length > 0 && selections !== 1)) {
+            this.cleanup(8); // CURLE_WEIRD_SERVER_REPLY; never dispatch open.
+            return;
+          }
+          this.selectedProtocol = selected;
           this.recv_loop = setInterval(() => {
             let data = this.recv();
             if (data !== null) this.onmessage(data);
@@ -6040,7 +6079,7 @@ Several C libraries are used, and their licenses are listed below:
       super.close();
       this.connected = false;
       if (error) {
-        error_msg(`Websocket "${this.url}" encountered error code ${error}: ${get_error_str(error)}`);
+        error_msg(`Websocket encountered error code ${error}: ${get_error_str(error)}`);
         this.onerror(error);
       } else {
         this.onclose();
@@ -6151,7 +6190,7 @@ Several C libraries are used, and their licenses are listed below:
       return 0;
     }
     get protocol() {
-      return this.protocols[0] || "";
+      return this.socket?.selectedProtocol || "";
     }
     get extensions() {
       return "";
@@ -6475,7 +6514,7 @@ var LibcurlClient = class {
     });
     socket.binaryType = "arraybuffer";
     socket.onopen = (event) => {
-      onopen("", "");
+      onopen(socket.protocol, socket.extensions);
     };
     socket.onclose = (event) => {
       onclose(event.code, event.reason);
