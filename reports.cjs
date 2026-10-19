@@ -2,6 +2,7 @@
 const crypto = require('node:crypto');
 const RETENTION = 7 * 24 * 60 * 60;
 const PREFIX = '{tros:reports}:v1:';
+const ARCHIVE_RETENTION = 30 * 24 * 60 * 60;
 const CATEGORIES = ['home', 'games', 'movies', 'ai', 'browser', 'snapchat', 'cloud', 'other'];
 const fail = (status, message) => Object.assign(new Error(message), {status});
 function imageBytes(image) {
@@ -50,6 +51,17 @@ local now=tonumber(redis.call('TIME')[1]); redis.call('ZREMRANGEBYSCORE',KEYS[1]
 local ids=redis.call('ZREVRANGE',KEYS[1],0,49); local reports={}
 for _,id in ipairs(ids) do local item=redis.call('GET',id..'meta'); if item then table.insert(reports,item) end end
 return reports`;
+const ARCHIVE = `-- tr-os:reports:archive
+local id=ARGV[1]; local now=tonumber(redis.call('TIME')[1]); local item=redis.call('GET',id..'meta')
+if not item then return 0 end
+local ttl=tonumber(ARGV[2]); local archivedId=ARGV[3]..id
+redis.call('SET',archivedId..'meta',item,'EX',ttl)
+local image=redis.call('GET',id..'image'); if image then redis.call('SET',archivedId..'image',image,'EX',ttl) end
+redis.call('ZREM',KEYS[1],id); redis.call('DEL',id..'meta',id..'image')
+redis.call('ZADD',KEYS[2],now,archivedId); redis.call('EXPIRE',KEYS[2],ttl)
+local extra=redis.call('ZCARD',KEYS[2])-1000
+if extra>0 then local old=redis.call('ZRANGE',KEYS[2],0,extra-1); for _,entry in ipairs(old) do redis.call('DEL',entry..'meta',entry..'image'); redis.call('ZREM',KEYS[2],entry) end end
+return 1`;
 function createReports(env, request = fetch) {
   const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
@@ -80,6 +92,12 @@ function createReports(env, request = fetch) {
       if (!Array.isArray(values)) throw fail(503, 'Rapporterna kunde inte hämtas.');
       return {reports:values.map(value=>JSON.parse(value)),retentionDays:7,maximum:50};
     },
+    async archive(id) {
+      if (!/^[a-f0-9-]{36}$/i.test(id)) throw fail(404, 'Rapporten finns inte.');
+      const result = await redis(['EVAL',ARCHIVE,2,PREFIX+'index',PREFIX+'archive:index',PREFIX+id+':',ARCHIVE_RETENTION,PREFIX+'archive:']);
+      if (Number(result) !== 1) throw fail(404, 'Rapporten finns inte längre.');
+      return { archived: true };
+    },
     async image(id) {
       if (!/^[a-f0-9-]{36}$/i.test(id)) throw fail(404, 'Bilden finns inte.');
       const value = await redis(['GET',PREFIX+id+':image']);
@@ -88,4 +106,4 @@ function createReports(env, request = fetch) {
     }
   };
 }
-module.exports = {createReports,imageBytes,RETENTION};
+module.exports = {createReports,imageBytes,RETENTION,ARCHIVE_RETENTION};

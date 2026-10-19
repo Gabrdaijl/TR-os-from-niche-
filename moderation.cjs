@@ -3,8 +3,11 @@ const crypto = require('node:crypto');
 
 const COOKIE = 'tros-device';
 const REDIS_KEY = 'tros:moderation:bans:v1';
+const CONVERSATIONS_KEY = 'tros:moderation:conversations:v1';
+const CONVERSATION_INDEX_KEY = 'tros:moderation:conversations:index:v1';
 const DEVICE_PATTERN = /^[A-Za-z0-9_-]{32,64}$/;
 const ID_PATTERN = /^[a-f0-9]{64}$/;
+const MAX_MESSAGES = 100;
 
 function cookieDeviceId(header = '') {
   for (const part of String(header).split(';')) {
@@ -25,6 +28,7 @@ function createModeration(env = process.env, request = fetch) {
   const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   const memory = new Map();
+  const conversations = new Map();
   let endpoint = null;
   try {
     if (endpointValue && token) {
@@ -112,7 +116,58 @@ function createModeration(env = process.env, request = fetch) {
     }
   }
 
-  return Object.freeze({ isBanned, ban, list, unban, configured: !!endpoint, cookieName: COOKIE });
+  function validText(text) {
+    if (typeof text !== 'string') return '';
+    const value = text.trim();
+    return value.length >= 1 && value.length <= 2000 ? value : '';
+  }
+
+  async function conversation(id) {
+    if (!ID_PATTERN.test(id)) return [];
+    if (!endpoint) return conversations.get(id)?.messages || [];
+    try {
+      const value = await command(['HGET', CONVERSATIONS_KEY, id]);
+      const messages = value ? JSON.parse(value) : [];
+      return Array.isArray(messages) ? messages : [];
+    } catch { return conversations.get(id)?.messages || []; }
+  }
+
+  async function send(id, role, rawText) {
+    const text = validText(rawText);
+    if (!ID_PATTERN.test(id) || !text || !['browser', 'admin'].includes(role)) return { ok: false };
+    const messages = (await conversation(id)).slice(-MAX_MESSAGES + 1);
+    const message = { id: crypto.randomUUID(), role, text, createdAt: new Date().toISOString() };
+    messages.push(message);
+    const updatedAt = Date.now();
+    conversations.set(id, { messages, updatedAt });
+    if (!endpoint) return { ok: true, message, source: 'memory' };
+    try {
+      await Promise.all([
+        command(['HSET', CONVERSATIONS_KEY, id, JSON.stringify(messages)]),
+        command(['ZADD', CONVERSATION_INDEX_KEY, updatedAt, id])
+      ]);
+      return { ok: true, message, source: 'redis' };
+    } catch { return { ok: true, message, source: 'memory-fallback' }; }
+  }
+
+  async function messagesForDevice(deviceId) {
+    const id = hashDeviceId(deviceId);
+    return { id, messages: await conversation(id) };
+  }
+
+  async function listConversations() {
+    if (!endpoint) return { source: 'memory', conversations: [...conversations.entries()].map(([id, value]) => ({ id, ...value })).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50) };
+    try {
+      const ids = await command(['ZREVRANGE', CONVERSATION_INDEX_KEY, 0, 49]);
+      if (!Array.isArray(ids)) throw new Error('Invalid conversation index');
+      const result = await Promise.all(ids.filter(id => ID_PATTERN.test(id)).map(async id => ({ id, messages: await conversation(id) })));
+      return { source: 'redis', conversations: result.map(item => ({ ...item, updatedAt: Date.parse(item.messages.at(-1)?.createdAt || '') || 0 })).sort((a, b) => b.updatedAt - a.updatedAt) };
+    } catch {
+      return { source: 'memory-fallback', conversations: [...conversations.entries()].map(([id, value]) => ({ id, ...value })).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50) };
+    }
+  }
+
+  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: !!endpoint, cookieName: COOKIE });
 }
 
-module.exports = { COOKIE, REDIS_KEY, cookieDeviceId, createModeration, hashDeviceId };
+module.exports = { COOKIE, REDIS_KEY, CONVERSATIONS_KEY, CONVERSATION_INDEX_KEY, cookieDeviceId, createModeration, hashDeviceId };
