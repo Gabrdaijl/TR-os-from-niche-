@@ -13,11 +13,11 @@
       const number=document.createElement('div');number.className='big-number';number.textContent=(values?.approximate && typeof value==='number'?'≈ ':'')+format(value);
       card.append(heading,number);return card;
     }));
-    let note='Gemensam statistik · uppdateras automatiskt';
+    let note='Uppdateras automatiskt';
     if(allTime && values) {
       const since=values.startedAt?new Date(values.startedAt).toLocaleString('sv-SE',{timeZone:'Europe/Stockholm'}):null;
-      note=since?'Totalt sedan '+since+' (Stockholm).':'Insamlingen av totalstatistik börjar vid det första besöket.';
-      note+=' Alla totaler är uppskattningar (cirka 0,81 % standardfel). Ett webbläsar-ID räknas som nytt en gång under hela mätningen. Äldre historik kan inte återskapas.';
+      note=since?'Sedan '+since+' · uppskattning.':'Totalmätningen börjar vid första besöket.';
+      note+=' Totalt visas som uppskattningar; äldre historik kan inte återskapas.';
     }
     $('traffic-note').textContent=traffic?.source==='redis' && values?note:'Statistik är inte tillgänglig. Kontrollera Redis-anslutningen.';
   }
@@ -80,15 +80,16 @@
       if (generation !== authGeneration || !authorization) return;
       if (!response.ok) throw Error(data.error || 'Spärrlistan kunde inte hämtas.');
       const bans = Array.isArray(data.bans) ? data.bans : [];
+      $('ban-count').textContent = format(bans.length);
       $('bans-state').textContent = data.source === 'redis'
-        ? 'Beständig lagring är ansluten.'
-        : 'Varning: listan använder minneslagring och kan försvinna när servern startas om.';
+        ? 'Spärrarna sparas.'
+        : 'Tillfällig lagring. Spärrar kan försvinna vid omstart.';
       const signature = JSON.stringify({ source: data.source, bans });
       if (signature === banSignature) return;
       banSignature = signature;
       if (!bans.length) {
-        $('bans-list').replaceChildren();
-        $('bans-state').textContent += ' Inga aktiva spärrar.';
+        const empty = document.createElement('div'); empty.className = 'ban-empty'; empty.textContent = 'Inga aktiva spärrar.';
+        $('bans-list').replaceChildren(empty);
         return;
       }
       $('bans-list').replaceChildren(...bans.map(ban => {
@@ -156,8 +157,8 @@
       }));
       $('scope').textContent = data.scope;
       $('updated').textContent = 'Senast kontrollerad ' + new Date(data.checkedAt).toLocaleTimeString('sv-SE') + ' · uppdateras var 15:e sekund';
-      await refreshReports();
       await refreshBans();
+      await refreshReports();
     } catch (error) { $('message').textContent = error.message; }
     finally { if(generation===authGeneration)pending = false; }
   }

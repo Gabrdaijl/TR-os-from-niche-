@@ -60,7 +60,9 @@ test('detected adult searches are stopped before external autocomplete and can b
   assert.equal((await suggestion.json()).banned, true);
   assert.equal(externalCalls.length, 0, 'The adult search must not be forwarded to autocomplete');
   const blockedHome = await localFetch(base + '/', { headers: { cookie } });
-  assert.equal(blockedHome.status, 403, await blockedHome.text());
+  const blockedText = await blockedHome.text();
+  assert.equal(blockedHome.status, 403, blockedText);
+  assert.match(blockedText, /Sökningar efter pornografiskt eller annat sexuellt innehåll utlöser en automatisk spärr/);
   assert.equal((await localFetch(base + '/api/health', { headers: { cookie } })).status, 403);
   assert.equal((await localFetch(base + '/admin.html', { headers: { cookie } })).status, 200);
 

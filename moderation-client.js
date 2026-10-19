@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const blockedMarkup = '<main style="min-height:100vh;display:grid;place-items:center;background:#0b111a;color:#edf3fc;font:16px system-ui;padding:24px;box-sizing:border-box"><section style="max-width:520px;padding:32px;border:1px solid #344657;border-radius:20px;background:#121d28"><p style="color:#f6df28;font-size:12px;letter-spacing:2px">TR-OS · ÅTKOMST SPÄRRAD</p><h1 style="font-size:28px">Webbläsaren är blockerad</h1><p>En sökning som bryter mot webbplatsens regler utlöste en automatisk spärr. Webbplatsens administratör kan häva den i adminpanelen.</p></section></main>';
+  const blockedMarkup = '<main style="min-height:100vh;display:grid;place-items:center;background:#0b111a;color:#edf3fc;font:16px system-ui;padding:24px;box-sizing:border-box"><section style="max-width:520px;padding:32px;border:1px solid #344657;border-radius:20px;background:#121d28"><p style="color:#f6df28;font-size:12px;letter-spacing:2px">TR-OS · ÅTKOMST SPÄRRAD</p><h1 style="font-size:28px">Webbläsaren är blockerad</h1><p>Sökningar efter pornografiskt eller annat sexuellt innehåll utlöser en automatisk spärr. Administratören kan häva spärren i adminpanelen.</p></section></main>';
   function showBlocked() {
     if (document.documentElement.dataset.trosModerationBlocked === 'true') return;
     document.documentElement.dataset.trosModerationBlocked = 'true';
