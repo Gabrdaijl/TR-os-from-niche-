@@ -90,6 +90,15 @@
               <button id="save-plans" class="primary" type="button">Spara abonnemang</button>
             </section>
           </div>
+          <section class="member-admin-box grant-time-box" aria-labelledby="bulk-grant-time-title">
+            <h3 id="bulk-grant-time-title">Ge extra tid till konton utan aktiv åtkomst</h3>
+            <p>Gäller alla aktiva, inte pausade konton vars provperiod och betalda tid har gått ut.</p>
+            <form id="bulk-grant-time-form" class="member-time-form">
+              <label>Dagar<input name="days" type="number" min="0" max="3650" step="1" value="1" required></label>
+              <label>Timmar<input name="hours" type="number" min="0" max="23" step="1" value="0" required></label>
+              <button class="primary" type="submit">Lägg till tid till alla utan aktiv åtkomst</button>
+            </form>
+          </section>
           <h3 class="members-subtitle">Swishbetalningar</h3>
           <div id="payments-list" class="members-list"></div>
           <h3 class="members-subtitle">Alla konton</h3>

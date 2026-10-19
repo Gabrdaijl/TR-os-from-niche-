@@ -228,7 +228,7 @@
     }catch(error){$('conversation-state').textContent=error.message;}
     finally{button.disabled=false;}
   });
-  let memberUsers=[],memberPayments=[],memberPlans=[],reportedPaidIds=null;
+  let memberUsers=[],memberPayments=[],memberPlans=[],reportedPaymentIds=null;
   async function memberRequest(path,options={}){
     const response=await fetch(path,{cache:'no-store',...options,headers:{authorization,...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})},signal:AbortSignal.timeout(10000)});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Medlemsuppgifterna kunde inte sparas.');return data;
@@ -262,11 +262,21 @@
       const name=document.createElement('strong');name.textContent=payment.firstName+' '+payment.lastName;
       const meta=document.createElement('span');meta.textContent=payment.email+' · '+payment.planName+' · '+payment.amount+' kr · '+payment.durationDays+' dagar';
       const status=document.createElement('span');
-      status.textContent=payment.status==='paid'?'Betald och bekräftad av Swish':payment.status==='pending'?'Väntar på betalning i Swish':payment.status==='initiating'?'Startar Swish-betalning…':'Betalning '+payment.status;
-      const when=document.createElement('time');when.textContent=(payment.confirmedAt?'Betald ':'Skapad ')+new Date(payment.confirmedAt||payment.createdAt).toLocaleString('sv-SE');
+      status.textContent=payment.status==='paid'?'Betalning godkänd manuellt':payment.status==='pending'&&payment.paidRequested?'Anmäld · väntar på din kontroll':payment.status==='pending'?'Väntar på att medlemmen anmäler betalningen':'Betalning '+payment.status;
+      const when=document.createElement('time');when.textContent=(payment.confirmedAt?'Godkänd ':payment.customerReportedPaidAt?'Anmäld ':'Skapad ')+new Date(payment.confirmedAt||payment.customerReportedPaidAt||payment.createdAt).toLocaleString('sv-SE');
       detail.append(name,meta,status,when);
-      if(payment.status==='paid'&&payment.paymentReference){const ref=document.createElement('code');ref.textContent='Swishreferens '+payment.paymentReference;detail.append(ref);}
-      card.append(detail);return card;
+      if(payment.reportedFirstName||payment.reportedLastName){const payer=document.createElement('span');payer.textContent='Anmält betalarens namn: '+[payment.reportedFirstName,payment.reportedLastName].filter(Boolean).join(' ');detail.append(payer);}
+      const ref=document.createElement('code');ref.textContent='Meddelande i Swish: '+payment.reference;detail.append(ref);
+      if(payment.status==='pending'&&payment.paidRequested){
+        const confirm=document.createElement('button');confirm.type='button';confirm.className='confirm-payment';confirm.textContent='Bekräfta Swish';
+        confirm.addEventListener('click',async()=>{
+          confirm.disabled=true;confirm.textContent='Godkänner…';
+          try{await memberRequest('/api/admin/payments/'+encodeURIComponent(payment.id)+'/confirm',{method:'POST',body:'{}'});$('members-state').textContent='Betalningen godkändes och '+payment.durationDays+' dagar lades till för '+payment.firstName+' '+payment.lastName+'.';await refreshMembership();}
+          catch(error){$('members-state').textContent=error.message;confirm.disabled=false;confirm.textContent='Försök igen';}
+        });
+        card.append(detail,confirm);
+      }else card.append(detail);
+      return card;
     }):[Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga Swishbetalningar ännu.'})]));
   }
   function renderMembers(){
@@ -308,7 +318,15 @@
         try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'PATCH',body:JSON.stringify(changes)});$('members-state').textContent='Medlemsuppgifterna sparades.';await refreshMembership();}
         catch(error){$('members-state').textContent=error.message;save.disabled=false;save.textContent='Försök igen';}
       });
-      card.append(form);return card;
+      const timeForm=document.createElement('form');timeForm.className='member-time-form individual-time-form';
+      timeForm.append(memberField('Lägg till dagar','number',1,'days',{min:0,max:3650,step:1,required:true}),memberField('Lägg till timmar','number',0,'hours',{min:0,max:23,step:1,required:true}));
+      const grant=document.createElement('button');grant.type='submit';grant.textContent='Lägg till tid';timeForm.append(grant);
+      timeForm.addEventListener('submit',async event=>{
+        event.preventDefault();grant.disabled=true;grant.textContent='Lägger till…';
+        try{const result=await memberRequest('/api/admin/members/'+encodeURIComponent(user.id)+'/add-time',{method:'POST',body:JSON.stringify({days:Number(timeForm.elements.days.value),hours:Number(timeForm.elements.hours.value)})});$('members-state').textContent='La till tid för '+user.firstName+' '+user.lastName+'. Ny sluttid: '+new Date(result.user.accessUntilMs).toLocaleString('sv-SE')+'.';await refreshMembership();}
+        catch(error){$('members-state').textContent=error.message;grant.disabled=false;grant.textContent='Försök igen';}
+      });
+      card.append(form,timeForm);return card;
     }));
   }
   async function refreshMembership(){
@@ -316,14 +334,23 @@
     try{
       const data=await memberRequest('/api/admin/members');if(generation!==authGeneration||!authorization)return;
       memberUsers=Array.isArray(data.users)?data.users:[];memberPayments=Array.isArray(data.payments)?data.payments:[];memberPlans=Array.isArray(data.plans)?data.plans:[];
-      const current=new Set(memberPayments.filter(payment=>payment.status==='paid').map(payment=>payment.id));
-      if(reportedPaidIds)for(const id of current)if(!reportedPaidIds.has(id)){const payment=memberPayments.find(item=>item.id===id);if(payment)notifyAdmin('Swishbetalning godkänd',payment.firstName+' '+payment.lastName+' · '+payment.amount+' kr');}
-      reportedPaidIds=current;
+      const current=new Set(memberPayments.filter(payment=>payment.status==='pending'&&payment.paidRequested).map(payment=>payment.id));
+      if(reportedPaymentIds)for(const id of current)if(!reportedPaymentIds.has(id)){const payment=memberPayments.find(item=>item.id===id);if(payment)notifyAdmin('Swishbetalning att godkänna',[payment.reportedFirstName,payment.reportedLastName].filter(Boolean).join(' ')+' · '+payment.amount+' kr för '+payment.firstName+' '+payment.lastName);}
+      reportedPaymentIds=current;
       renderPlans();renderPayments();renderMembers();
-      $('members-state').textContent=memberUsers.length+' konton · '+(data.swishConfigured?'Swish Commerce anslutet · '+data.swishNumber:'Swish Commerce behöver konfigureras med bankavtal och certifikat.');
+      $('members-state').textContent=memberUsers.length+' konton · Swish '+data.swishNumber+' · betalningar godkänns manuellt.';
     }catch(error){if(generation===authGeneration&&authorization)$('members-state').textContent=error.message;}
   }
   $('member-refresh').addEventListener('click',refreshMembership);
+  $('bulk-grant-time-form').addEventListener('submit',async event=>{
+    event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type=submit]');
+    button.disabled=true;button.textContent='Lägger till tid…';
+    try{
+      const result=await memberRequest('/api/admin/members/grant-time',{method:'POST',body:JSON.stringify({days:Number(form.elements.days.value),hours:Number(form.elements.hours.value)})});
+      $('members-state').textContent='La till tiden på '+result.updated+' aktiva konton som saknade giltig åtkomst.';await refreshMembership();
+    }catch(error){$('members-state').textContent=error.message;}
+    finally{button.disabled=false;button.textContent='Lägg till tid till alla utan aktiv åtkomst';}
+  });
   $('add-member-form').addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;button.textContent='Skapar…';
     try{const data=Object.fromEntries(new FormData(form));await memberRequest('/api/admin/members',{method:'POST',body:JSON.stringify(data)});form.reset();$('members-state').textContent='Medlemskontot skapades med 3 dagars provperiod.';await refreshMembership();}

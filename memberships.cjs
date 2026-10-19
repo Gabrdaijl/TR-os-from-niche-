@@ -1,7 +1,6 @@
 'use strict';
 
 const crypto = require('node:crypto');
-const { createSwishClient } = require('./swish.cjs');
 
 const SESSION_COOKIE = 'tros-session';
 const PREFIX = 'tros:membership:v1:';
@@ -46,6 +45,14 @@ function deviceType(req) {
 }
 function accessUntil(user) { return Math.max(Number(user?.paidUntilMs) || 0, Number(user?.trialUntilMs) || 0); }
 function hasAccess(user, now = Date.now()) { return !!user && user.enabled !== false && accessUntil(user) > now; }
+function grantDuration(daysValue, hoursValue) {
+  const days = Number(daysValue);
+  const hours = Number(hoursValue);
+  if (!Number.isInteger(days) || days < 0 || days > 3650 || !Number.isInteger(hours) || hours < 0 || hours > 23 || days * 24 + hours < 1) {
+    fail(400, 'Ange minst en dag eller timme. Dagar får vara 0–3650 och timmar 0–23.');
+  }
+  return { days, hours, durationMs: (days * 24 + hours) * 60 * 60 * 1000 };
+}
 function planRecord(plan) {
   return plan && typeof plan.id === 'string' && typeof plan.name === 'string'
     ? { id: plan.id, name: plan.name, prices: Array.isArray(plan.prices) ? plan.prices : [40, 35, 30], durationDays: Number(plan.durationDays) || 30 }
@@ -65,15 +72,14 @@ function publicUser(user, plans, now = Date.now()) {
     createdAt: user.createdAt
   };
 }
-function publicPayment(payment, includeToken = false) {
+function publicPayment(payment) {
   if (!payment) return null;
-  const { callbackIdentifier, ...visible } = payment;
-  if (!includeToken) delete visible.paymentToken;
+  const { callbackIdentifier, paymentToken, instructionUUID, payeeAlias, ...visible } = payment;
   return visible;
 }
 
 function createMemberships(env = process.env, request = fetch) {
-  const swish = createSwishClient(env, request);
+  const swishNumber = String(env.SWISH_NUMBER || '0739579244').replace(/\s+/g, '');
   const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   let endpoint = null;
@@ -108,7 +114,6 @@ function createMemberships(env = process.env, request = fetch) {
   const keyPayment = id => PREFIX + 'payment:' + id;
   const keyPending = id => PREFIX + 'pending:' + id;
   const keyLatestPayment = id => PREFIX + 'latest-payment:' + id;
-  const keySwishRequest = id => PREFIX + 'swish-request:' + id;
 
   async function getUser(id) {
     const value = await command(['GET', keyUser(id)]);
@@ -227,7 +232,7 @@ return 1`;
   }
   async function summary(req) {
     const account = await getSession(req);
-    if (!account) return { user: null, active: false, swishNumber: swish.payeeAlias || '', swishConfigured: swish.configured, plans: await getPlans() };
+    if (!account) return { user: null, active: false, swishNumber, plans: await getPlans() };
     const plans = await getPlans();
     const user = publicUser(account.user, plans);
     const plan = plans.find(item => item.id === user.planId) || plans[0];
@@ -237,35 +242,32 @@ return 1`;
     const payment = latestId ? safeJson(await command(['GET', keyPayment(latestId)])) : null;
     return {
       user, active: user.active, nextPrice: amount, durationDays: plan.durationDays,
-      swishNumber: swish.payeeAlias || '', swishConfigured: swish.configured, plans,
-      pendingPayment: payment && ['initiating', 'pending'].includes(payment.status) ? publicPayment(payment, true) : null,
+      swishNumber, plans,
+      pendingPayment: payment && payment.status === 'pending' ? publicPayment(payment) : null,
       latestPayment: payment?.status === 'paid' ? publicPayment(payment) : null
     };
   }
-  async function createPayment(req) {
+  async function createManualPayment(req) {
     const account = await getSession(req);
     if (!account) fail(401, 'Logga in för att beställa en betalning.');
-    if (!swish.configured) fail(503, 'Automatisk Swish är inte ansluten. Admin behöver konfigurera Swish Commerce och servercertifikatet.');
     const user = account.user;
+    if (user.enabled === false) fail(403, 'Kontot är pausat.');
     const plans = await getPlans();
     const plan = plans.find(item => item.id === user.planId) || plans[0];
     const id = crypto.randomUUID();
-    const instructionUUID = crypto.randomBytes(16).toString('hex').toUpperCase();
-    const callbackIdentifier = crypto.randomUUID();
-    const reference = 'TR' + crypto.randomBytes(4).toString('hex').toUpperCase();
     const payment = {
       id, userId: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email,
       planId: plan.id, planName: plan.name, amount: plan.prices[Math.min(user.paidMonths, 2)],
       durationDays: plan.durationDays, cycle: (Number(user.paidMonths) || 0) + 1,
-      reference, instructionUUID, callbackIdentifier, payeeAlias: swish.payeeAlias,
-      status: 'initiating', createdAt: new Date().toISOString()
+      reference: 'TR' + crypto.randomBytes(4).toString('hex').toUpperCase(),
+      status: 'pending', paidRequested: false, createdAt: new Date().toISOString()
     };
     const script = `local existing=redis.call('GET',KEYS[3])
 if existing then
  local current=redis.call('GET',ARGV[2]..existing)
  if current then
   local payment=cjson.decode(current)
-  if payment.instructionUUID and (payment.status=='pending' or payment.status=='initiating') then return 'existing:'..existing end
+  if payment.status=='pending' then return 'existing:'..existing end
  end
  redis.call('DEL',KEYS[3])
 end
@@ -273,107 +275,121 @@ redis.call('SET',KEYS[1],ARGV[1])
 redis.call('SADD',KEYS[2],ARGV[3])
 redis.call('SET',KEYS[3],ARGV[3])
 redis.call('SET',KEYS[4],ARGV[3])
-redis.call('SET',KEYS[5],ARGV[3])
 return 'new:'..ARGV[3]`;
-    const result = await command(['EVAL', script, 5, keyPayment(id), PREFIX + 'payments', keyPending(user.id), keyLatestPayment(user.id), keySwishRequest(instructionUUID), JSON.stringify(payment), PREFIX + 'payment:', id]);
-    const resultText = String(result || '');
-    if (resultText.startsWith('existing:')) {
-      const existing = safeJson(await command(['GET', keyPayment(resultText.slice('existing:'.length))]));
-      if (existing?.status === 'pending' && existing.paymentToken) return publicPayment(existing, true);
-      fail(409, 'Swish-betalningen håller på att starta. Ladda om sidan om en liten stund.');
+    const result = String(await command(['EVAL', script, 4, keyPayment(id), PREFIX + 'payments', keyPending(user.id), keyLatestPayment(user.id), JSON.stringify(payment), PREFIX + 'payment:', id]) || '');
+    if (result.startsWith('existing:')) {
+      const existing = safeJson(await command(['GET', keyPayment(result.slice('existing:'.length))]));
+      if (existing?.status === 'pending') return publicPayment(existing);
     }
-    if (!resultText.startsWith('new:')) fail(503, 'Betalningsordern kunde inte sparas.');
-    let swishPayment;
-    try {
-      swishPayment = await swish.createPayment({
-        instructionUUID, reference, amount: payment.amount, callbackIdentifier,
-        message: 'TR-os ' + plan.name
-      });
-    } catch (error) {
-      await command(['SET', keyPayment(id), JSON.stringify({ ...payment, status: 'failed', errorMessage: error.message, failedAt: new Date().toISOString() })]);
-      await command(['DEL', keyPending(user.id)]);
-      throw error;
-    }
-    const completeScript = `local raw=redis.call('GET',KEYS[1])
+    if (result !== 'new:' + id) fail(503, 'Betalningsuppgifterna kunde inte sparas. Försök igen.');
+    return publicPayment(payment);
+  }
+
+  async function markPaid(req, id, data) {
+    const account = await getSession(req);
+    if (!account) fail(401, 'Logga in för att anmäla betalningen.');
+    const firstName = typeof data.firstName === 'string' ? data.firstName.trim() : '';
+    const lastName = typeof data.lastName === 'string' ? data.lastName.trim() : '';
+    const reference = typeof data.reference === 'string' ? data.reference.trim().toUpperCase() : '';
+    if (!firstName || firstName.length > 80 || !lastName || lastName.length > 80) fail(400, 'Skriv både ditt förnamn och efternamn.');
+    if (!/^[A-Z0-9]{4,20}$/.test(reference)) fail(400, 'Betalningsreferensen är ogiltig.');
+    const payment = safeJson(await command(['GET', keyPayment(id)]));
+    if (!payment || payment.userId !== account.user.id) fail(404, 'Betalningen hittades inte.');
+    const script = `local raw=redis.call('GET',KEYS[1])
 if not raw then return 'missing' end
 local payment=cjson.decode(raw)
-if payment.status=='initiating' then
- payment.status='pending'
- payment.paymentToken=ARGV[1]
- redis.call('SET',KEYS[1],cjson.encode(payment))
-end
-return cjson.encode(payment)`;
-    const completed = safeJson(await command(['EVAL', completeScript, 1, keyPayment(id), swishPayment.token]));
-    if (!completed) fail(503, 'Swish-betalningen sparades inte. Försök igen.');
-    return publicPayment(completed, true);
-  }
-  async function paymentQr(req, id) {
-    const account = await getSession(req);
-    if (!account) fail(401, 'Logga in för att visa Swish QR-koden.');
-    const payment = safeJson(await command(['GET', keyPayment(id)]));
-    if (!payment || payment.userId !== account.user.id || payment.status !== 'pending' || !payment.paymentToken) fail(404, 'Swish-betalningen hittades inte.');
-    return swish.qr(payment.paymentToken);
-  }
-  function sameSecret(left, right) {
-    if (typeof left !== 'string' || typeof right !== 'string' || left.length !== right.length) return false;
-    return crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right));
-  }
-  async function processSwishCallback(callbackIdentifier, event) {
-    const instructionUUID = typeof event?.id === 'string' ? event.id.toUpperCase() : '';
-    if (!/^[A-F0-9]{32}$/.test(instructionUUID)) fail(400, 'Ogiltigt Swish-betalnings-ID.');
-    const paymentId = await command(['GET', keySwishRequest(instructionUUID)]);
-    const payment = paymentId ? safeJson(await command(['GET', keyPayment(paymentId)])) : null;
-    if (!payment) fail(404, 'Swish-betalningen hittades inte.');
-    if (!sameSecret(callbackIdentifier, payment.callbackIdentifier)) fail(401, 'Swish-bekräftelsen kunde inte verifieras.');
-    if (event.payeeAlias !== payment.payeeAlias || event.payeePaymentReference !== payment.reference || event.currency !== 'SEK' || Math.round(Number(event.amount) * 100) !== Math.round(Number(payment.amount) * 100)) {
-      fail(400, 'Swish-bekräftelsen stämmer inte med betalningsordern.');
+if payment.userId~=ARGV[1] or payment.reference~=ARGV[2] then return 'mismatch' end
+if payment.status~='pending' then return 'closed' end
+if payment.paidRequested==true then return cjson.encode({payment=payment,notified=false}) end
+payment.paidRequested=true
+payment.reportedFirstName=ARGV[3]
+payment.reportedLastName=ARGV[4]
+payment.customerReportedPaidAt=ARGV[5]
+redis.call('SET',KEYS[1],cjson.encode(payment))
+return cjson.encode({payment=payment,notified=true})`;
+    const raw = await command(['EVAL', script, 1, keyPayment(id), account.user.id, reference, firstName, lastName, new Date().toISOString()]);
+    const result = typeof raw === 'string' && raw.startsWith('{') ? safeJson(raw) : null;
+    if (!result) {
+      const messages = { missing: 'Betalningen hittades inte.', mismatch: 'Referensen stämmer inte med betalningen.', closed: 'Betalningen är redan avslutad.' };
+      fail(raw === 'missing' ? 404 : 409, messages[raw] || 'Betalningen kunde inte anmälas.');
     }
-    const result = await applySwishResult(payment, event);
     return result;
   }
-  async function applySwishResult(payment, event) {
+
+  async function confirmPayment(id) {
+    const storedPayment = safeJson(await command(['GET', keyPayment(id)]));
+    if (!storedPayment) fail(404, 'Betalningen hittades inte.');
     const now = Date.now();
-    const status = String(event.status || '').toUpperCase();
-    if (!['PAID', 'DECLINED', 'ERROR', 'CANCELLED'].includes(status)) fail(400, 'Okänd Swish-status.');
     const script = `local rawp=redis.call('GET',KEYS[1])
 if not rawp then return 'missing' end
 local payment=cjson.decode(rawp)
-if payment.instructionUUID~=ARGV[1] or payment.callbackIdentifier~=ARGV[2] or payment.reference~=ARGV[3] or payment.payeeAlias~=ARGV[4] then return 'mismatch' end
-if payment.status=='paid' then
- if ARGV[5]=='PAID' and payment.paymentReference==ARGV[7] then return cjson.encode({payment=payment,newlyPaid=false}) end
- return 'closed'
-end
-if payment.status~='pending' and payment.status~='initiating' then return 'closed' end
-if ARGV[5]=='PAID' then
- local rawu=redis.call('GET',KEYS[2])
- if not rawu then return 'missinguser' end
- local user=cjson.decode(rawu)
- local now=tonumber(ARGV[6])
- local base=math.max(now,tonumber(user.paidUntilMs) or 0,tonumber(user.trialUntilMs) or 0)
- local days=tonumber(payment.durationDays) or 30
- user.paidUntilMs=base+days*86400000
- user.paidMonths=(tonumber(user.paidMonths) or 0)+1
- payment.status='paid'
- payment.paymentReference=ARGV[7]
- payment.confirmedAt=ARGV[8]
- redis.call('SET',KEYS[2],cjson.encode(user))
- redis.call('SET',KEYS[1],cjson.encode(payment))
- if redis.call('GET',KEYS[3])==payment.id then redis.call('DEL',KEYS[3]) end
- return cjson.encode({payment=payment,user=user,newlyPaid=true})
-end
-payment.status=string.lower(ARGV[5])
-payment.errorCode=ARGV[9]
-payment.failedAt=ARGV[8]
+if payment.status~='pending' then return 'closed' end
+if payment.paidRequested~=true then return 'notreported' end
+local rawu=redis.call('GET',KEYS[2])
+if not rawu then return 'missinguser' end
+local user=cjson.decode(rawu)
+if user.enabled==false then return 'disabled' end
+local now=tonumber(ARGV[1])
+local base=math.max(now,tonumber(user.paidUntilMs) or 0,tonumber(user.trialUntilMs) or 0)
+local days=tonumber(payment.durationDays) or 30
+user.paidUntilMs=base+days*86400000
+user.paidMonths=(tonumber(user.paidMonths) or 0)+1
+payment.status='paid'
+payment.confirmedAt=ARGV[2]
+payment.confirmedManually=true
 redis.call('SET',KEYS[1],cjson.encode(payment))
+redis.call('SET',KEYS[2],cjson.encode(user))
 if redis.call('GET',KEYS[3])==payment.id then redis.call('DEL',KEYS[3]) end
-return cjson.encode({payment=payment,newlyPaid=false})`;
-    const raw = await command(['EVAL', script, 3, keyPayment(payment.id), keyUser(payment.userId), keyPending(payment.userId), payment.instructionUUID, payment.callbackIdentifier, payment.reference, payment.payeeAlias, status, now, String(event.paymentReference || ''), new Date(now).toISOString(), String(event.errorCode || '')]);
-    if (typeof raw !== 'string' || !raw.startsWith('{')) {
-      const messages = { missing: 'Betalningsordern hittades inte.', mismatch: 'Swish-bekräftelsen stämmer inte.', closed: 'Betalningsordern är redan avslutad.', missinguser: 'Medlemskontot hittades inte.' };
-      fail(raw === 'missing' ? 404 : 409, messages[raw] || 'Swish-betalningen kunde inte uppdateras.');
+return cjson.encode({payment=payment,user=user})`;
+    const raw = await command(['EVAL', script, 3, keyPayment(id), keyUser(storedPayment.userId), keyPending(storedPayment.userId), now, new Date(now).toISOString()]);
+    const result = typeof raw === 'string' && raw.startsWith('{') ? safeJson(raw) : null;
+    if (!result) {
+      const messages = { missing: 'Betalningen hittades inte.', closed: 'Betalningen är redan avslutad.', notreported: 'Medlemmen har inte anmält betalningen ännu.', missinguser: 'Medlemskontot hittades inte.', disabled: 'Kontot är pausat. Återaktivera det innan betalningen godkänns.' };
+      fail(raw === 'missing' ? 404 : 409, messages[raw] || 'Betalningen kunde inte godkännas.');
     }
-    return safeJson(raw);
+    return result;
   }
+
+  async function addTime(id, daysValue, hoursValue) {
+    const { days, hours, durationMs } = grantDuration(daysValue, hoursValue);
+    const now = Date.now();
+    const script = `local raw=redis.call('GET',KEYS[1])
+if not raw then return 'missing' end
+local user=cjson.decode(raw)
+local base=math.max(tonumber(ARGV[1]),tonumber(user.paidUntilMs) or 0,tonumber(user.trialUntilMs) or 0)
+user.paidUntilMs=base+tonumber(ARGV[2])
+redis.call('SET',KEYS[1],cjson.encode(user))
+return cjson.encode(user)`;
+    const raw = await command(['EVAL', script, 1, keyUser(id), now, durationMs]);
+    const user = typeof raw === 'string' ? safeJson(raw) : null;
+    if (!user) fail(raw === 'missing' ? 404 : 503, raw === 'missing' ? 'Medlemmen hittades inte.' : 'Tiden kunde inte läggas till.');
+    return { user: publicUser(user, await getPlans()), days, hours };
+  }
+
+  async function addTimeToExpiredUsers(daysValue, hoursValue) {
+    const { durationMs } = grantDuration(daysValue, hoursValue);
+    const now = Date.now();
+    const script = `local ids=redis.call('SMEMBERS',KEYS[1])
+local updated=0
+for _,id in ipairs(ids) do
+ local key=ARGV[1]..id
+ local raw=redis.call('GET',key)
+ if raw then
+  local user=cjson.decode(raw)
+  local paid=tonumber(user.paidUntilMs) or 0
+  local trial=tonumber(user.trialUntilMs) or 0
+  if user.enabled~=false and math.max(paid,trial)<=tonumber(ARGV[2]) then
+   user.paidUntilMs=tonumber(ARGV[2])+tonumber(ARGV[3])
+   redis.call('SET',key,cjson.encode(user))
+   updated=updated+1
+  end
+ end
+end
+return updated`;
+    const updated = await command(['EVAL', script, 1, USERS_KEY, PREFIX + 'user:', now, durationMs]);
+    return Number(updated) || 0;
+  }
+
   async function listPayments() {
     const script = `local ids=redis.call('SMEMBERS',KEYS[1])
 local out={}
@@ -458,16 +474,17 @@ return 1`;
 
   return Object.freeze({
     configured: !!endpoint,
-    swishConfigured: swish.configured,
-    swishNumber: swish.payeeAlias,
+    swishNumber,
     authenticate: getSession,
     register,
     login,
     logout,
     summary,
-    createPayment,
-    paymentQr,
-    processSwishCallback,
+    createPayment: createManualPayment,
+    markPaid,
+    confirmPayment,
+    addTime,
+    addTimeToExpiredUsers,
     listPayments,
     listUsers,
     updateUser,

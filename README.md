@@ -68,18 +68,13 @@ En extern GitHub Actions-kontroll kör var femte minut. Vid driftstopp öppnar d
 
 ## Medlemskap och Swish
 
-TR-os kräver ett konto för hemsidans sidor och API. Nya konton får tre dagars provperiod. Standardabonnemanget kostar 40 kr den första betalda månaden, 35 kr den andra och 30 kr per månad från den tredje månaden. Varje betalning ger 30 dagars åtkomst. Kontot kan vara inloggat på en dator och en mobil. `/account.html` används för att skapa konto, logga in och förnya. Swish öppnas från mobilen eller kan skannas som QR-kod från en annan enhet.
+TR-os kräver ett konto för hemsidans sidor och API. Nya konton får tre dagars provperiod. Standardabonnemanget kostar 40 kr den första betalda månaden, 35 kr den andra och 30 kr per månad från den tredje månaden. Varje betalning ger 30 dagars åtkomst. Kontot kan vara inloggat på en dator och en mobil. `/account.html` används för att skapa konto, logga in och förnya.
 
-Swish Commerce skickar betalningsresultatet till `/api/swish/callback`. Endast en verifierad `PAID`-bekräftelse med rätt belopp, valuta, betalningsreferens och callback-kod förlänger medlemskapet. Admin får en notis vid godkänd betalning och kan se hela betalningshistoriken. I adminpanelen kan du ändra abonnemangsnamn och priser, skapa medlemskonton, ändra namn och slutdatum, pausa konton, byta lösenord och återställa enhetsinloggningar.
+Medlemmen får ett belopp och en unik referens att skriva som Swishmeddelande. När betalningen har skickats fyller medlemmen i betalarens för- och efternamn och anmäler den. Admin jämför anmälan med Swish och godkänner den manuellt; först då förlängs medlemskapet. Admin får en notis när en betalning anmäls och kan se betalaren, kontonamnet, beloppet, referensen och betalningshistoriken.
 
-Automatisk Swish kräver ett Swish Commerce-avtal via banken, ett bankutfärdat Swish Commerce-nummer och ett API-certifikat. Ett privat Swish-nummer i sig räcker inte för serverns automatiska betalningsbesked. Lägg dessa serverhemligheter i värdens inställningar, aldrig i GitHub:
+I adminpanelen kan du ändra abonnemangsnamn och priser, skapa medlemskonton, ändra namn och slutdatum, pausa konton, byta lösenord och återställa enhetsinloggningar. Du kan lägga till dagar och timmar på en medlem eller ge extra tid till alla aktiva konton vars åtkomst gått ut. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
 
-- `SWISH_ENV=production` för riktiga betalningar, eller `mss` för Swish Merchant Simulator.
-- `SWISH_PAYEE_ALIAS` är numret som banken har anslutit till Commerce-avtalet.
-- `SWISH_CALLBACK_URL` är webbplatsens fullständiga HTTPS-adress följd av `/api/swish/callback`.
-- `SWISH_CERT_P12_BASE64` och `SWISH_CERT_PASSWORD` är `.p12`-certifikatet kodat som Base64 och dess lösenord.
-
-Medlemskonton och betalningar sparas i den konfigurerade Upstash Redis-databasen. Lägg även in `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` bland värdens hemliga miljövariabler. Om Swish Commerce-uppgifterna saknas går det inte att starta en betalning. Lösenord lagras som scrypt-hashar; sessionscookies är HttpOnly.
+`SWISH_NUMBER` är numret som visas för betalningen och kan ändras i värdens miljövariabler. Det är förifyllt med numret som administratören har angett. Medlemskonton och betalningar sparas i den konfigurerade Upstash Redis-databasen. Lägg in `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` bland värdens hemliga miljövariabler. Lösenord lagras som scrypt-hashar; sessionscookies är HttpOnly.
 
 ## Gemensam besöksräkning
 

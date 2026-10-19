@@ -22,13 +22,5 @@ services:
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
-      - key: SWISH_ENV
-        value: mss
-      - key: SWISH_PAYEE_ALIAS
-        sync: false
-      - key: SWISH_CALLBACK_URL
-        sync: false
-      - key: SWISH_CERT_P12_BASE64
-        sync: false
-      - key: SWISH_CERT_PASSWORD
-        sync: false
+      - key: SWISH_NUMBER
+        value: 0739579244

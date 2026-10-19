@@ -138,16 +138,15 @@ function createApp(options = {}) {
     res.setHeader('referrer-policy', 'same-origin');
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
-    const swishCallback = route === '/api/swish/callback';
     const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
-    if (apiRequest && !swishCallback && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
+    if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
     const suppliedDevice = cookieDeviceId(req.headers.cookie);
     const currentDevice = suppliedDevice || deviceCookie(req, res, env);
     const adminRoute = route === '/admin.html' || route.startsWith('/api/admin/');
     const documentRequest = ['GET', 'HEAD'].includes(req.method) && (route === '/' || route === '/join' || route === '/join/' || route.endsWith('.html'));
-    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && !swishCallback && !route.startsWith('/api/membership/') && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/moderation/status', '/api/moderation/flag', '/api/push/vapid-public'].includes(route);
+    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && !route.startsWith('/api/membership/') && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/moderation/status', '/api/moderation/flag', '/api/push/vapid-public'].includes(route);
     if (suppliedDevice && !adminRoute && (documentRequest || protectedApi) && await moderation.isBanned(currentDevice)) {
       if (documentRequest) {
         res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -171,15 +170,6 @@ function createApp(options = {}) {
       catch (error) { return json(res, error.status || 503, { error: error.message || 'Medlemskapet kunde inte kontrolleras.' }); }
       if (!account) return json(res, 401, { error: 'Logga in för att använda TR-os.', code: 'membership_login' });
       if (!memberships.hasAccess(account.user)) return json(res, 402, { error: 'Abonnemanget har gått ut. Betala för att få åtkomst igen.', code: 'membership_expired' });
-    }
-    if (swishCallback) {
-      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
-      if (!memberships.configured) return json(res, 503, { error: 'Betalningsdatabasen är inte tillgänglig.' });
-      const result = await memberships.processSwishCallback(req.headers.callbackidentifier, await body(req, 12000));
-      if (result.payment?.status === 'paid' && result.newlyPaid) {
-        notify(push.notifyAdmins('Swishbetalning godkänd', result.payment.firstName + ' ' + result.payment.lastName + ' har betalat ' + result.payment.amount + ' kr. Medlemskapet förlängdes automatiskt.', '/admin.html#members', 'member-payment-' + result.payment.id));
-      }
-      return json(res, 200, { ok: true });
     }
     if (route.startsWith('/api/membership/')) {
       if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
@@ -207,12 +197,15 @@ function createApp(options = {}) {
         const payment = await memberships.createPayment(req);
         return json(res, 201, { payment, swishNumber: memberships.swishNumber });
       }
-      const qrMatch = route.match(/^\/api\/membership\/payments\/([a-f0-9-]{36})\/qr$/i);
-      if (qrMatch) {
-        if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
-        const image = await memberships.paymentQr(req, qrMatch[1]);
-        res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store', 'content-length': image.length });
-        return res.end(image);
+      const reportPaymentMatch = route.match(/^\/api\/membership\/payments\/([a-f0-9-]{36})\/report$/i);
+      if (reportPaymentMatch) {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        const result = await memberships.markPaid(req, reportPaymentMatch[1], await body(req, 4000));
+        if (result.notified) {
+          const payment = result.payment;
+          notify(push.notifyAdmins('Swishbetalning att godkänna', payment.reportedFirstName + ' ' + payment.reportedLastName + ' anmälde ' + payment.amount + ' kr för ' + payment.firstName + ' ' + payment.lastName + '.', '/admin.html#members', 'member-payment-report-' + payment.id));
+        }
+        return json(res, 200, { payment: result.payment });
       }
       return json(res, 404, { error: 'Not found' });
     }
@@ -285,6 +278,14 @@ function createApp(options = {}) {
       if (!adminAuthorized(req, res)) return;
       return json(res, 200, await moderation.listConversations());
     }
+    if (route === '/api/admin/members/grant-time') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      if (!adminAuthorized(req, res)) return;
+      if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
+      const data = await body(req, 4000);
+      const updated = await memberships.addTimeToExpiredUsers(data.days, data.hours);
+      return json(res, 200, { updated });
+    }
     if (route === '/api/admin/members' || route === '/api/admin/members/plans') {
       if (!adminAuthorized(req, res)) return;
       if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
@@ -295,23 +296,37 @@ function createApp(options = {}) {
       }
       if (req.method === 'GET') {
         const [users, payments, plans] = await Promise.all([memberships.listUsers(), memberships.listPayments(), memberships.getPlans()]);
-        return json(res, 200, { users, payments, plans, swishNumber: memberships.swishNumber, swishConfigured: memberships.swishConfigured });
+        return json(res, 200, { users, payments, plans, swishNumber: memberships.swishNumber });
       }
       if (req.method !== 'POST') return json(res, 405, { error: 'Use GET or POST' });
       const created = await memberships.adminCreateUser(await body(req, 12000));
       return json(res, 201, { user: memberships.publicUser(created, await memberships.getPlans()) });
     }
-    const adminMemberMatch = route.match(/^\/api\/admin\/members\/([a-f0-9-]{36})(?:\/(reset-devices))?$/i);
+    const adminMemberMatch = route.match(/^\/api\/admin\/members\/([a-f0-9-]{36})(?:\/(reset-devices|add-time))?$/i);
     if (adminMemberMatch) {
       if (!adminAuthorized(req, res)) return;
       if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
       if (adminMemberMatch[2]) {
         if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
-        await memberships.resetDevices(adminMemberMatch[1]);
-        return json(res, 200, { ok: true });
+        if (adminMemberMatch[2] === 'reset-devices') {
+          await memberships.resetDevices(adminMemberMatch[1]);
+          return json(res, 200, { ok: true });
+        }
+        const data = await body(req, 4000);
+        const result = await memberships.addTime(adminMemberMatch[1], data.days, data.hours);
+        return json(res, 200, result);
       }
       if (req.method !== 'PATCH') return json(res, 405, { error: 'Use PATCH' });
       return json(res, 200, { user: await memberships.updateUser(adminMemberMatch[1], await body(req, 8000)) });
+    }
+    const adminPaymentMatch = route.match(/^\/api\/admin\/payments\/([a-f0-9-]{36})\/confirm$/i);
+    if (adminPaymentMatch) {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      if (!adminAuthorized(req, res)) return;
+      if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
+      const result = await memberships.confirmPayment(adminPaymentMatch[1]);
+      notify(push.notifyAdmins('Swishbetalning godkänd', result.payment.firstName + ' ' + result.payment.lastName + ' · ' + result.payment.amount + ' kr.', '/admin.html#members', 'member-payment-approved-' + result.payment.id));
+      return json(res, 200, result);
     }
     const conversationMatch = route.match(/^\/api\/admin\/moderation\/conversations\/([a-f0-9]{64})\/messages$/i);
     if (conversationMatch) {

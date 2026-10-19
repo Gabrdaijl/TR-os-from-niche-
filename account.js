@@ -33,36 +33,28 @@
     if (!payment) {
       $('payment-instructions').hidden = true;
       $('create-payment').hidden = false;
-      $('swish-qr').hidden = true;
-      $('swish-qr').removeAttribute('src');
-      $('create-payment').disabled = !current?.swishConfigured;
-      $('payment-state').textContent = current?.swishConfigured ? '' : 'Automatisk Swish är inte ansluten ännu.';
+      $('create-payment').disabled = false;
+      $('payment-state').textContent = '';
       return;
     }
     if (payment.status === 'paid') {
       $('payment-instructions').hidden = true;
       $('create-payment').hidden = false;
-      $('create-payment').disabled = !current?.swishConfigured;
-      $('swish-qr').hidden = true;
-      $('swish-qr').removeAttribute('src');
-      $('payment-state').textContent = 'Swish har bekräftat betalningen. ' + payment.durationDays + ' dagar har lagts till automatiskt.';
+      $('create-payment').disabled = false;
+      $('payment-state').textContent = 'Din betalning är bekräftad. ' + payment.durationDays + ' dagar har lagts till.';
       return;
     }
-    if (payment.status === 'initiating') {
+    if (payment.status === 'pending' && payment.paidRequested) {
       $('payment-instructions').hidden = true;
       $('create-payment').hidden = true;
-      $('swish-qr').hidden = true;
-      $('swish-qr').removeAttribute('src');
-      $('payment-state').textContent = 'Swish-betalningen startar. Vänta en stund.';
+      $('payment-state').textContent = 'Din betalning är anmäld och väntar på att admin ska kontrollera och godkänna den.';
       return;
     }
     if (payment.status !== 'pending') {
       $('payment-instructions').hidden = true;
       $('create-payment').hidden = false;
-      $('create-payment').disabled = !current?.swishConfigured;
-      $('swish-qr').hidden = true;
-      $('swish-qr').removeAttribute('src');
-      $('payment-state').textContent = 'Swish-betalningen startar. Vänta en stund och ladda om sidan.';
+      $('create-payment').disabled = false;
+      $('payment-state').textContent = 'Skapa nya betalningsuppgifter för att försöka igen.';
       return;
     }
     $('create-payment').hidden = true;
@@ -70,10 +62,7 @@
     $('payment-amount').textContent = payment.amount + ' kr';
     $('swish-number').textContent = swishNumber || '';
     $('payment-reference').textContent = payment.reference;
-    $('swish-app').href = 'swish://paymentrequest?token=' + encodeURIComponent(payment.paymentToken || '');
-    $('swish-qr').src = '/api/membership/payments/' + encodeURIComponent(payment.id) + '/qr';
-    $('swish-qr').hidden = !payment.paymentToken;
-    $('payment-state').textContent = 'Betalningskod ' + payment.reference + ' · Swish bekräftar betalningen automatiskt.';
+    $('payment-state').textContent = 'Betalningsreferens ' + payment.reference + '. Anmäl betalningen efter att du har swishat.';
   }
   function render(data) {
     current = data;
@@ -94,7 +83,7 @@
     const freeTrial = user.trialUntilMs > Date.now() && user.paidUntilMs <= Date.now();
     $('member-state').classList.toggle('expired', !user.active);
     $('member-state').textContent = !user.active
-      ? 'Åtkomsten har gått ut. Betala nästa månad med Swish så öppnas hemsidan igen automatiskt.'
+      ? 'Åtkomsten har gått ut. Swisha nästa månad och anmäl betalningen. Admin öppnar åtkomsten när betalningen har godkänts.'
       : freeTrial
         ? 'Din provperiod är aktiv till ' + formatDate(user.trialUntilMs) + '. Efter 3 dagar behöver du betala med Swish.'
         : 'Ditt medlemskap är aktivt.';
@@ -102,7 +91,7 @@
     $('devices').textContent = 'Inloggning tillåten på en dator och en mobil. Aktiva platser: dator ' + (user.devices.computer ? 'upptagen' : 'ledig') + ', mobil ' + (user.devices.mobile ? 'upptagen' : 'ledig') + '.';
     const plans = Array.isArray(data.plans) ? data.plans : [];
     const plan = plans.find(item => item.id === user.planId);
-    $('payment-copy').textContent = 'Nästa ' + (data.durationDays || plan?.durationDays || 30) + ' dagar kostar ' + (data.nextPrice ?? plan?.prices?.[Math.min(user.paidMonths, 2)] ?? '—') + ' kr. Swish verifierar betalningen automatiskt.';
+    $('payment-copy').textContent = 'Nästa ' + (data.durationDays || plan?.durationDays || 30) + ' dagar kostar ' + (data.nextPrice ?? plan?.prices?.[Math.min(user.paidMonths, 2)] ?? '—') + ' kr. Admin kontrollerar varje betalning innan åtkomsten förlängs.';
     $('payment-instructions').hidden = true;
     $('create-payment').hidden = false;
     showPayment(data.pendingPayment || data.latestPayment, data.swishNumber);
@@ -142,15 +131,27 @@
   });
   $('create-payment').addEventListener('click', async () => {
     $('create-payment').disabled = true;
-    $('payment-state').textContent = 'Skapar betalningskod…';
+    $('payment-state').textContent = 'Hämtar betalningsuppgifter…';
     try { const result = await api('/api/membership/payments', { method: 'POST', body: '{}' }); showPayment(result.payment, result.swishNumber); }
     catch (error) { $('payment-state').textContent = error.message; $('create-payment').disabled = false; }
   });
+  $('report-payment-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!currentPayment || currentPayment.status !== 'pending') return;
+    const form = event.currentTarget, button = form.querySelector('button[type=submit]');
+    button.disabled = true; button.textContent = 'Skickar anmälan…';
+    const data = { reference: currentPayment.reference, firstName: $('payer-first-name').value.trim(), lastName: $('payer-last-name').value.trim() };
+    try {
+      await api('/api/membership/payments/' + encodeURIComponent(currentPayment.id) + '/report', { method: 'POST', body: JSON.stringify(data) });
+      form.reset(); await refresh();
+    } catch (error) { $('payment-state').textContent = error.message; }
+    finally { button.disabled = false; button.textContent = 'Jag har swishat'; }
+  });
   $('copy-payment').addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText($('payment-reference').textContent);
-      $('payment-state').textContent = 'Betalningsreferensen kopierades.';
-    } catch { $('payment-state').textContent = 'Kopiering stöds inte här. Skriv av referensen.'; }
+      await navigator.clipboard.writeText('Swishnummer: ' + $('swish-number').textContent + '\nBelopp: ' + $('payment-amount').textContent + '\nMeddelande: ' + $('payment-reference').textContent);
+      $('payment-state').textContent = 'Swishnummer, belopp och referens kopierades.';
+    } catch { $('payment-state').textContent = 'Kopiering stöds inte här. Skriv av Swishnumret, beloppet och referensen.'; }
   });
   refresh().then(() => { if (current?.user && !timer) timer = setInterval(refresh, 20000); });
 })();

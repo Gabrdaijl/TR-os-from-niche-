@@ -62,17 +62,22 @@
         <p class="eyebrow">SWISH</p>
         <h3 id="payment-title">Förnya medlemskapet</h3>
         <p id="payment-copy">Priset för nästa månad visas här.</p>
-        <button id="create-payment" class="primary" type="button">Visa Swishbetalning</button>
+        <button id="create-payment" class="primary" type="button">Visa betalningsuppgifter</button>
         <div id="payment-instructions" class="instructions" hidden>
           <div class="amount-row"><span>Att betala</span><strong id="payment-amount"></strong></div>
           <p>Swishmottagare: <strong id="swish-number"></strong>.</p>
-          <p>Öppna Swish på mobilen eller skanna QR-koden från en annan enhet. Belopp och referens fylls i automatiskt.</p>
-          <a id="swish-app" class="primary link-button" href="#">Öppna Swish</a>
-          <img id="swish-qr" class="swish-qr" alt="QR-kod för din Swishbetalning" hidden>
+          <p>Betala beloppet i Swish till numret ovan och skriv referensen som meddelande.</p>
           <p>Betalningsreferens:</p>
           <code id="payment-reference"></code>
-          <button id="copy-payment" class="quiet" type="button">Kopiera referensen</button>
-          <p class="hint">Swish bekräftar betalningen automatiskt. Dina 30 dagar läggs till direkt när den är godkänd.</p>
+          <button id="copy-payment" class="quiet" type="button">Kopiera Swishuppgifter</button>
+          <p class="hint">När du har swishat fyller du i namnet på den som betalade. Admin kontrollerar betalningen och godkänner den manuellt.</p>
+          <form id="report-payment-form" class="form report-payment-form">
+            <div class="name-fields">
+              <label for="payer-first-name">Förnamn<input id="payer-first-name" name="firstName" autocomplete="given-name" maxlength="80" required></label>
+              <label for="payer-last-name">Efternamn<input id="payer-last-name" name="lastName" autocomplete="family-name" maxlength="80" required></label>
+            </div>
+            <button class="primary" type="submit">Jag har swishat</button>
+          </form>
         </div>
         <p id="payment-state" class="state" role="status" aria-live="polite"></p>
       </section>
