@@ -31,10 +31,10 @@
     catch { $('message').textContent='Fullskärm kunde inte startas. Prova F11.'; }
   });
   document.addEventListener('fullscreenchange',()=>{$('admin-fullscreen').textContent=document.fullscreenElement?'Avsluta fullskärm':'Fullskärm';});
-  let reportSignature = '', authGeneration = 0;
+  let reportSignature = '', banSignature = '', authGeneration = 0;
   function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
   function logout() {
-    authGeneration++;pending=false;clearImages();reportSignature='';$('reports-list').replaceChildren();$('reports-state').textContent='';
+    authGeneration++;pending=false;clearImages();reportSignature='';banSignature='';$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';
     authorization = ''; clearInterval(timer); $('password').value = '';
     $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
     $('login').hidden = false; $('logout').hidden = true;
@@ -71,6 +71,51 @@
         return card;
       }));
     }catch(error){if(generation===authGeneration && authorization)$('reports-state').textContent=error.message;}
+  }
+  async function refreshBans() {
+    const generation = authGeneration;
+    try {
+      const response = await fetch('/api/admin/moderation/bans', { headers: { authorization }, cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      const data = await response.json();
+      if (generation !== authGeneration || !authorization) return;
+      if (!response.ok) throw Error(data.error || 'Spärrlistan kunde inte hämtas.');
+      const bans = Array.isArray(data.bans) ? data.bans : [];
+      $('bans-state').textContent = data.source === 'redis'
+        ? 'Beständig lagring är ansluten.'
+        : 'Varning: listan använder minneslagring och kan försvinna när servern startas om.';
+      const signature = JSON.stringify({ source: data.source, bans });
+      if (signature === banSignature) return;
+      banSignature = signature;
+      if (!bans.length) {
+        $('bans-list').replaceChildren();
+        $('bans-state').textContent += ' Inga aktiva spärrar.';
+        return;
+      }
+      $('bans-list').replaceChildren(...bans.map(ban => {
+        const card = document.createElement('article'); card.className = 'ban-card';
+        const details = document.createElement('div'); details.className = 'ban-details';
+        const identity = document.createElement('strong'); identity.className = 'ban-id'; identity.textContent = 'Webbläsare ' + ban.id.slice(0, 12) + '…'; identity.title = ban.id;
+        const time = document.createElement('time'); time.dateTime = new Date(ban.createdAt).toISOString(); time.textContent = 'Spärrad ' + new Date(ban.createdAt).toLocaleString('sv-SE');
+        const reason = document.createElement('span'); reason.textContent = 'Sökning efter vuxeninnehåll';
+        details.append(identity, time, reason);
+        const remove = document.createElement('button'); remove.className = 'ban-remove'; remove.type = 'button'; remove.textContent = 'Häv spärr';
+        remove.addEventListener('click', async () => {
+          remove.disabled = true; remove.textContent = 'Häver…';
+          try {
+            const result = await fetch('/api/admin/moderation/bans/' + encodeURIComponent(ban.id), { method: 'DELETE', headers: { authorization }, cache: 'no-store', signal: AbortSignal.timeout(10000) });
+            const body = await result.json();
+            if (!result.ok) throw Error(body.error || 'Spärren kunde inte hävas.');
+            banSignature = '';
+            await refreshBans();
+          } catch (error) {
+            if (generation === authGeneration) { $('bans-state').textContent = error.message; remove.disabled = false; remove.textContent = 'Försök igen'; }
+          }
+        });
+        card.append(details, remove); return card;
+      }));
+    } catch (error) {
+      if (generation === authGeneration && authorization) $('bans-state').textContent = error.message;
+    }
   }
   async function refresh() {
     if (pending) return;
@@ -112,6 +157,7 @@
       $('scope').textContent = data.scope;
       $('updated').textContent = 'Senast kontrollerad ' + new Date(data.checkedAt).toLocaleTimeString('sv-SE') + ' · uppdateras var 15:e sekund';
       await refreshReports();
+      await refreshBans();
     } catch (error) { $('message').textContent = error.message; }
     finally { if(generation===authGeneration)pending = false; }
   }

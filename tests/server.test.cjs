@@ -19,6 +19,12 @@ async function fixture(t, env = {}) {
 test('serves the app and prevents access to server files and secrets', async t => {
   const { base, request } = await fixture(t);
   assert.equal((await fetch(base + '/')).status, 200);
+  const manifest = await fetch(base + '/manifest.webmanifest');
+  assert.equal(manifest.status, 200);
+  assert.match(manifest.headers.get('content-type'), /application\/manifest\+json/);
+  assert.equal((await manifest.json()).start_url, '/mobile.html?source=homescreen');
+  assert.equal((await fetch(base + '/mobile.html')).status, 200);
+  assert.match((await fetch(base + '/pwa-icon.svg')).headers.get('content-type'), /image\/svg\+xml/);
   assert.equal((await fetch(base + '/scram/scramjet.wasm.wasm')).headers.get('content-type'), 'application/wasm');
   for (const route of ['/.env', '/server.cjs', '/package-lock.json', '/node_modules/ws/index.js', '/tests/server.test.cjs']) assert.equal((await fetch(base + route)).status, 404, route);
   const health = await request('/api/health');

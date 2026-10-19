@@ -1,7 +1,7 @@
 // Device-local, opt-in support report. No requests, storage, account data or
 // raw errors enter this report. It never inspects the Snapchat document.
 (() => {
-  const release = '20261019.1';
+  const release = '20261019.4';
   const outcomes = new Set(['applied', 'skipped-status', 'skipped-body', 'oversize', 'idle-timeout', 'total-timeout', 'hash-mismatch', 'source-mismatch', 'read-error', 'hash-error', 'decode-error', 'source-error', 'encode-error']);
   const stages = new Set(['starting', 'service-worker', 'transport', 'engine', 'page-loaded', 'startup-failed']);
   const categories = new Set(['structured-clone', 'cross-origin', 'storage', 'missing-api', 'null-property', 'wasm', 'socket', 'url', 'worker', 'unknown']);

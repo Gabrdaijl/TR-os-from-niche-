@@ -1,0 +1,64 @@
+:root{color-scheme:dark;--bg:#09111b;--panel:#121e2b;--panel-2:#182737;--line:#27394a;--text:#f4f7fa;--muted:#9cabb9;--lime:#c7f36b;--yellow:#ffdf2b;--blue:#7abaff}
+*{box-sizing:border-box}
+html{min-height:100%;background:var(--bg)}
+body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(ellipse at 84% 3%,#243b2b 0,transparent 29rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,a{-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button{font:inherit}
+.mobile-shell{width:min(100%,560px);min-height:100vh;min-height:100dvh;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 20px calc(18px + env(safe-area-inset-bottom))}
+.topbar{height:46px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:inline-flex;align-items:center;gap:9px;font-size:17px;font-weight:800;letter-spacing:-.03em}
+.brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--lime);color:#14200c;font-size:23px;font-family:Georgia,serif;font-weight:900;box-shadow:0 5px 18px #c7f36b33}
+.install-mini{min-height:40px;padding:0 14px;border:1px solid #4b6335;border-radius:13px;background:#1b2a1c;color:#e5ffba;font-size:13px;font-weight:700}
+.welcome{position:relative;isolation:isolate;overflow:hidden;min-height:218px;margin:24px 0 17px;padding:28px 22px;border:1px solid #394a39;border-radius:25px;background:linear-gradient(125deg,#1b2c28 0%,#172a2d 50%,#182231 100%)}
+.welcome-copy{position:relative;z-index:1;max-width:340px}
+.eyebrow{margin:0;color:#b6c4ce;font-size:10px;font-weight:800;letter-spacing:.15em}
+.live-dot{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 4px #c7f36b1b;vertical-align:1px}
+.welcome h1{margin:16px 0 10px;font-size:clamp(29px,8vw,39px);line-height:1.04;letter-spacing:-.055em}
+.welcome h1 span{color:var(--lime)}
+.welcome-text{max-width:275px;margin:0;color:#becbd0;font-size:13px;line-height:1.6}
+.orb{position:absolute;z-index:-1;border:1px solid #c7f36b2e;border-radius:50%;pointer-events:none}
+.orb-one{width:175px;height:175px;right:-35px;top:30px;background:radial-gradient(circle at 35% 35%,#d5ff8d32,transparent 68%);box-shadow:inset 0 0 28px #c7f36b14}
+.orb-two{width:115px;height:115px;right:14px;top:60px;border-color:#ffffff17}
+.install-card{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:14px;border:1px solid #33442e;border-radius:19px;background:linear-gradient(105deg,#1b2b21,#15241f);box-shadow:0 8px 25px #0002}
+.install-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:#c7f36b1a;color:var(--lime);font-size:27px}
+.install-copy h2{margin:0 0 3px;font-size:13px;letter-spacing:-.02em}
+.install-copy p{margin:0;color:#aeb9b4;font-size:11px;line-height:1.4}
+.install-button,.dialog-action{min-height:42px;padding:0 13px;border:0;border-radius:12px;background:var(--lime);color:#15200c;font-size:12px;font-weight:800}
+.apps-section{margin-top:30px}
+.section-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-heading h2{margin:6px 0 0;font-size:21px;letter-spacing:-.04em}
+.heading-spark{color:var(--lime);font-size:23px}
+.app-card{display:flex;align-items:center;gap:13px;min-width:0;border:1px solid var(--line);border-radius:19px;background:linear-gradient(130deg,#172534,#121d29);transition:transform .16s ease,border-color .16s ease}
+.app-card:active{transform:scale(.985)}
+.app-card:focus-visible,.install-button:focus-visible,.install-mini:focus-visible,.mobile-footer a:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+.snapchat-card{position:relative;overflow:hidden;min-height:100px;padding:16px;border-color:#514c28;background:linear-gradient(112deg,#24291e,#1b2526 58%,#1b2432)}
+.snapchat-card:after{position:absolute;right:-24px;top:-56px;width:180px;height:180px;border:1px solid #ffdf2b24;border-radius:50%;content:"";pointer-events:none}
+.app-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:15px;background:#ffffff0d;color:#d5e6f6;font-size:23px}
+.snap-icon{background:var(--yellow);box-shadow:0 5px 18px #ffdf2b25}
+.snap-icon svg{width:31px;height:31px;fill:#151515}
+.app-details{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.app-details strong{font-size:16px;letter-spacing:-.02em}
+.app-kicker{color:#ffe777;font-size:9px;font-weight:800;letter-spacing:.1em}
+.app-subtitle{color:var(--muted);font-size:11px}
+.app-arrow{position:relative;z-index:1;color:#d5e0e9;font-size:22px}
+.app-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.small-card{min-height:82px;gap:9px;padding:10px}
+.small-card .app-icon{flex-basis:38px;width:38px;height:38px;border-radius:12px;font-size:18px}
+.small-card .app-details strong{font-size:13px}
+.small-card .app-subtitle{font-size:10px}
+.small-card .app-arrow{font-size:18px;color:#91a1af}
+.games-card .app-icon{background:#292643}.movies-card .app-icon{background:#38272b}.browser-card .app-icon{background:#203644}.cloud-card .app-icon{background:#292f43}
+.mobile-footer{display:flex;justify-content:space-between;gap:12px;margin-top:30px;padding:15px 2px;color:#758493;font-size:11px}
+.mobile-footer a{color:#c5d4df;text-decoration:underline;text-underline-offset:3px}
+.install-dialog{width:min(calc(100% - 34px),390px);padding:23px;border:1px solid #3b4e5e;border-radius:23px;background:#111e2b;color:var(--text);box-shadow:0 24px 80px #0009}
+.install-dialog::backdrop{background:#03070bc9;backdrop-filter:blur(5px)}
+.dialog-close{float:right;width:38px;height:38px;border:1px solid #384959;border-radius:12px;background:#1b2a38;color:#dbe6ee;font-size:22px}
+.dialog-symbol{display:grid;place-items:center;width:48px;height:48px;margin:9px 0 16px;border-radius:15px;background:#c7f36b1a;color:var(--lime);font-size:28px}
+.install-dialog h2{margin:0 0 9px;font-size:20px;letter-spacing:-.03em}
+.install-dialog p{margin:0 0 20px;color:#b6c4d0;font-size:14px;line-height:1.6}
+.install-dialog p strong{color:#f4f7fa}
+.dialog-action{width:100%;margin-bottom:9px}
+.dialog-done{width:100%;min-height:44px;border:1px solid #3a4a58;border-radius:13px;background:#172534;color:#e9f1f6;font-weight:700}
+@media(max-width:370px){.mobile-shell{padding-right:15px;padding-left:15px}.welcome{padding:23px 18px}.install-card{grid-template-columns:36px 1fr auto;gap:9px;padding:11px}.install-icon{width:36px;height:36px}.install-button{padding:0 10px}.small-card{padding:9px 8px;gap:7px}.small-card .app-icon{flex-basis:34px;width:34px;height:34px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}

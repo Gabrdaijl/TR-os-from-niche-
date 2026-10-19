@@ -5,8 +5,19 @@
 <head>
   <script src="tr-os.config.js"></script>
   <script src="tr-os.runtime.js"></script>
+  <script src="moderation-client.js?v=20261019.4"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/logo.png">
+  <script>
+    try {
+      if (matchMedia('(max-width: 760px)').matches && new URLSearchParams(location.search).get('desktop') !== '1') {
+        location.replace('/mobile.html' + location.search + location.hash);
+      }
+    } catch {}
+  </script>
   <title>TR-os</title>
   <script defer src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link href="https://fonts.googleapis.com/css2?family=Agbalumo&amp;display=swap" rel="stylesheet">
@@ -72,7 +83,7 @@
   </nav>
 
 
-  <iframe id="mainFrame" class="main-frame" src="n1browser27d.html" allow="fullscreen; autoplay; gamepad; camera 'self'; microphone 'self'; clipboard-write 'self'" allowfullscreen></iframe>
+  <iframe id="mainFrame" class="main-frame" src="n1browser27d.html?v=20261019.4" allow="fullscreen; autoplay; gamepad; camera 'self'; microphone 'self'; clipboard-write 'self'" allowfullscreen></iframe>
 
 
   <div id="page-loader" class="page-loader bg-blue-300/80">

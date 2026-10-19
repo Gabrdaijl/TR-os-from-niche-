@@ -10,6 +10,22 @@ const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 const { createPresence } = require('./presence.cjs');
 const { createTraffic } = require('./traffic.cjs');
 const { createReports } = require('./reports.cjs');
+const { COOKIE: MODERATION_COOKIE, cookieDeviceId, createModeration } = require('./moderation.cjs');
+const { detects: detectsAdultSearch } = require('./adult-search.js');
+
+const BLOCKED_HTML = '<!doctype html><html lang="sv"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Åtkomst spärrad · TR-os</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b111a;color:#edf3fc;font:16px system-ui;padding:24px;box-sizing:border-box"><main style="max-width:520px;padding:32px;border:1px solid #344657;border-radius:20px;background:#121d28"><p style="color:#f6df28;font-size:12px;letter-spacing:2px">TR-OS · ÅTKOMST SPÄRRAD</p><h1>Webbläsaren är blockerad</h1><p>En sökning som bryter mot webbplatsens regler utlöste en automatisk spärr. Webbplatsens administratör kan häva den i adminpanelen.</p></main></body></html>';
+
+function deviceCookie(req, res, env) {
+  const existing = cookieDeviceId(req.headers.cookie);
+  if (existing) return existing;
+  const id = crypto.randomBytes(32).toString('base64url');
+  const forwarded = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+  const secure = forwarded === 'https' || env.VERCEL === '1' || env.RENDER === 'true' || env.NODE_ENV === 'production';
+  const cookie = MODERATION_COOKIE + '=' + id + '; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax' + (secure ? '; Secure' : '');
+  const previous = res.getHeader('set-cookie');
+  res.setHeader('set-cookie', previous ? [...(Array.isArray(previous) ? previous : [previous]), cookie] : cookie);
+  return id;
+}
 
 function proxyEnvironment(source) {
   const env = { ...source };
@@ -36,6 +52,7 @@ function createApp(options = {}) {
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
   const presence = createPresence(env, activeCount);
   const traffic = createTraffic(env);
+  const moderation = createModeration(env);
   const reports = createReports(env);
   const json = (res, status, data) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -115,6 +132,42 @@ function createApp(options = {}) {
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
     if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
+    const suppliedDevice = cookieDeviceId(req.headers.cookie);
+    const currentDevice = suppliedDevice || deviceCookie(req, res, env);
+    const adminRoute = route === '/admin.html' || route.startsWith('/api/admin/');
+    const documentRequest = ['GET', 'HEAD'].includes(req.method) && (route === '/' || route === '/join' || route === '/join/' || route.endsWith('.html'));
+    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute;
+    if (suppliedDevice && !adminRoute && (documentRequest || protectedApi) && await moderation.isBanned(currentDevice)) {
+      if (documentRequest) {
+        res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+        return res.end(req.method === 'HEAD' ? undefined : BLOCKED_HTML);
+      }
+      return json(res, 403, { banned: true, error: 'This browser is blocked by site moderation.' });
+    }
+    if (route === '/api/moderation/status') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
+      return json(res, 200, { banned: false, storage: moderation.configured ? 'redis' : 'memory' });
+    }
+    if (route === '/api/moderation/flag') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      if (!allowed(req, 'moderation', 5)) return json(res, 429, { error: 'Too many moderation events; try again shortly.' });
+      const result = await moderation.ban(currentDevice);
+      if (!result.ok) return json(res, 503, { error: 'The moderation service is not available.' });
+      return json(res, 200, { banned: true, storage: result.source });
+    }
+    if (route === '/api/admin/moderation/bans') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
+      if (!adminAuthorized(req, res)) return;
+      return json(res, 200, await moderation.list());
+    }
+    const unbanMatch = route.match(/^\/api\/admin\/moderation\/bans\/([a-f0-9]{64})$/i);
+    if (unbanMatch) {
+      if (req.method !== 'DELETE') return json(res, 405, { error: 'Use DELETE' });
+      if (!adminAuthorized(req, res)) return;
+      const result = await moderation.unban(unbanMatch[1].toLowerCase());
+      if (result.source === 'unavailable') return json(res, 503, { error: 'The moderation storage is not available.' });
+      return json(res, 200, result);
+    }
     if (route === '/api/admin/snapchat' || route === '/api/admin/snapchat/stop' || route === '/api/admin/snapchat/forget') {
       return json(res, 410, { error: 'Snapchat-testet är borttaget.' });
     }
@@ -204,6 +257,13 @@ function createApp(options = {}) {
     if (route === '/suggest' && req.method === 'GET') {
       const query = (url.searchParams.get('q') || '').slice(0, 200);
       if (!query) return json(res, 200, { list: [] });
+      if (detectsAdultSearch(query)) {
+        // Do not forward adult searches to DuckDuckGo. Only the random device
+        // ID hash, timestamp, and fixed moderation reason are retained.
+        const result = await moderation.ban(currentDevice);
+        if (!result.ok) return json(res, 503, { error: 'The moderation service is not available.' });
+        return json(res, 403, { banned: true, error: 'This browser is blocked by site moderation.' });
+      }
       try {
         const response = await fetch('https://ac.duckduckgo.com/ac/?q=' + encodeURIComponent(query) + '&type=list', { signal: AbortSignal.timeout(4000) });
         const suggestions = await response.json();
@@ -281,7 +341,7 @@ function createApp(options = {}) {
     let file = path.resolve(root, '.' + decoded);
     if (!file.startsWith(root + path.sep) && file !== root) return json(res, 404, { error: 'Not found' });
     try { if (fs.statSync(file).isDirectory()) file = path.join(file, 'index.html'); } catch { return json(res, 404, { error: 'Not found' }); }
-    const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.cur': 'image/x-icon', '.ani': 'application/octet-stream', '.woff2': 'font/woff2' };
+    const types = { '.html': 'text/html; charset=utf-8', '.webmanifest': 'application/manifest+json; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.cur': 'image/x-icon', '.ani': 'application/octet-stream', '.woff2': 'font/woff2' };
     const type = types[path.extname(file)];
     if (!type || !fs.existsSync(file)) return json(res, 404, { error: 'Not found' });
     res.writeHead(200, { 'content-type': type, 'cache-control': 'no-cache', ...(file.endsWith('sw.js') ? { 'service-worker-allowed': '/' } : {}) });
@@ -323,11 +383,14 @@ function createApp(options = {}) {
       });
     });
   }
-  server.on('upgrade', (req, socket, head) => {
+  server.on('upgrade', async (req, socket, head) => {
     socket.on('error', () => {});
     if (req.headers.origin) {
       try { if (new URL(req.headers.origin).host !== req.headers.host) return socket.destroy(); }
       catch { return socket.destroy(); }
+    }
+    if (await moderation.isBanned(cookieDeviceId(req.headers.cookie))) {
+      return socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
     }
     const route = new URL(req.url, 'http://localhost').pathname;
     if (route === '/tros-ws') return chatWs.handleUpgrade(req, socket, head, ws => chatWs.emit('connection', ws, req));

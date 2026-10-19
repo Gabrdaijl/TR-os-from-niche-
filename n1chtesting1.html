@@ -8,21 +8,23 @@
   <script src="tr-os.runtime.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Agbalumo&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.cur2.css">
-    <script src="baremux/index.js"></script>
-    <script src="scram/scramjet.all.js"></script>
     <script src="theme.black5ce31.js?v=19"></script>
     <title>TR-os</title>
+    <style>
+      #home-search { box-sizing:border-box; width:min(550px,calc(100vw - 32px)); max-width:100%; font-size:16px; }
+      @media(max-width:480px) { #home-title { margin-top:5rem; } }
+    </style>
 
   <script src="panic.js"></script>
 </head>
 
 <body>
 
-            <h1 class="agbalumo text-center text-blue-500 bold-100 text-8xl mt-40 hop">TR-os</h1>
-            <input type="text" placeholder="Search the web...." class="font-sans block mx-auto  h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl mt-10 w-[350px] transition-all duration-300 ease-out focus:w-[550px] flex items-center justify-center"/>
+            <h1 id="home-title" class="agbalumo text-center text-blue-500 bold-100 text-8xl mt-40 hop">TR-os</h1>
+            <input id="home-search" type="text" placeholder="Search the web...." class="font-sans block mx-auto h-12 bg-blue-300 border border-blue-500 text-center rounded-2xl mt-10 transition-all duration-300 ease-out flex items-center justify-center"/>
             <div class="flex justify-center items-center gap-3 mt-2">
 <button type="button" aria-label="Snapchat" title="Öppna Snapchat i TR-os" onclick="if (parent !== window &amp;&amp; typeof parent.trosOpenSnapchat === 'function') { parent.trosOpenSnapchat(); } else { location.href='snapchat.html'; }" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] p-2 flex items-center justify-center transition hover:-translate-y-1"><img src="snapchat.svg" alt="Snapchat" width="36" height="36"></button>
 

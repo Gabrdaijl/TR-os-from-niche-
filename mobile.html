@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09111b">
+  <meta name="description" content="TR-os på mobilen. Öppna Snapchat och dina favoriter direkt från hemskärmen.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="stylesheet" href="/mobile.css?v=20261019.1">
+  <title>TR-os · Mobil</title>
+</head>
+<body>
+  <main class="mobile-shell">
+    <header class="topbar">
+      <a class="brand" href="/mobile.html" aria-label="TR-os startsida"><span class="brand-mark">T</span><span>TR-os</span></a>
+      <button class="install-mini" id="install-open" type="button">＋ Lägg till</button>
+    </header>
+
+    <section class="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-copy">
+        <p class="eyebrow"><span class="live-dot"></span> DIN PLATS PÅ NÄTET</p>
+        <h1 id="welcome-title">Allt du gillar.<br><span>Byggt för mobilen.</span></h1>
+        <p class="welcome-text">Öppna dina favoriter enkelt, med en vy som passar telefonen.</p>
+      </div>
+      <div class="orb orb-one" aria-hidden="true"></div>
+      <div class="orb orb-two" aria-hidden="true"></div>
+    </section>
+
+    <section class="install-card" id="install-card" aria-labelledby="install-title">
+      <div class="install-icon" aria-hidden="true">⌂</div>
+      <div class="install-copy">
+        <h2 id="install-title">Ha TR-os på hemskärmen</h2>
+        <p>Öppna mobilvyn direkt nästa gång, som en app.</p>
+      </div>
+      <button class="install-button" id="install-button" type="button">Lägg till</button>
+    </section>
+
+    <section class="apps-section" aria-labelledby="apps-title">
+      <div class="section-heading"><div><p class="eyebrow">SNABBA GENVÄGAR</p><h2 id="apps-title">Vad vill du öppna?</h2></div><span class="heading-spark" aria-hidden="true">✦</span></div>
+
+      <a class="app-card snapchat-card" href="/snapchat.html?mobile=1">
+        <span class="app-icon snap-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 7c-5 0-8 4-8 9 0 2 0 4-1 5l-4 3c-.8.8-.2 2 1 2 2 0 3 1 4 3 1 2 3 3 5 2 1-.4 2-.6 3-.6s2 .2 3 .6c2 1 4 0 5-2 1-2 2-3 4-3 1.2 0 1.8-1.2 1-2l-4-3c-1-1-1-3-1-5 0-5-3-9-8-9z"/></svg></span>
+        <span class="app-details"><span class="app-kicker">FOTO · CHATT · SAMTAL</span><strong>Snapchat</strong><span class="app-subtitle">Öppna Snapchat i TR-os</span></span>
+        <span class="app-arrow" aria-hidden="true">↗</span>
+      </a>
+
+      <div class="app-grid">
+        <a class="app-card small-card games-card" href="/n1chtesting2.html"><span class="app-icon" aria-hidden="true">🎮</span><span class="app-details"><strong>Games</strong><span class="app-subtitle">Spel</span></span><span class="app-arrow" aria-hidden="true">›</span></a>
+        <a class="app-card small-card movies-card" href="/nm.html"><span class="app-icon" aria-hidden="true">▶</span><span class="app-details"><strong>Movies</strong><span class="app-subtitle">Titta</span></span><span class="app-arrow" aria-hidden="true">›</span></a>
+        <a class="app-card small-card browser-card" href="/n1browser27d.html"><span class="app-icon" aria-hidden="true">◎</span><span class="app-details"><strong>Webbläsare</strong><span class="app-subtitle">Surfa</span></span><span class="app-arrow" aria-hidden="true">›</span></a>
+        <a class="app-card small-card cloud-card" href="/launcher.html"><span class="app-icon" aria-hidden="true">☁</span><span class="app-details"><strong>Cloud</strong><span class="app-subtitle">Dina verktyg</span></span><span class="app-arrow" aria-hidden="true">›</span></a>
+      </div>
+    </section>
+
+    <footer class="mobile-footer"><a href="/?desktop=1">Öppna datorvyn</a><span>TR-os · alltid nära</span></footer>
+  </main>
+
+  <dialog class="install-dialog" id="install-dialog" aria-labelledby="install-dialog-title">
+    <form method="dialog"><button class="dialog-close" aria-label="Stäng">×</button></form>
+    <div class="dialog-symbol" aria-hidden="true">＋</div>
+    <h2 id="install-dialog-title">Lägg TR-os på hemskärmen</h2>
+    <p id="install-instructions">Använd webbläsarens meny och välj <strong>Installera app</strong> eller <strong>Lägg till på hemskärmen</strong>. Då öppnas TR-os direkt i mobilvyn.</p>
+    <button class="dialog-action" id="install-confirm" type="button" hidden>Installera TR-os</button>
+    <button class="dialog-done" id="install-done" type="button">Okej</button>
+  </dialog>
+  <script src="/mobile.js?v=20261019.1" defer></script>
+</body>
+</html>

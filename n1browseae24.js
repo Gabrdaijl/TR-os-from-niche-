@@ -6,7 +6,8 @@
     "mullvad-se": "/wisp-mullvad-se/",
     mullvad: "/wisp-mullvad/"
   };
-  let __sj = null, __sjReady = false;
+  let __sj = null, __sjReady = false, __sjInitPromise = null;
+  const __proxyScripts = new Map();
   var MV_BUILD = 'r5';
   function mvLog(m) {
     try { window.TR_OS.fetch('api/mullvad/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ m: String(m).slice(0, 200) }) }); } catch (e) {}
@@ -133,36 +134,83 @@
   }
 
   async function initScramjet() {
-    const epoxyWarm = import("epoxy/index.mjs").catch(() => null);
-    try {
-      const { ScramjetController } = $scramjetLoadController();
-      const client = new ScramjetController({
-        files: {
-          wasm: window.TR_OS.assetUrl("scram/scramjet.wasm.wasm"),
-          all: window.TR_OS.assetUrl("scram/scramjet.all.js"),
-          sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
-        },
-      });
-      await client.init();
-      await window.TR_OS.ensureServiceWorker();
-      const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
-      __bareConn = conn;
-      await epoxyWarm.catch(() => null);
+    if (__sjReady) return true;
+    if (__sjInitPromise) return __sjInitPromise;
+    if (pendingNav) {
+      const status = document.getElementById('browser-status');
+      const retry = document.getElementById('browser-retry');
+      if (status) {
+        status.querySelector('span').textContent = 'Startar webbproxyn…';
+        status.hidden = false;
+      }
+      if (retry) retry.hidden = true;
+    }
+    __sjInitPromise = (async () => {
       try {
-        await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
-      } catch (err) {
+        const loadScript = src => {
+          if (__proxyScripts.has(src)) return __proxyScripts.get(src);
+          const promise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('A browser component could not be loaded.'));
+            document.head.append(script);
+          });
+          __proxyScripts.set(src, promise);
+          promise.catch(() => __proxyScripts.delete(src));
+          return promise;
+        };
+        // Keep proxy code, its WASM rewriter, and Epoxy out of the mobile
+        // startup path. The local TR-os home page does not need them.
+        await loadScript(window.TR_OS.assetUrl('baremux/index.js'));
+        await loadScript(window.TR_OS.assetUrl('scram/scramjet.all.js'));
+        const epoxyWarm = import('epoxy/index.mjs').catch(() => null);
+        const { ScramjetController } = $scramjetLoadController();
+        const client = new ScramjetController({
+          files: {
+            wasm: window.TR_OS.assetUrl('scram/scramjet.wasm.wasm'),
+            all: window.TR_OS.assetUrl('scram/scramjet.all.js'),
+            sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
+          },
+        });
+        await client.init();
+        await window.TR_OS.ensureServiceWorker();
+        const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl('baremux/worker.js'));
+        __bareConn = conn;
+        await epoxyWarm;
         try {
-          await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
-        } catch (e2) {}
+          await conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
+        } catch {
+          try {
+            await conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
+          } catch {}
+        }
+        __sj = client;
+        __sjReady = true;
+        const status = document.getElementById('browser-status');
+        if (status) status.hidden = true;
+        if (pendingNav) {
+          const next = pendingNav;
+          pendingNav = null;
+          navigate(next);
+        }
+        return true;
+      } catch {
+        __sjInitPromise = null;
+        if (pendingNav) {
+          pendingNav = null;
+          const status = document.getElementById('browser-status');
+          const retry = document.getElementById('browser-retry');
+          if (status) {
+            status.querySelector('span').textContent = 'Webbläsarens proxy kunde inte starta på den här enheten. Stäng andra flikar och försök igen.';
+            status.hidden = false;
+          }
+          if (retry) retry.hidden = false;
+        }
+        return false;
       }
-      __sj = client;
-      __sjReady = true;
-      if (pendingNav) {
-        const next = pendingNav;
-        pendingNav = null;
-        navigate(next);
-      }
-    } catch (e) {}
+    })();
+    return __sjInitPromise;
   }
 
   function buildUrl(raw) {
@@ -344,9 +392,49 @@
 
   let pendingNav = null;
 
+  function containsAdultSearch(value) {
+    try { return !!window.TR_OS_ADULT_SEARCH?.detects(value); }
+    catch { return false; }
+  }
+
+  function flagAdultSearch() {
+    try {
+      const moderation = window.top.TR_OS_MODERATION;
+      if (moderation?.flagAdultSearch) {
+        moderation.flagAdultSearch().catch(() => window.top.alert('Sökningen stoppades, men spärren kunde inte sparas. Försök igen senare.'));
+        return;
+      }
+    } catch {}
+    fetch('/api/moderation/flag', {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'content-type': 'application/json' }, body: '{}'
+    }).then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.banned) throw new Error('Moderation could not save the ban');
+      window.top.postMessage({ type: 'tr-os-moderation-banned' }, location.origin);
+    }).catch(() => {
+      try { window.top.alert('Sökningen stoppades, men spärren kunde inte sparas. Försök igen senare.'); } catch {}
+    });
+  }
+
   function navigate(raw) {
     const tab = activeTab();
     if (!tab || !raw || !raw.trim()) return;
+    if (containsAdultSearch(raw)) {
+      pendingNav = null;
+      try { clearTimeout(suggestTimer); closeSuggest(); } catch {}
+      flagAdultSearch();
+      return;
+    }
+    if (/^tr-os:\/\//i.test(raw.trim())) {
+      pendingNav = null;
+      lockFor(HOME);
+      tab.frame.src = HOME;
+      tab.lastUrl = HOME;
+      renderTabs();
+      syncAddress(true);
+      return;
+    }
     if (!__sjReady) {
       pendingNav = raw;
       try {
@@ -354,14 +442,10 @@
         renderTabs();
         syncAddress(true);
       } catch {}
+      initScramjet();
       return;
     }
     try {
-      if (/^tr-os:\/\//i.test(raw.trim())) {
-        lockFor(HOME);
-        tab.frame.src = HOME;
-        return;
-      }
       const url = buildUrl(raw);
       lockFor(url);
       tab.lastUrl = url;
@@ -379,7 +463,7 @@
     tab.lastUrl = 'https://web.snapchat.com/';
     tab.favicon = new URL('snapchat.svg', location.href).href;
     tab.frame.setAttribute('allow', "camera 'self'; microphone 'self'; autoplay 'self'; fullscreen 'self'; clipboard-write 'self'");
-    tab.frame.src = 'snapchat.html?v=20261019.1';
+    tab.frame.src = 'snapchat.html?v=20261019.4';
     renderTabs();
     syncAddress(true);
   };
@@ -926,6 +1010,13 @@
   setTimeout(mvCheckExit, 5000);
   mvInitPanel();
   document.getElementById('new-tab').addEventListener('click', () => newTab(HOME));
+  document.getElementById('browser-retry').addEventListener('click', () => {
+    const tab = activeTab();
+    const target = tab?.lastUrl;
+    const status = document.getElementById('browser-status');
+    if (status) status.hidden = true;
+    if (target && target !== HOME) navigate(target);
+  });
 
   const suggestBox = document.getElementById('suggest');
   let suggestItems = [];
@@ -1032,6 +1123,8 @@
     try { clearTimeout(suggestTimer); } catch (e) {}
     const q = input.value.trim();
     if (!q) { closeSuggest(); return; }
+    // Keep sensitive terms out of local autocomplete and all suggestion APIs.
+    if (containsAdultSearch(q)) { closeSuggest(); return; }
     suggestItems = localMatches(q);
     suggestHi = -1;
     renderSuggest();
@@ -1082,5 +1175,4 @@
   input.addEventListener('blur', () => { setTimeout(closeSuggest, 120); });
 
   newTab(HOME);
-  initScramjet();
 })();

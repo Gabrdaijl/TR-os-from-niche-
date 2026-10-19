@@ -6124,6 +6124,8 @@ Several C libraries are used, and their licenses are listed below:
       this.CLOSED = 3;
       this.status = this.CONNECTING;
       this.socket = null;
+      this.send_queue = [];
+      this.sending = false;
       this.connect();
     }
     connect() {
@@ -6172,14 +6174,41 @@ Several C libraries are used, and their licenses are listed below:
         return;
       }
       if (data instanceof Blob) {
-        (async () => {
-          let array_buffer = await data.arrayBuffer();
-          this.socket.send(new Uint8Array(array_buffer));
-        })();
+        this.send_queue.push(data);
+        this.flush_send_queue();
       } else if (typeof data === "string") {
-        this.socket.send(data);
+        this.queue_or_send(data);
       } else {
-        this.socket.send(data_to_array(data));
+        this.queue_or_send(data_to_array(data).slice());
+      }
+    }
+    queue_or_send(data) {
+      if (!this.sending && this.send_queue.length === 0) {
+        this.socket.send(data);
+        return;
+      }
+      this.send_queue.push(data);
+      this.flush_send_queue();
+    }
+    async flush_send_queue() {
+      if (this.sending) return;
+      this.sending = true;
+      try {
+        while (this.send_queue.length > 0) {
+          const queued = this.send_queue.shift();
+          try {
+            const data = queued instanceof Blob
+              ? new Uint8Array(await queued.arrayBuffer())
+              : queued;
+            if (this.status === this.OPEN) this.socket.send(data);
+          } catch (error) {
+            this.socket.onerror(error);
+            break;
+          }
+        }
+      } finally {
+        this.sending = false;
+        if (this.send_queue.length > 0 && this.status === this.OPEN) this.flush_send_queue();
       }
     }
     close() {

@@ -6,6 +6,62 @@
   const dataScript = text => 'data:text/javascript;charset=utf-8;base64,' +
     btoa(Array.from(new TextEncoder().encode(text), byte => String.fromCharCode(byte)).join(''));
 
+  // Snapchat's own capture scripts may encode a JPEG before the document's
+  // load event. Install this before page scripts so a failed high-quality
+  // export can retry at lower quality instead of aborting capture.
+  function installSnapImageEncodingFallback(scope) {
+    const marker = '__trosSnapJpegQualityFallback';
+    const isHighQualityJpeg = (type, quality) => typeof type === 'string' &&
+      type.split(';', 1)[0].trim().toLowerCase() === 'image/jpeg' &&
+      typeof quality === 'number' && quality >= 0.9;
+    const retries = quality => [quality, 0.85, 0.7, 0.55].filter((value, index, values) =>
+      value <= quality && values.indexOf(value) === index);
+
+    try {
+      const prototype = scope.HTMLCanvasElement?.prototype;
+      const original = prototype?.toBlob;
+      if (typeof original === 'function' && !original[marker]) {
+        function toBlob(callback, type, quality) {
+          if (typeof callback !== 'function' || !isHighQualityJpeg(type, quality)) {
+            return original.apply(this, arguments);
+          }
+          const levels = retries(quality);
+          let index = 0;
+          let finished = false;
+          const attempt = () => {
+            const level = levels[index++];
+            original.call(this, blob => {
+              if (finished) return;
+              if (blob || index >= levels.length) {
+                finished = true;
+                callback(blob);
+              } else attempt();
+            }, type, level);
+          };
+          attempt();
+        }
+        Object.defineProperty(toBlob, marker, { value: true });
+        Object.defineProperty(prototype, 'toBlob', { configurable: true, writable: true, value: toBlob });
+      }
+    } catch {}
+
+    try {
+      const prototype = scope.OffscreenCanvas?.prototype;
+      const original = prototype?.convertToBlob;
+      if (typeof original === 'function' && !original[marker]) {
+        function convertToBlob(options = {}) {
+          if (!isHighQualityJpeg(options?.type, options?.quality)) return original.apply(this, arguments);
+          const levels = retries(options.quality);
+          const attempt = index => Promise.resolve(original.call(this, { ...options, quality: levels[index] }))
+            .catch(error => index + 1 < levels.length ? attempt(index + 1) : Promise.reject(error));
+          return attempt(0);
+        }
+        Object.defineProperty(convertToBlob, marker, { value: true });
+        Object.defineProperty(prototype, 'convertToBlob', { configurable: true, writable: true, value: convertToBlob });
+      }
+    } catch {}
+  }
+
   // Serialized into the proxied window before its Scramjet hooks are installed.
   function windowRelay(key) {
     const scope = globalThis;
@@ -267,8 +323,10 @@
           const scripts = originalScripts.call(this, meta, handler, html, script);
           if (!Array.isArray(scripts)) throw new Error('Unsupported Snapchat controller script list');
           const relay = script(dataScript('(' + windowRelay.toString() + ')(' + JSON.stringify(key) + ');'));
-          // The last upstream script calls load(), which installs the page hooks.
-          scripts.splice(Math.max(0, scripts.length - 1), 0, relay);
+          const jpegFallback = script(dataScript('(' + installSnapImageEncodingFallback.toString() + ')(globalThis);'));
+          // Run our capture recovery and worker relay before the final upstream
+          // loader and before Snapchat's own application scripts execute.
+          scripts.splice(Math.max(0, scripts.length - 1), 0, jpegFallback, relay);
           return scripts;
         };
         context.interface.getWorkerInjectScripts = function (_meta, _type, script) {

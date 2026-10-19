@@ -1,4 +1,7 @@
 /* n1browser27d extracted styles */
+#browser-status{position:fixed;left:10px;right:10px;top:88px;z-index:70;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #865447;border-radius:12px;background:#281c1a;color:#ffe4dc;font:13px system-ui,sans-serif;box-shadow:0 8px 24px #0008}
+#browser-status[hidden]{display:none}
+#browser-status button{flex-shrink:0;border:1px solid #b87560;border-radius:8px;background:#49302b;color:#fff;padding:8px 10px;font:inherit}
 #mv-panel{display:flex;flex-direction:column;background:var(--mv-bg,#0b0b0d);border:1px solid var(--mv-border,#26262b);border-radius:16px;color:var(--mv-text,#e8e8ea);box-shadow:0 12px 40px rgba(0,0,0,.5);overflow:hidden;font-family:inherit;text-transform:lowercase;}
 #mv-panel[hidden]{display:none;}
 #mv-current{color:var(--mv-muted,#b9b9c0) !important;border-bottom:1px solid var(--mv-border,#1d1d22) !important;}
@@ -54,6 +57,13 @@
   #frames-wrap iframe.tab-enter { animation: none; }
   #frames-wrap iframe.tab-leave { transition: none; }
   #frames-wrap iframe.tab-close { transition: none; }
+}
+
+@media (max-width: 600px) {
+  #browser-input, #mv-filter { font-size: 16px; }
+  #browser-status { top: calc(84px + env(safe-area-inset-top, 0px)); align-items: flex-start; }
+  #frames-wrap { bottom: env(safe-area-inset-bottom, 0px); }
+  #mv-panel { max-height: calc(100dvh - 108px - env(safe-area-inset-bottom, 0px)) !important; }
 }
 #suggest {
   position: absolute;

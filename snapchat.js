@@ -1,7 +1,5 @@
-// Snapchat uses a separate Scramjet 2 controller; the existing proxy is unchanged.
-// Upstream source and pinned versions: see snapchat-notices.html.
 (async () => {
-  const release = '20261019.1';
+  const release = '20261019.4';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -43,7 +41,7 @@
       const lazy=window.TR_OS_SNAP_CURL.create(async()=>{
       await TR_OS.withTimeout(new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = '/snap-curl-transport.js?v=' + release + '-send-bytes-20261019.1';
+        script.src = '/snap-curl-transport.js?v=' + release + '-ordered-send-20261019.4';
         script.onload = resolve;
         script.onerror = () => reject(new Error('Snapchat-transporten kunde inte laddas.'));
         document.head.append(script);
@@ -123,7 +121,10 @@
         window.TR_OS_SNAP_CALLS.install(frame, true, value => support?.call(value));
       }
     } catch {}
-    element.addEventListener('load', () => { status.hidden = true; support?.stage('page-loaded'); });
+    element.addEventListener('load', () => {
+      status.hidden = true;
+      support?.stage('page-loaded');
+    });
     let lastLocation = '';
     function syncLocation() {
       try {
