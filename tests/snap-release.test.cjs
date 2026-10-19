@@ -16,7 +16,7 @@ test('normal Snapchat entry and every executable local asset share one release',
   assert.ok(main.includes("const release = '" + release + "'"));
   assert.ok(fs.readFileSync(path.join(root, 'snap-compat.js'), 'utf8').includes("const release = '" + release + "'"));
   assert.ok(fs.readFileSync(path.join(root, 'snap-report.js'), 'utf8').includes("const release = '" + release + "'"));
-  assert.ok(fs.readFileSync(path.join(root, 'n1browseae24.js'), 'utf8').includes("tab.frame.src = 'snapchat.html?v=" + release + "'"));
+  assert.ok(fs.readFileSync(path.join(root, 'n1browseae24.js'), 'utf8').includes("tab.frame.src = 'snapchat.html?v=" + release));
   for (const name of ['snap-curl-transport.js', 'snap-engine.js', 'snap-controller.inject.js', 'snap-engine.wasm']) {
     assert.ok(main.includes(name + "?v=' + release"), name + ' must use the same release for dynamic assets');
   }

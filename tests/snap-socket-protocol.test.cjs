@@ -35,6 +35,20 @@ function socket(offered = []) {
 }
 const response = protocol => 'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' + protocol + '\r\n';
 
+test('Curl send conversion preserves only the selected bytes from an ArrayBufferView', () => {
+  const start = curl.indexOf('  function data_to_array(');
+  const end = curl.indexOf('  function c_func(', start);
+  assert.ok(start >= 0 && end > start);
+  const convert = vm.runInNewContext(curl.slice(start, end) + '\ndata_to_array', { Uint8Array, ArrayBuffer, TextEncoder });
+  const backing = Uint8Array.of(91, 92, 0, 128, 255, 3, 93, 94);
+  for (const view of [new DataView(backing.buffer, 2, 4),
+    new Uint16Array(backing.buffer, 2, 2), new Int8Array(backing.buffer, 2, 4),
+    backing.subarray(2, 6)]) {
+    assert.deepEqual(Array.from(convert(view)), [0, 128, 255, 3]);
+  }
+  assert.deepEqual(Array.from(backing), [91, 92, 0, 128, 255, 3, 93, 94]);
+});
+
 test('actual Curl class keeps the server-selected SECOND protocol with fragmented headers', () => {
   const h = socket(['first', 'second']);
   h.send('HTTP/1.1 103 Early Hints\r\nSec-WebSocket-Protocol: ignored\r\n\r\n');
