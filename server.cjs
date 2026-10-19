@@ -3,6 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { isIP } = require('node:net');
 const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
@@ -60,7 +61,12 @@ function createApp(options = {}) {
     catch { throw Object.assign(new Error('Invalid JSON'), { status: 400 }); }
   }
   function allowed(req, bucket = 'general', maximum = 300) {
-    const key = bucket + ':' + req.socket.remoteAddress;
+    // Render's public ingress overwrites CF-Connecting-IP. X-Forwarded-For
+    // can contain caller-supplied entries, so never use it for rate limits.
+    const forwarded = req.headers['cf-connecting-ip'];
+    const clientIp = env.RENDER === 'true' && typeof forwarded === 'string' && isIP(forwarded)
+      ? forwarded : req.socket.remoteAddress;
+    const key = bucket + ':' + clientIp;
     let limit = limits.get(key);
     if (!limit || limit.until < Date.now()) limits.set(key, limit = { n: 0, until: Date.now() + 60000 });
     return ++limit.n <= maximum;
