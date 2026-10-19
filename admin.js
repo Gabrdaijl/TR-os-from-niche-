@@ -5,7 +5,16 @@
   let traffic, period = 'today';
   let reportIds = null, banIds = null, conversationData = [], selectedConversation = '', conversationSignature = '', healthDown = null;
   function notifyAdmin(title, body) {
-    $('notice').textContent = title + ' · ' + body;
+    const notice=$('notice');
+    const icon=document.createElement('span');icon.className='notice-icon';icon.setAttribute('aria-hidden','true');icon.textContent=title.includes('Swish')?'!':'•';
+    const copy=document.createElement('span');copy.className='notice-copy';
+    const heading=document.createElement('strong');heading.textContent=title;
+    const detail=document.createElement('span');detail.textContent=body;copy.append(heading,detail);
+    const children=[icon,copy];
+    if(title.includes('Swish')){const action=document.createElement('a');action.className='notice-action';action.href='#payments-list';action.textContent='Granska';children.push(action);}
+    const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='notice-dismiss';dismiss.setAttribute('aria-label','Stäng notis');dismiss.textContent='×';
+    dismiss.addEventListener('click',()=>notice.replaceChildren());children.push(dismiss);
+    notice.classList.add('has-notice');notice.replaceChildren(...children);
     if (!pushReady && 'Notification' in window && Notification.permission === 'granted') {
       try { new Notification(title, { body, tag: 'tr-os-admin-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }); } catch {}
     }
@@ -279,6 +288,18 @@
       return card;
     }):[Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga Swishbetalningar ännu.'})]));
   }
+  function renderMemberStats(){
+    const active=memberUsers.filter(user=>user.active).length;
+    const expired=memberUsers.filter(user=>user.enabled&& !user.active).length;
+    const paused=memberUsers.filter(user=>!user.enabled).length;
+    const waiting=memberPayments.filter(payment=>payment.status==='pending'&&payment.paidRequested).length;
+    const stats=[['Konton',memberUsers.length],['Aktiva',active],['Utan aktiv tid',expired],['Pausade',paused],['Väntar på godkännande',waiting]];
+    $('member-stats').replaceChildren(...stats.map(([label,value])=>{
+      const card=document.createElement('div');card.className='member-stat';
+      const number=document.createElement('strong');number.textContent=format(value);
+      const caption=document.createElement('span');caption.textContent=label;card.append(number,caption);return card;
+    }));
+  }
   function renderMembers(){
     $('member-count').textContent=format(memberUsers.length);
     if(!memberUsers.length){$('members-list').replaceChildren(Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga medlemskonton ännu.'}));return;}
@@ -335,9 +356,9 @@
       const data=await memberRequest('/api/admin/members');if(generation!==authGeneration||!authorization)return;
       memberUsers=Array.isArray(data.users)?data.users:[];memberPayments=Array.isArray(data.payments)?data.payments:[];memberPlans=Array.isArray(data.plans)?data.plans:[];
       const current=new Set(memberPayments.filter(payment=>payment.status==='pending'&&payment.paidRequested).map(payment=>payment.id));
-      if(reportedPaymentIds)for(const id of current)if(!reportedPaymentIds.has(id)){const payment=memberPayments.find(item=>item.id===id);if(payment)notifyAdmin('Swishbetalning att godkänna',[payment.reportedFirstName,payment.reportedLastName].filter(Boolean).join(' ')+' · '+payment.amount+' kr för '+payment.firstName+' '+payment.lastName);}
+      if(reportedPaymentIds)for(const id of current)if(!reportedPaymentIds.has(id)){const payment=memberPayments.find(item=>item.id===id);if(payment)notifyAdmin('Swishbetalning att godkänna','Betalare: '+[payment.reportedFirstName,payment.reportedLastName].filter(Boolean).join(' ')+' · Konto: '+payment.firstName+' '+payment.lastName+' · '+payment.amount+' kr för '+payment.durationDays+' dagar · ref '+payment.reference);}
       reportedPaymentIds=current;
-      renderPlans();renderPayments();renderMembers();
+      renderMemberStats();renderPlans();renderPayments();renderMembers();
       $('members-state').textContent=memberUsers.length+' konton · Swish '+data.swishNumber+' · betalningar godkänns manuellt.';
     }catch(error){if(generation===authGeneration&&authorization)$('members-state').textContent=error.message;}
   }

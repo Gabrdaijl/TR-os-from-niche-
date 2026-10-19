@@ -36,7 +36,7 @@
         </div>
       </header>
       <p id="message" role="status"></p>
-      <p id="notice" role="status" aria-live="polite"></p>
+      <div id="notice" role="status" aria-live="polite"></div>
       <form id="login" class="login">
         <div class="lock" aria-hidden="true">&#9671;</div>
         <h2>Logga in</h2>
@@ -66,6 +66,7 @@
         <section id="members" class="admin-section" aria-labelledby="members-title">
           <div class="section-top"><div class="section-heading"><h2 id="members-title">Medlemmar <span id="member-count" class="count-badge">0</span></h2><p>Betalningar, abonnemangstid och tillåtna enheter.</p></div><button id="member-refresh" type="button">Uppdatera</button></div>
           <p id="members-state" class="moderation-state" role="status" aria-live="polite"></p>
+          <div id="member-stats" class="member-stats" aria-label="Medlemsöversikt"></div>
           <div class="member-admin-grid">
             <section class="member-admin-box" aria-labelledby="add-member-title">
               <h3 id="add-member-title">Lägg till medlem</h3>

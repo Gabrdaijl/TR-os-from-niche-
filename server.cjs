@@ -203,7 +203,7 @@ function createApp(options = {}) {
         const result = await memberships.markPaid(req, reportPaymentMatch[1], await body(req, 4000));
         if (result.notified) {
           const payment = result.payment;
-          notify(push.notifyAdmins('Swishbetalning att godkänna', payment.reportedFirstName + ' ' + payment.reportedLastName + ' anmälde ' + payment.amount + ' kr för ' + payment.firstName + ' ' + payment.lastName + '.', '/admin.html#members', 'member-payment-report-' + payment.id));
+          notify(push.notifyAdmins('Swishbetalning att godkänna', 'Betalare: ' + payment.reportedFirstName + ' ' + payment.reportedLastName + '. Konto: ' + payment.firstName + ' ' + payment.lastName + '. ' + payment.amount + ' kr för ' + payment.durationDays + ' dagar. Referens: ' + payment.reference + '.', '/admin.html#payments-list', 'member-payment-report-' + payment.id));
         }
         return json(res, 200, { payment: result.payment });
       }
