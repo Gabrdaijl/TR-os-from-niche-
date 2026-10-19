@@ -43,7 +43,7 @@
       const lazy=window.TR_OS_SNAP_CURL.create(async()=>{
       await TR_OS.withTimeout(new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = '/snap-curl-transport.js?v=' + release + '-send-bytes-20261019.1';
+        script.src = '/snap-curl-transport.js?v=' + release + '-ordered-send-20261019.2';
         script.onload = resolve;
         script.onerror = () => reject(new Error('Snapchat-transporten kunde inte laddas.'));
         document.head.append(script);
