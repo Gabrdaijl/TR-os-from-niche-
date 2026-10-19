@@ -72,9 +72,16 @@ test('moderation support chat persists across server instances using only the ha
 test('detected adult searches are stopped before external autocomplete and can be unbanned by admin', async t => {
   const originalFetch = global.fetch;
   const externalCalls = [];
+  const pushEvents = [];
+  const push = {
+    notifyAdmins: (...args) => { pushEvents.push(['admin', ...args]); return Promise.resolve({ ok: true, sent: 1 }); },
+    notifyBrowser: (...args) => { pushEvents.push(['browser', ...args]); return Promise.resolve({ ok: true, sent: 1 }); },
+    publicKey: async () => 'public-key', registerAdmin: async () => ({ ok: true }), removeAdmin: async () => ({ ok: true }),
+    registerBrowser: async () => ({ ok: true }), removeBrowser: async () => ({ ok: true })
+  };
   global.fetch = async (...args) => { externalCalls.push(args); throw new Error('Unexpected external request'); };
   const password = 'moderation-test-password';
-  const app = createApp({ env: { ADMIN_PASSWORD: password } });
+  const app = createApp({ env: { ADMIN_PASSWORD: password }, push });
   await new Promise(resolve => app.server.listen(0, '127.0.0.1', resolve));
   t.after(async () => { global.fetch = originalFetch; await app.close(); });
   const base = 'http://127.0.0.1:' + app.server.address().port;
@@ -87,6 +94,7 @@ test('detected adult searches are stopped before external autocomplete and can b
   assert.equal(suggestion.status, 403);
   assert.equal((await suggestion.json()).banned, true);
   assert.equal(externalCalls.length, 0, 'The adult search must not be forwarded to autocomplete');
+  assert.equal(pushEvents.some(event => event[0] === 'admin' && event[1] === 'Ny spärr'), true);
   const blockedHome = await localFetch(base + '/', { headers: { cookie } });
   const blockedText = await blockedHome.text();
   assert.equal(blockedHome.status, 403, blockedText);
@@ -107,6 +115,7 @@ test('detected adult searches are stopped before external autocomplete and can b
 
   const supportMessage = await localFetch(base + '/api/moderation/messages', { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Hej, jag tror att detta blev fel.' }) });
   assert.equal(supportMessage.status, 201);
+  assert.equal(pushEvents.some(event => event[0] === 'admin' && event[1] === 'Nytt supportmeddelande'), true);
   const conversations = await localFetch(base + '/api/admin/moderation/conversations', { headers: { authorization } });
   assert.equal(conversations.status, 200);
   const chat = await conversations.json();
@@ -114,12 +123,21 @@ test('detected adult searches are stopped before external autocomplete and can b
   assert.equal(chat.conversations[0].messages[0].role, 'browser');
   const reply = await localFetch(base + '/api/admin/moderation/conversations/' + listed.bans[0].id + '/messages', { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Jag hjälper dig.' }) });
   assert.equal(reply.status, 201);
+  assert.equal(pushEvents.some(event => event[0] === 'browser' && event[1] === listed.bans[0].id && event[2] === 'Svar från TR-os admin'), true);
   const inbox = await (await localFetch(base + '/api/moderation/messages', { headers: { cookie } })).json();
   assert.deepEqual(inbox.messages.map(message => message.role), ['browser', 'admin']);
   assert.equal((await localFetch(base + '/api/moderation/messages', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Ingen spärr' }) })).status, 403);
 
   const remove = await localFetch(base + '/api/admin/moderation/bans/' + listed.bans[0].id, { method: 'DELETE', headers: { authorization } });
   assert.equal(remove.status, 200);
+  assert.equal(pushEvents.some(event => event[0] === 'browser' && event[1] === listed.bans[0].id && event[2] === 'Spärren är hävd'), true);
   assert.equal((await localFetch(base + '/', { headers: { cookie } })).status, 200);
   assert.equal((await (await localFetch(base + '/api/admin/moderation/bans', { headers: { authorization } })).json()).bans.length, 0);
+  const supportPage = await localFetch(base + '/support.html', { headers: { cookie } });
+  assert.equal(supportPage.status, 200);
+  assert.match(await supportPage.text(), /Supportchat/);
+  const afterUnban = await localFetch(base + '/api/moderation/messages', { headers: { cookie } });
+  assert.equal(afterUnban.status, 200, 'The browser can keep using its existing conversation after unban');
+  const followUp = await localFetch(base + '/api/moderation/messages', { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Tack för hjälpen.' }) });
+  assert.equal(followUp.status, 201);
 });
