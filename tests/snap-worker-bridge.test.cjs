@@ -103,7 +103,7 @@ function setup(t, { changedCookie = false, selectedProtocol = '' } = {}) {
   const created = new host.Worker('blob:https://tr-os.test/controlled-rewritten-blob');
   created.addEventListener('message', event => appWindowMessages.push(event.data));
   t.after(() => created.terminate());
-  return { host, worker, client, jar, requests, connections, appWorkerMessages, appWindowMessages, created, get activeWorker() { return activeWorker; } };
+  return { host, worker, frame, client, jar, requests, connections, appWorkerMessages, appWindowMessages, created, get activeWorker() { return activeWorker; } };
 }
 
 test('bridge install is idempotent and scoped to the supplied controller', () => {
@@ -115,6 +115,30 @@ test('bridge install is idempotent and scoped to the supplied controller', () =>
   host.TR_OS_SNAP_WORKER.install(host.$scramjetController);
   assert.notEqual(patched, original);
   assert.equal(Object.getOwnPropertyDescriptor(host.$scramjetController.Frame.prototype, 'context').get, patched);
+});
+
+test('JPEG capture fallback is injected before Snapchat page initialization', async t => {
+  const h = setup(t);
+  class Canvas {
+    toBlob(callback, type, quality) {
+      this.qualities ||= [];
+      this.qualities.push(quality);
+      queueMicrotask(() => callback(quality === 0.95 ? null : { type, quality }));
+    }
+  }
+  h.host.HTMLCanvasElement = Canvas;
+  const generated = [];
+  const script = value => { const item = { source: value }; generated.push(item); return item; };
+  const scripts = h.frame.context.interface.getInjectScripts({}, {}, { headers: [], history: [] }, script);
+  const fallback = generated.find(item => typeof item.source === 'string' && item.source.startsWith('data:') &&
+    decode(item.source).includes('__trosSnapJpegQualityFallback'));
+  assert.ok(fallback, 'the Snapchat document receives the JPEG retry before app code');
+  assert.ok(scripts.indexOf(fallback) < scripts.length - 1, 'the final upstream initializer stays after our fallback');
+  vm.runInContext(decode(fallback.source), h.host);
+  const canvas = new h.host.HTMLCanvasElement();
+  const result = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+  assert.deepEqual(Array.from(canvas.qualities), [0.95, 0.85]);
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), { type: 'image/jpeg', quality: 0.85 });
 });
 
 test('actual generated worker gets owner cookies and real parent-mediated transport without worker SW', { timeout: 2000 }, async t => {

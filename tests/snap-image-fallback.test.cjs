@@ -5,9 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '../snapchat.js'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '../snap-worker-bridge.js'), 'utf8');
 const start = source.indexOf('function installSnapImageEncodingFallback(scope) {');
-const end = source.indexOf('(async () => {', start);
+const end = source.indexOf('\n  // Serialized into the proxied window', start);
 assert.ok(start >= 0 && end > start, 'Snapchat JPEG fallback helper is present');
 const install = vm.runInNewContext(`${source.slice(start, end)}\ninstallSnapImageEncodingFallback`, { Promise, Object });
 
