@@ -1,7 +1,60 @@
 // Snapchat uses a separate Scramjet 2 controller; the existing proxy is unchanged.
 // Upstream source and pinned versions: see snapchat-notices.html.
+function installSnapImageEncodingFallback(scope) {
+  const marker = '__trosSnapJpegQualityFallback';
+  const isHighQualityJpeg = (type, quality) => typeof type === 'string' &&
+    type.split(';', 1)[0].trim().toLowerCase() === 'image/jpeg' &&
+    typeof quality === 'number' && quality >= 0.9;
+  const retries = quality => [quality, 0.85, 0.7, 0.55].filter((value, index, values) =>
+    value <= quality && values.indexOf(value) === index);
+
+  try {
+    const prototype = scope.HTMLCanvasElement?.prototype;
+    const original = prototype?.toBlob;
+    if (typeof original === 'function' && !original[marker]) {
+      function toBlob(callback, type, quality) {
+        if (typeof callback !== 'function' || !isHighQualityJpeg(type, quality)) {
+          return original.apply(this, arguments);
+        }
+        const levels = retries(quality);
+        let index = 0;
+        let finished = false;
+        const attempt = () => {
+          const level = levels[index++];
+          original.call(this, blob => {
+            if (finished) return;
+            if (blob || index >= levels.length) {
+              finished = true;
+              callback(blob);
+            } else attempt();
+          }, type, level);
+        };
+        attempt();
+      }
+      Object.defineProperty(toBlob, marker, { value: true });
+      Object.defineProperty(prototype, 'toBlob', { configurable: true, writable: true, value: toBlob });
+    }
+  } catch {}
+
+  try {
+    const prototype = scope.OffscreenCanvas?.prototype;
+    const original = prototype?.convertToBlob;
+    if (typeof original === 'function' && !original[marker]) {
+      function convertToBlob(options = {}) {
+        if (!isHighQualityJpeg(options?.type, options?.quality)) return original.apply(this, arguments);
+        const levels = retries(options.quality);
+        const attempt = index => Promise.resolve(original.call(this, { ...options, quality: levels[index] }))
+          .catch(error => index + 1 < levels.length ? attempt(index + 1) : Promise.reject(error));
+        return attempt(0);
+      }
+      Object.defineProperty(convertToBlob, marker, { value: true });
+      Object.defineProperty(prototype, 'convertToBlob', { configurable: true, writable: true, value: convertToBlob });
+    }
+  } catch {}
+}
+
 (async () => {
-  const release = '20261019.1';
+  const release = '20261019.2';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -123,7 +176,11 @@
         window.TR_OS_SNAP_CALLS.install(frame, true, value => support?.call(value));
       }
     } catch {}
-    element.addEventListener('load', () => { status.hidden = true; support?.stage('page-loaded'); });
+    element.addEventListener('load', () => {
+      try { installSnapImageEncodingFallback(element.contentWindow); } catch {}
+      status.hidden = true;
+      support?.stage('page-loaded');
+    });
     let lastLocation = '';
     function syncLocation() {
       try {
