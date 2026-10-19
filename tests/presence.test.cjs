@@ -10,6 +10,7 @@ test('Redis presence is shared across instances, deduplicates browsers and count
   assert.equal(req.headers.authorization,'Bearer test-only-redis-token');
   let body='';for await(const c of req)body+=c;
   const [command,script,keys,key,id,window]=JSON.parse(body);
+  if (key === 'tros:traffic:last:v1') { res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({result:Array(13).fill(0)}));return; }
   assert.equal(command,'EVAL');assert.equal(keys,1);assert.ok(script.includes("redis.call('TIME')"));assert.ok(script.includes("redis.call('ZCOUNT'"));assert.equal(key,'tros:presence:browsers:v1');
   for(const [id,seen] of members)if(seen<=now-1800000)members.delete(id);
   if(id){assert.match(id,/^[a-f0-9]{64}$/);members.set(id,now);}

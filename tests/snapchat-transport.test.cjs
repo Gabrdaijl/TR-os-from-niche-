@@ -6,6 +6,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../snapchat.js'), 'utf8');
 
+const release = source.match(/const release = '([^']+)'/)[1];
+const lazySource = fs.readFileSync(path.join(__dirname, '../snap-lazy-curl.js'), 'utf8');
 async function startup(diagnostics = false, options = {}) {
   const elements = new Map(['status', 'message', 'player', 'retry'].map(id => [id, {
     hidden: false, textContent: '', addEventListener() {}, contentWindow: { location: { href: 'about:blank' } }
@@ -71,9 +73,11 @@ async function startup(diagnostics = false, options = {}) {
     setTimeout(fn, milliseconds) { timers.set(++nextTimer, { fn, milliseconds }); return nextTimer; },
     clearTimeout(id) { timers.delete(id); },
     window: { addEventListener() {}, TR_OS_SNAP_REPORT: options.report, TR_OS_SNAP_DIAGNOSTICS: options.observer, TR_OS_SNAP_COMPAT: options.missingCompat ? undefined : {
-      release: '20261018.3', response: value => value, ...options.compat
+      release: release, response: value => value, ...options.compat
     } }, parent: { postMessage() {} }
   };
+  vm.runInNewContext(lazySource, sandbox);
+  sandbox.window.TR_OS_SNAP_CURL.release = release;
   await vm.runInNewContext(source, sandbox, { filename: 'actual-snapchat.js' });
   if (options.expectFailure) {
     assert.ok(elements.get('message').textContent, 'Startup failure must be shown');
@@ -84,8 +88,8 @@ async function startup(diagnostics = false, options = {}) {
     assert.deepEqual(navigation, ['https://web.snapchat.com/']);
   }
   assert.deepEqual(bridgeInstalls, options.missingCompat || options.compat?.release === 'old' ? [] : [controller]);
-  return { transport: instance, configuration, nativeClient, tuple, logs, connects, requests,
-    elements, scripts, curlInstance, curlConnects, curlRequests, curlSends, curlCloses, timers,
+  return { async connect(...args) { const tuple=instance.connect(...args);await new Promise(resolve=>setImmediate(resolve));return tuple; }, transport: instance, configuration, nativeClient, tuple, logs, connects, requests,
+    elements, scripts, get curlInstance() { return curlInstance; }, curlConnects, curlRequests, curlSends, curlCloses, timers,
     fireTimeout(milliseconds) {
       const match = [...timers].find(([, timer]) => timer.milliseconds === milliseconds);
       assert.ok(match, 'Expected pending timer ' + milliseconds);
@@ -108,19 +112,19 @@ test('crash-body inspection requires explicit diagnostics and exact Sentry desti
   }
 });
 test('an optional report initialization failure cannot prevent Snapchat startup', async () => {
-  const h = await startup(false, { actualDefault: true, report: { release: '20261018.3', create() { throw new Error('PRIVATE_REPORT_ERROR'); } } });
+  const h = await startup(false, { actualDefault: true, report: { release: release, create() { throw new Error('PRIVATE_REPORT_ERROR'); } } });
   assert.equal(h.elements.get('message').textContent, '');
   assert.doesNotMatch(JSON.stringify(h.logs), /PRIVATE_REPORT_ERROR/);
 });
 test('safe report receives compatibility, public script and socket outcomes only in opt-in mode', async () => {
   const events = [];
-  const h = await startup(true, { actualDefault: true, report: { release: '20261018.3', create(enabled, ready, options) {
+  const h = await startup(true, { actualDefault: true, report: { release: release, create(enabled, ready, options) {
     assert.equal(enabled, true); assert.equal(ready, true); assert.equal(options.compatibilityEnabled, true); assert.equal(options.socketMode, 'curl');
     return { stage: value => events.push(['stage', value]), compatibility: value => events.push(['compatibility', value]),
       asset: (url, status) => events.push(['asset', url, status]), socket: value => events.push(['socket', value]), crash() {} };
   } }, compat: { response(value, _url, report) { report('applied'); return value; } } });
   await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/127ca002fe3599f56576.js'), 'GET', null, []);
-  h.transport.connect(new URL('wss://aws.duplex.snapchat.com/'), [], [], () => {}, () => {}, () => {}, () => {});
+  await h.connect(new URL('wss://aws.duplex.snapchat.com/'), [], [], () => {}, () => {}, () => {}, () => {});
   h.curlConnects[0][3]('PRIVATE_PROTOCOL');
   assert.ok(events.some(item => item[0] === 'compatibility' && item[1] === 'applied'));
   assert.ok(events.some(item => item[0] === 'socket' && item[1] === 'open'));
@@ -152,9 +156,9 @@ test('opt-in startup metadata and compatibility outcomes contain only fixed tech
   const h = await startup(true, { compat: { response(value, _url, report) { report('applied'); return value; } } });
   await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/fixture.js?PRIVATE_QUERY'), 'GET', null, []);
   const start = JSON.parse(h.logs.find(([name]) => name === 'TR-os Snapchat startup')[1]);
-  assert.deepEqual(start, { release: '20261018.3', compatibilityEnabled: true, compatibilityReady: true });
+  assert.deepEqual(start, { release: release, compatibilityEnabled: true, compatibilityReady: true });
   const outcome = JSON.parse(h.logs.find(([name]) => name === 'TR-os Snapchat compatibility')[1]);
-  assert.deepEqual(outcome, { release: '20261018.3', outcome: 'applied' });
+  assert.deepEqual(outcome, { release: release, outcome: 'applied' });
   assert.doesNotMatch(JSON.stringify(h.logs), /PRIVATE_QUERY/);
 });
 
@@ -173,7 +177,7 @@ test('Snapchat startup removes duplicate caller UA only and preserves Epoxy defa
     (...args) => received.push(['open', ...args]), (...args) => received.push(['data', ...args]),
     (...args) => received.push(['close', ...args]), (...args) => received.push(['error', ...args])
   ];
-  assert.equal(h.transport.connect(target, protocols, headers, ...callbacks), h.tuple);
+  assert.equal(await h.connect(target, protocols, headers, ...callbacks), h.tuple);
   const sent = h.connects[0];
   assert.notEqual(sent[0], target, 'Only a backend URL copy may be normalized');
   assert.equal(sent[0].protocol, 'https:');
@@ -198,9 +202,11 @@ test('Snapchat startup removes duplicate caller UA only and preserves Epoxy defa
 
 test('normal Snapchat entry loads curl sockets and keeps HTTP on initialized Epoxy', async () => {
   const h = await startup(false, { actualDefault: true });
+  assert.equal(h.scripts.length, 0, 'Socket WASM stays unloaded until first connection');
+  assert.equal(h.curlInstance, undefined);
+  await h.connect(new URL('wss://chat.example.test/'), [], [], () => {}, () => {}, () => {}, () => {});
   assert.equal(h.scripts.length, 1);
   assert.equal(h.curlInstance.ready, true);
-  h.transport.connect(new URL('wss://chat.example.test/'), [], [], () => {}, () => {}, () => {}, () => {});
   assert.equal(h.curlConnects.length, 1);
   assert.equal(h.connects.length, 0);
   await h.transport.request(new URL('https://http.example.test/'), 'GET', null, []);
@@ -210,13 +216,11 @@ test('normal Snapchat entry loads curl sockets and keeps HTTP on initialized Epo
 
 test('curl sockets preserve original WS URL and auth while HTTP stays on initialized Epoxy', async () => {
   const h = await startup(true, { curl: true });
-  assert.equal(h.scripts.length, 1); assert.equal(h.scripts[0].src, '/snap-curl-transport.js?v=20261018.3');
-  assert.equal(h.curlInstance.ready, true);
-  assert.equal(h.curlInstance.opts.wisp, h.transport.opts.wisp);
+  assert.equal(h.scripts.length, 0);
   const target = new URL('wss://chat.example.test:8443/socket?token=URL_QUERY_SECRET');
   const headers = [['Origin', 'https://origin.example.test'], ['Cookie', 'COOKIE_VALUE_SECRET'], ['User-Agent', 'CALLER_UA_SECRET']];
   const protocols = ['PROTOCOL_VALUE_SECRET'], received = [];
-  const tuple = h.transport.connect(target, protocols, headers,
+  const tuple = await h.connect(target, protocols, headers,
     (...args) => received.push(['open', ...args]), (...args) => received.push(['message', ...args]),
     (...args) => received.push(['close', ...args]), (...args) => received.push(['error', ...args]));
   assert.equal(h.connects.length, 0);
@@ -229,8 +233,9 @@ test('curl sockets preserve original WS URL and auth while HTTP stays on initial
   sent[4]('MESSAGE_SECRET'); sent[6]('POST_OPEN_ERROR_SECRET'); sent[5](1000, 'CLOSE_REASON_SECRET');
   assert.deepEqual(received, [['open', 'SELECTED_PROTOCOL_SECRET', 'EXTENSION_SECRET'], ['message', 'MESSAGE_SECRET'],
     ['error', 'POST_OPEN_ERROR_SECRET'], ['close', 1000, 'CLOSE_REASON_SECRET']]);
-  tuple[0]('OUTGOING_MESSAGE_SECRET'); await tuple[1](1000, 'OUTGOING_CLOSE_SECRET');
-  assert.equal(h.curlSends[0], 'OUTGOING_MESSAGE_SECRET'); assert.deepEqual(h.curlCloses[0], [1000, 'OUTGOING_CLOSE_SECRET']);
+  assert.throws(()=>tuple[0]('OUTGOING_MESSAGE_SECRET'), /not open/);
+  await tuple[1](1000, 'OUTGOING_CLOSE_SECRET');
+  assert.equal(h.curlSends.length, 0, 'Application cannot send after a closed socket');
   const body = 'HTTP_BODY_SECRET';
   await h.transport.request(new URL('https://http.example.test/?token=HTTP_QUERY_SECRET'), 'POST', body, headers);
   assert.equal(h.requests.length, 1); assert.equal(h.requests[0][2], body); assert.equal(h.requests[0][3], headers);
@@ -242,7 +247,7 @@ test('curl sockets preserve original WS URL and auth while HTTP stays on initial
 test('curl handshake timeout fails, absorbs asynchronous close rejection and ignores late callbacks', async () => {
   const h = await startup(false, { curl: true, rejectCurlClose: true });
   const received = [];
-  h.transport.connect(new URL('wss://chat.example.test/'), [], [],
+  await h.connect(new URL('wss://chat.example.test/'), [], [],
     () => received.push('open'), () => received.push('data'), () => received.push('close'), error => received.push(['error', error]));
   h.fireTimeout(15000);
   await new Promise(resolve => setImmediate(resolve));
@@ -256,7 +261,7 @@ test('curl handshake timeout fails, absorbs asynchronous close rejection and ign
 for (const event of ['close', 'error']) test('curl pre-open ' + event + ' fails the handshake and suppresses late open', async () => {
   const h = await startup(false, { curl: true });
   const received = [];
-  h.transport.connect(new URL('wss://chat.example.test/'), [], [],
+  await h.connect(new URL('wss://chat.example.test/'), [], [],
     () => received.push('open'), () => received.push('data'), () => received.push('close'), error => received.push(['error', error]));
   const sent = h.curlConnects[0];
   if (event === 'close') sent[5](1006, 'controlled premature close'); else sent[6]('controlled premature error');
@@ -265,10 +270,12 @@ for (const event of ['close', 'error']) test('curl pre-open ' + event + ' fails 
   assert.equal(received.length, 1); assert.equal(h.timers.size, 0);
 });
 
-for (const failure of ['script', 'init']) test('curl ' + failure + ' failure prevents controller startup', async () => {
-  const h = await startup(false, { curl: true, expectFailure: true,
+for (const failure of ['script', 'init']) test('lazy curl ' + failure + ' failure reaches socket error without opening a connection', async () => {
+  const h = await startup(false, { curl: true,
     scriptError: failure === 'script', curlInitError: failure === 'init' ? new Error('controlled curl init failure') : undefined });
-  assert.equal(h.configuration, undefined); assert.equal(h.curlConnects.length, 0);
+  const errors=[];
+  await h.connect(new URL('wss://chat.example.test/'),[],[],()=>assert.fail('must not open'),()=>{},()=>{},error=>errors.push(error));
+  assert.equal(errors.length,1);assert.ok(h.configuration);assert.equal(h.curlConnects.length,0);
 });
 
 test('opt-in TLS check sends only public empty requests and requires bad certificate rejection plus valid HTTPS', async () => {
@@ -301,7 +308,7 @@ test('socket backend scheme mapping preserves endpoint and original URL for secu
     const target = new URL(input);
     const headers = [['Origin', 'https://origin.example.test'], ['Cookie', 'COOKIE_VALUE_SECRET']];
     const protocols = ['PROTOCOL_VALUE_SECRET'];
-    h.transport.connect(target, protocols, headers, () => {}, () => {}, () => {}, () => {});
+    await h.connect(target, protocols, headers, () => {}, () => {}, () => {}, () => {});
     const [backend, passedProtocols, passedHeaders] = h.connects.at(-1);
     assert.notEqual(backend, target);
     assert.equal(backend.protocol, scheme);
@@ -333,7 +340,7 @@ test('opt-in diagnostics contain connection metadata and forward all payloads wi
     ['Origin', 'https://user:ORIGIN_PASSWORD_SECRET@origin.example.test/private?secret=ORIGIN_QUERY_SECRET'],
     ['User-Agent', 'UA_VALUE_SECRET']];
   const received = [];
-  const result = h.transport.connect(target, protocols, headers,
+  const result = await h.connect(target, protocols, headers,
     (...args) => received.push(['open', ...args]), (...args) => received.push(['message', ...args]),
     (...args) => received.push(['close', ...args]), (...args) => received.push(['error', ...args]));
   assert.equal(result, h.tuple);
