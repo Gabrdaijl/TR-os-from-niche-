@@ -211,37 +211,74 @@
 
     #tros-player-bar{
       position:absolute;top:0;left:0;right:0;
-      height:56px;z-index:10;
-      background:linear-gradient(180deg,rgba(0,0,0,.9) 0%,transparent 100%);
-      display:flex;align-items:center;
-      padding:0 18px;gap:14px;
+      min-height:72px;z-index:10;
+      background:linear-gradient(180deg,rgba(0,0,0,.94),rgba(0,0,0,.72));
+      border-bottom:1px solid rgba(255,255,255,.12);
+      backdrop-filter:blur(18px);
+      display:grid;grid-template-columns:44px minmax(0,1fr) auto auto auto;
+      align-items:center;padding:calc(env(safe-area-inset-top,0px) + 10px) 18px 10px;gap:10px;
+    }
+    #tros-player-heading{min-width:0;overflow:hidden}
+    #tros-player-source,#tros-player-next,#tros-player-fullscreen{
+      flex:0 0 auto;min-width:0;width:auto;max-width:none;
+      height:42px;padding:7px 12px;font-size:12px;border-radius:13px;
+      white-space:nowrap;
     }
     #tros-player-source,#tros-player-next{
-      flex:0 0 auto;min-width:0;width:auto;max-width:110px;
-      height:28px;padding:3px 8px;font-size:11px;border-radius:7px;
+      background:var(--tros-card,#111);border:1px solid var(--tros-border,#333);
+      color:var(--tros-text,#fff);
     }
-    #tros-player-source{width:86px}
-    @media(max-width:600px){#tros-player-bar{padding:0 8px;gap:7px}#tros-player-title{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#tros-player-sub{display:none}}
+    #tros-player-source{width:116px;cursor:pointer}
+    #tros-player-next{min-width:108px;cursor:pointer}
+    #tros-player-fullscreen{
+      border:1px solid var(--tros-accent,#fff);background:var(--tros-accent,#fff);
+      color:var(--tros-onacc,#000);font-weight:800;cursor:pointer;
+    }
     #tros-player-back{
-      width:38px;height:38px;border-radius:50%;
-      background:rgba(255,255,255,.15);
-      border:1px solid rgba(255,255,255,.25);
-      color:#fff;font-size:20px;
+      width:42px;height:42px;border-radius:14px;
+      background:var(--tros-card,#181818);
+      border:1px solid var(--tros-border,#444);
+      color:var(--tros-text,#fff);font-size:22px;
       display:grid;place-items:center;
       cursor:pointer;transition:background .2s;
     }
-    #tros-player-back:hover{ background:rgba(255,255,255,.3) }
+    #tros-player-back:hover{ background:var(--tros-border,#333) }
     #tros-player-title{
       font-family:ui-sans-serif,system-ui,sans-serif;
-      color:#fff;font-size:16px;
+      color:var(--tros-text,#fff);font-size:16px;font-weight:800;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
     }
     #tros-player-sub{
-      font-size:11px;color:rgba(255,255,255,.6);
-      margin-top:1px;
+      overflow:hidden;margin-top:3px;color:var(--tros-text,rgba(255,255,255,.65));
+      font-size:11px;opacity:.72;text-overflow:ellipsis;white-space:nowrap;
+    }
+    #tros-player-status{
+      position:absolute;inset:90px 16px 16px;z-index:2;display:none;
+      align-items:center;justify-content:center;padding:28px;
+      border:1px solid var(--tros-border,#263542);border-radius:22px;
+      background:radial-gradient(ellipse at 50% 35%,var(--tros-card,#111) 0%,#080b0f 74%);
+      color:var(--tros-text,#d7e8f4);font-size:15px;font-weight:650;
+      line-height:1.65;text-align:center;backdrop-filter:blur(16px);
     }
     #tros-frame{
       width:100%;flex:1;min-height:0;
       border:none;display:block;
+    }
+    @media(max-width:600px){
+      #tros-player-bar{
+        min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));
+        grid-template-rows:auto auto;gap:8px;
+        padding:calc(env(safe-area-inset-top,0px) + 9px) max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px));
+      }
+      #tros-player-back{grid-column:1;grid-row:1;width:42px;height:42px}
+      #tros-player-heading{grid-column:2/4;grid-row:1}
+      #tros-player-title{font-size:14px}
+      #tros-player-sub{display:block;font-size:10px}
+      #tros-player-source{grid-column:1;grid-row:2;width:100%}
+      #tros-player-next{grid-column:2;grid-row:2;width:100%;min-width:0}
+      #tros-player-fullscreen{grid-column:3;grid-row:2;width:100%;padding-right:6px;padding-left:6px;font-size:11px}
+      #tros-player-source,#tros-player-next,#tros-player-fullscreen{height:40px;border-radius:12px}
+      #tros-player-status{inset:126px 10px 10px;padding:22px 16px;font-size:14px}
     }
   `;
   document.head.appendChild(style);
@@ -308,16 +345,16 @@
     player.id = 'tros-player';
     player.innerHTML = `
       <div id="tros-player-bar">
-        <button id="tros-player-back">←</button>
-        <div>
+        <button id="tros-player-back" type="button" aria-label="Tillbaka till Movies" title="Tillbaka till Movies">←</button>
+        <div id="tros-player-heading">
           <div id="tros-player-title"></div>
           <div id="tros-player-sub"></div>
         </div>
-        <select id="tros-player-source" class="tros-sel" aria-label="Video source" style="margin-left:auto"><option>VidFast</option><option>VidLink</option><option>VidSrc</option></select>
-        <button id="tros-player-next" class="tros-sel">Next source</button>
-        <button id="tros-player-fullscreen" class="tros-sel" aria-pressed="false">⛶ Fullskärm</button>
+        <select id="tros-player-source" class="tros-sel" aria-label="Videokälla"><option>VidFast</option><option>VidLink</option><option>VidSrc</option></select>
+        <button id="tros-player-next" class="tros-sel" type="button">Byt källa</button>
+        <button id="tros-player-fullscreen" class="tros-sel" type="button" aria-pressed="false">⛶ Fullskärm</button>
       </div>
-      <div id="tros-player-status" role="status" style="display:none;position:absolute;inset:70px 0 0;background:#080f16;color:#d7e8f4;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:2"></div>
+      <div id="tros-player-status" role="status" aria-live="polite"></div>
       <iframe id="tros-frame"
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
@@ -471,6 +508,11 @@
   }
 
   let playerSource = 0, playerPath = '', playerGeneration = 0;
+  function notifyMobilePlayer(open) {
+    try {
+      if (window.parent !== window) window.parent.postMessage({ trosMobilePlayer: open ? 'open' : 'close' }, location.origin);
+    } catch (_) {}
+  }
   function failedPlayerSource(generation) {
     if (generation !== playerGeneration || !playerPath) return;
     const frame = document.getElementById('tros-frame');
@@ -480,7 +522,7 @@
       frame.src = 'about:blank';
       document.getElementById('tros-player-sub').textContent = 'Källan kunde inte laddas. Välj en annan källa ovan.';
       const status = document.getElementById('tros-player-status');
-      status.textContent = 'Den här källan kunde inte laddas just nu. Välj en annan källa ovan eller tryck på Next source. Inget byte sker automatiskt.';
+      status.textContent = 'Den här källan kunde inte laddas just nu. Välj en annan källa ovan eller tryck på Byt källa. Inget byte sker automatiskt.';
       status.style.display = 'flex';
     }
   }
@@ -492,7 +534,7 @@
     const hosts = ['https://vidfast.vc', 'https://vidlink.pro', 'https://vidsrc.sh/embed'];
     const names = ['VidFast', 'VidLink', 'VidSrc'];
     document.getElementById('tros-player-source').selectedIndex = index;
-    document.getElementById('tros-player-sub').textContent = names[index] + ' · Use Next source if playback fails';
+    document.getElementById('tros-player-sub').textContent = names[index] + ' · Byt källa om uppspelningen inte fungerar';
     // VidSrc's embedded player breaks when its scripts are rewritten by
     // Scramjet. Its public embed supports normal cross-origin iframes.
     const src = index === 2 ? hosts[index] + playerPath : await proxyPlayerUrl(hosts[index] + playerPath);
@@ -513,6 +555,7 @@
     playerPath = new URL(src).pathname;
     await changePlayerSource(0);
     document.getElementById('tros-player').classList.add('open');
+    notifyMobilePlayer(true);
     closeModal();
     document.body.style.overflow = 'hidden';
   }
@@ -521,6 +564,7 @@
     ++playerGeneration;
     playerPath = '';
     document.getElementById('tros-player').classList.remove('open');
+    notifyMobilePlayer(false);
     document.getElementById('tros-frame').src = 'about:blank';
     document.body.style.overflow = '';
   }

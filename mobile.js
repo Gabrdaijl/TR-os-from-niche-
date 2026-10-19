@@ -6,7 +6,6 @@
     games: { title: 'Games', src: '/n1chetesting2.html' },
     movies: { title: 'Movies', src: '/nm.html' },
     ai: { title: 'AI', src: '/nai.html' },
-    snapchat: { title: 'Snapchat', src: '/snapchat.html?mobile=1' },
     cheats: { title: 'Cheats', src: '/join' },
     cloud: { title: 'Cloud', src: '/launcher.html' },
     settings: { title: 'Settings', src: '/settings.html' }
@@ -21,6 +20,50 @@
   const confirmButton = document.getElementById('install-confirm');
   let installPrompt = null;
   let currentPage = 'home';
+
+  const themes = {
+    dark: { bg: '#000000', card: '#111111', border: '#2b2b2b', text: '#ffffff', nav: '#161616', accent: '#ffffff', onAccent: '#000000' },
+    halloween: { bg: '#0a0705', card: '#120c07', border: '#2e2114', text: '#f2dfc2', nav: '#1c130b', accent: '#d99a5f', onAccent: '#0a0a0a' },
+    red: { bg: '#0d0807', card: '#150c0a', border: '#332019', text: '#f3e2d8', nav: '#211210', accent: '#d67f6d', onAccent: '#0a0a0a' },
+    green: { bg: '#070a07', card: '#0c110b', border: '#232b20', text: '#e3e8d8', nav: '#151a13', accent: '#a3b18a', onAccent: '#0a0a0a' },
+    white: { bg: '#f4f1ea', card: '#ffffff', border: '#e3ddd0', text: '#211d16', nav: '#ebe6da', accent: '#2f5d8a', onAccent: '#ffffff' },
+    ocean: { bg: '#060b10', card: '#0a1218', border: '#1e3a4d', text: '#d8ecf5', nav: '#10202c', accent: '#5aa9e6', onAccent: '#06121a' }
+  };
+  const hasTheme = name => Object.prototype.hasOwnProperty.call(themes, name);
+
+  function syncTheme(name) {
+    if (name === 'light') name = 'ocean';
+    const themeName = hasTheme(name) ? name : 'dark';
+    const theme = themes[themeName];
+    const root = document.documentElement;
+    root.dataset.trosTheme = themeName;
+    root.style.colorScheme = themeName === 'white' ? 'light' : 'dark';
+    root.style.setProperty('--shell', theme.bg);
+    root.style.setProperty('--stage', theme.bg);
+    root.style.setProperty('--bar', theme.card);
+    root.style.setProperty('--bar-border', theme.border);
+    root.style.setProperty('--bar-ink', theme.text);
+    root.style.setProperty('--bar-active', theme.accent);
+    root.style.setProperty('--bar-active-ink', theme.onAccent);
+    root.style.setProperty('--bar-control', theme.nav);
+    root.style.setProperty('--dialog-bg', theme.card);
+    root.style.setProperty('--dialog-line', theme.border);
+    root.style.setProperty('--dialog-ink', theme.text);
+    root.style.setProperty('--dialog-accent', theme.accent);
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.content = theme.card;
+
+    try {
+      if (frame?.contentWindow) {
+        frame.contentWindow.postMessage({ trosTheme: themeName === 'ocean' ? 'ocean' : 'dark', trosThemeName: themeName }, location.origin);
+      }
+    } catch {}
+  }
+
+  function readTheme() {
+    try { syncTheme(localStorage.getItem('tros-theme') || 'dark'); }
+    catch { syncTheme('dark'); }
+  }
 
   const isInstalled = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const closeDialog = dialog => { if (dialog?.open) dialog.close(); };
@@ -45,6 +88,19 @@
       history.pushState({ trosMobilePage: app }, '', `${location.pathname}${location.search}${hash}`);
     }
   }
+
+  frame?.addEventListener('load', readTheme);
+  window.addEventListener('storage', event => {
+    if (event.key === 'tros-theme') syncTheme(event.newValue || 'dark');
+  });
+  window.addEventListener('message', event => {
+    if (event.source !== frame?.contentWindow || event.origin !== location.origin) return;
+    if (!event.data || typeof event.data !== 'object') return;
+    if (hasTheme(event.data.trosThemeName)) syncTheme(event.data.trosThemeName);
+    if (event.data.trosMobilePlayer === 'open') document.querySelector('.mobile-shell')?.classList.add('movie-player-open');
+    if (event.data.trosMobilePlayer === 'close') document.querySelector('.mobile-shell')?.classList.remove('movie-player-open');
+  });
+  readTheme();
 
   document.querySelectorAll('[data-page]').forEach(button => {
     button.addEventListener('click', event => {
