@@ -5487,7 +5487,7 @@ var libcurl = function() {
     } else if (data instanceof ArrayBuffer) {
       return new Uint8Array(data);
     } else if (ArrayBuffer.isView(data)) {
-      return new Uint8Array(data.buffer);
+      return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     }
     throw new TypeError("invalid data type to be sent");
   }
