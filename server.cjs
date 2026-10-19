@@ -12,6 +12,7 @@ const { createTraffic } = require('./traffic.cjs');
 const { createReports } = require('./reports.cjs');
 const { COOKIE: MODERATION_COOKIE, cookieDeviceId, createModeration } = require('./moderation.cjs');
 const { createPushNotifications } = require('./push.cjs');
+const { createMemberships } = require('./memberships.cjs');
 const { detects: detectsAdultSearch } = require('./adult-search.js');
 
 const BLOCKED_HTML = '<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b111a"><title>Webbläsaren är blockerad · TR-os</title><link rel="stylesheet" href="/support.css?v=20261020.1"></head><body><main class="support-shell blocked-shell"><a class="support-brand" href="/" aria-label="TR-os"><span class="brand-mark">T</span><span>TR-os<small>Hjälpcenter</small></span></a><section class="block-card"><div class="block-icon" aria-hidden="true">!</div><p class="support-eyebrow">ÅTKOMST SPÄRRAD</p><h1>Webbläsaren är blockerad</h1><p class="block-reason"><strong>Anledning:</strong> Systemet har upptäckt sökningar efter pornografiskt eller annat sexuellt innehåll och blockerat webbläsaren automatiskt.</p><p class="block-help">Kontakta administratören så hjälper han dig med problemet.</p><section class="support-chat-card" aria-labelledby="moderation-chat-title"><div class="chat-heading"><div><p class="support-eyebrow">SUPPORT</p><h2 id="moderation-chat-title">Skriv till admin</h2></div><span class="chat-status"><i></i> Privat ärende</span></div><p class="chat-intro">Beskriv vad som hänt. Du kan fortsätta chatten även efter att spärren hävts.</p><div id="moderation-chat-messages" class="support-messages" role="log" aria-live="polite"></div><form id="moderation-chat-form" class="support-form"><label class="sr-only" for="moderation-chat-input">Ditt meddelande</label><textarea id="moderation-chat-input" maxlength="2000" required rows="3" placeholder="Skriv ditt meddelande…"></textarea><div class="support-form-bottom"><span id="moderation-chat-state" role="status" aria-live="polite"></span><button type="submit"><span>Skicka</span><span aria-hidden="true">↗</span></button></div></form><button id="moderation-push" class="push-opt-in" type="button">Få en notis när admin svarar</button><span id="moderation-push-state" class="push-state" role="status" aria-live="polite"></span><a class="support-link" href="/support.html">Öppna supportchatten senare <span aria-hidden="true">→</span></a></section></section><footer class="support-footer">TR-os · Hjälpcenter</footer></main><script src="/moderation-client.js?v=20261020.1" defer></script></body></html>';
@@ -54,6 +55,7 @@ function createApp(options = {}) {
   const presence = createPresence(env, activeCount);
   const traffic = createTraffic(env);
   const moderation = createModeration(env);
+  const memberships = options.memberships || createMemberships(env);
   const reports = createReports(env);
   const push = options.push || createPushNotifications(env);
   function notify(promise) { Promise.resolve(promise).catch(error => console.warn('Push delivery failed:', error.message)); }
@@ -61,6 +63,11 @@ function createApp(options = {}) {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
   };
+  function appendCookie(res, cookie) {
+    const current = res.getHeader('set-cookie');
+    const cookies = current ? Array.isArray(current) ? current : [current] : [];
+    res.setHeader('set-cookie', [...cookies, cookie]);
+  }
   function authenticated(token, secret) {
     const user = sessions.get(token);
     if (!user || typeof secret !== 'string' || !/^[a-f0-9]{64}$/.test(secret)) return null;
@@ -131,21 +138,83 @@ function createApp(options = {}) {
     res.setHeader('referrer-policy', 'same-origin');
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
+    const swishCallback = route === '/api/swish/callback';
     const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
-    if (apiRequest && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
+    if (apiRequest && !swishCallback && !allowed(req)) return json(res, 429, { error: 'Too many requests; try again shortly' });
     const suppliedDevice = cookieDeviceId(req.headers.cookie);
     const currentDevice = suppliedDevice || deviceCookie(req, res, env);
     const adminRoute = route === '/admin.html' || route.startsWith('/api/admin/');
     const documentRequest = ['GET', 'HEAD'].includes(req.method) && (route === '/' || route === '/join' || route === '/join/' || route.endsWith('.html'));
-    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/push/vapid-public'].includes(route);
+    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && !swishCallback && !route.startsWith('/api/membership/') && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/moderation/status', '/api/moderation/flag', '/api/push/vapid-public'].includes(route);
     if (suppliedDevice && !adminRoute && (documentRequest || protectedApi) && await moderation.isBanned(currentDevice)) {
       if (documentRequest) {
         res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         return res.end(req.method === 'HEAD' ? undefined : BLOCKED_HTML);
       }
       return json(res, 403, { banned: true, error: 'This browser is blocked by site moderation.' });
+    }
+    const publicDocument = route === '/account.html' || route === '/support.html';
+    if (documentRequest && !adminRoute && !publicDocument) {
+      let account;
+      try { account = await memberships.authenticate(req); }
+      catch (error) { return json(res, error.status || 503, { error: error.message || 'Medlemskapet kunde inte kontrolleras.' }); }
+      if (!account || !memberships.hasAccess(account.user)) {
+        res.writeHead(302, { location: '/account.html?status=' + (account ? 'expired' : 'login'), 'cache-control': 'no-store' });
+        return res.end();
+      }
+    }
+    if (protectedApi) {
+      let account;
+      try { account = await memberships.authenticate(req); }
+      catch (error) { return json(res, error.status || 503, { error: error.message || 'Medlemskapet kunde inte kontrolleras.' }); }
+      if (!account) return json(res, 401, { error: 'Logga in för att använda TR-os.', code: 'membership_login' });
+      if (!memberships.hasAccess(account.user)) return json(res, 402, { error: 'Abonnemanget har gått ut. Betala för att få åtkomst igen.', code: 'membership_expired' });
+    }
+    if (swishCallback) {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      if (!memberships.configured) return json(res, 503, { error: 'Betalningsdatabasen är inte tillgänglig.' });
+      const result = await memberships.processSwishCallback(req.headers.callbackidentifier, await body(req, 12000));
+      if (result.payment?.status === 'paid' && result.newlyPaid) {
+        notify(push.notifyAdmins('Swishbetalning godkänd', result.payment.firstName + ' ' + result.payment.lastName + ' har betalat ' + result.payment.amount + ' kr. Medlemskapet förlängdes automatiskt.', '/admin.html#members', 'member-payment-' + result.payment.id));
+      }
+      return json(res, 200, { ok: true });
+    }
+    if (route.startsWith('/api/membership/')) {
+      if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
+      if (route === '/api/membership/me') {
+        if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
+        return json(res, 200, await memberships.summary(req));
+      }
+      if (route === '/api/membership/register' || route === '/api/membership/login') {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        if (!allowed(req, route.endsWith('/register') ? 'member-register' : 'member-login', 8)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
+        const data = await body(req, 12000);
+        const result = route.endsWith('/register') ? await memberships.register(data, req) : await memberships.login(data, req);
+        appendCookie(res, memberships.sessionCookie(result.token, req, env));
+        const plans = await memberships.getPlans();
+        return json(res, route.endsWith('/register') ? 201 : 200, { user: memberships.publicUser(result.user, plans), deviceType: result.deviceType });
+      }
+      if (route === '/api/membership/logout') {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        await memberships.logout(req);
+        appendCookie(res, memberships.clearSessionCookie(req, env));
+        return json(res, 200, { ok: true });
+      }
+      if (route === '/api/membership/payments') {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        const payment = await memberships.createPayment(req);
+        return json(res, 201, { payment, swishNumber: memberships.swishNumber });
+      }
+      const qrMatch = route.match(/^\/api\/membership\/payments\/([a-f0-9-]{36})\/qr$/i);
+      if (qrMatch) {
+        if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
+        const image = await memberships.paymentQr(req, qrMatch[1]);
+        res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store', 'content-length': image.length });
+        return res.end(image);
+      }
+      return json(res, 404, { error: 'Not found' });
     }
     if (route === '/api/moderation/status') {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
@@ -215,6 +284,34 @@ function createApp(options = {}) {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
       if (!adminAuthorized(req, res)) return;
       return json(res, 200, await moderation.listConversations());
+    }
+    if (route === '/api/admin/members' || route === '/api/admin/members/plans') {
+      if (!adminAuthorized(req, res)) return;
+      if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
+      if (route.endsWith('/plans')) {
+        if (req.method === 'GET') return json(res, 200, { plans: await memberships.getPlans() });
+        if (req.method !== 'PUT') return json(res, 405, { error: 'Use GET or PUT' });
+        return json(res, 200, { plans: await memberships.updatePlans((await body(req, 20000)).plans) });
+      }
+      if (req.method === 'GET') {
+        const [users, payments, plans] = await Promise.all([memberships.listUsers(), memberships.listPayments(), memberships.getPlans()]);
+        return json(res, 200, { users, payments, plans, swishNumber: memberships.swishNumber, swishConfigured: memberships.swishConfigured });
+      }
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use GET or POST' });
+      const created = await memberships.adminCreateUser(await body(req, 12000));
+      return json(res, 201, { user: memberships.publicUser(created, await memberships.getPlans()) });
+    }
+    const adminMemberMatch = route.match(/^\/api\/admin\/members\/([a-f0-9-]{36})(?:\/(reset-devices))?$/i);
+    if (adminMemberMatch) {
+      if (!adminAuthorized(req, res)) return;
+      if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
+      if (adminMemberMatch[2]) {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        await memberships.resetDevices(adminMemberMatch[1]);
+        return json(res, 200, { ok: true });
+      }
+      if (req.method !== 'PATCH') return json(res, 405, { error: 'Use PATCH' });
+      return json(res, 200, { user: await memberships.updateUser(adminMemberMatch[1], await body(req, 8000)) });
     }
     const conversationMatch = route.match(/^\/api\/admin\/moderation\/conversations\/([a-f0-9]{64})\/messages$/i);
     if (conversationMatch) {
@@ -291,6 +388,8 @@ function createApp(options = {}) {
     if (route === '/online') {
       if (req.method === 'GET') return json(res, 200, await presence.snapshot());
       if (req.method !== 'POST') return json(res, 405, { error: 'Use GET or POST' });
+      const member = await memberships.authenticate(req);
+      if (!member || !memberships.hasAccess(member.user)) return json(res, 402, { error: 'Aktivt medlemskap krävs.', code: 'membership_expired' });
       const data = await body(req);
       let user = authenticated(data.token, data.secret);
       // A closing tab must not remove another tab using the same browser ID.
@@ -298,9 +397,10 @@ function createApp(options = {}) {
       if (!user) {
         if (sessions.size >= 10000) return json(res, 503, { error: 'Server is busy' });
         const token = crypto.randomUUID();
-        user = { token, secret: crypto.randomBytes(32).toString('hex'), name: 'Guest ' + token.slice(0, 4), seen: Date.now() };
+        user = { token, secret: crypto.randomBytes(32).toString('hex'), name: member.user.firstName + ' ' + member.user.lastName, seen: Date.now() };
         sessions.set(token, user);
       }
+      user.name = member.user.firstName + ' ' + member.user.lastName;
       user.seen = Date.now();
       broadcast();
       const [livePresence, trafficStats] = await Promise.all([presence.snapshot(data.visitorId), traffic.snapshot(data.visitorId, data.viewId)]);
@@ -462,6 +562,12 @@ function createApp(options = {}) {
     }
     if (await moderation.isBanned(cookieDeviceId(req.headers.cookie))) {
       return socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    }
+    let member;
+    try { member = await memberships.authenticate(req); }
+    catch { return socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n'); }
+    if (!member || !memberships.hasAccess(member.user)) {
+      return socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
     }
     const route = new URL(req.url, 'http://localhost').pathname;
     if (route === '/tros-ws') return chatWs.handleUpgrade(req, socket, head, ws => chatWs.emit('connection', ws, req));

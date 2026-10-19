@@ -82,6 +82,22 @@
     return workerReady;
   }
   function apiUrl(path) { return new URL(String(path).replace(/^\//, ''), apiBase + '/').href; }
+  function watchMembership() {
+    if (['/admin.html', '/account.html', '/support.html'].includes(location.pathname)) return;
+    let checking = false;
+    setInterval(async function () {
+      if (checking || document.visibilityState === 'hidden') return;
+      checking = true;
+      try {
+        const response = await nativeFetch(apiUrl('/api/membership/me'), { cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(8000) });
+        if (!response.ok) return;
+        const account = await response.json();
+        if (!account.user) location.replace('/account.html?status=login');
+        else if (!account.active) location.replace('/account.html?status=expired');
+      } catch {} finally { checking = false; }
+    }, 30000);
+  }
+  watchMembership();
   window.TR_OS = Object.freeze({
     apiBase,
     identity,

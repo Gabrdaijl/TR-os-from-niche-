@@ -47,7 +47,7 @@ Cloud-sidan öppnar den externa launchern direkt utan startsida, spelkatalog ell
 
 ## Vercel
 
-Importera detta GitHub-repo i ditt Vercel-team. `vercel.json` väljer Other, bygger frontendfiler till `public/` och skickar serveranrop till `api/index.js`. API-funktionen exporterar samma HTTP-server som den lokala versionen, inklusive WebSocket-uppgraderingar. Miljöfil, serverkod, tester och dependencies kopieras inte till den publika katalogen. `/tr-os.config.js` genereras av servern.
+Importera detta GitHub-repo i ditt Vercel-team. `vercel.json` väljer Other, bygger frontendfiler till `public/` och skickar serveranrop till `api/index.js`. Även startsidan och HTML-sidorna går via servern så att medlemskapsspärren används. API-funktionen exporterar samma HTTP-server som den lokala versionen, inklusive WebSocket-uppgraderingar. Miljöfil, serverkod, tester och dependencies kopieras inte till den publika katalogen. `/tr-os.config.js` genereras av servern.
 
 Välj projektets Settings → Domains för att koppla din domän efter en lyckad driftsättning. Använd DNS-värdena som Vercel visar för just domänen. Leverantörernas API-nycklar läggs i Vercels Environment Variables, aldrig i frontend.
 
@@ -65,6 +65,21 @@ Spärrade webbläsare kan skriva till admin. Samtalet ligger kvar efter att spä
 Tryck **Aktivera push** i adminpanelen på varje enhet som ska få notiser. På iPhone måste TR-os först läggas på hemskärmen och öppnas som app. Användaren kan aktivera avisering för adminsvar i supportchatten. Prenumerationer och en VAPID-nyckel lagras på servern i Redis; den privata nyckeln skickas aldrig till klienten. Notiser kan inte tas emot om användaren nekat systemnotiser, saknar nätanslutning eller om operativsystemet stoppar bakgrundsaviseringar.
 
 En extern GitHub Actions-kontroll kör var femte minut. Vid driftstopp öppnar den ett issue i GitHub och stänger det när TR-os svarar igen. Det kräver att GitHub Actions är aktiverat. Mobilaviseringar för detta driftlarm styrs av GitHubs egna repo- och appnotisinställningar; en server som ligger nere kan inte skicka sina egna pushnotiser.
+
+## Medlemskap och Swish
+
+TR-os kräver ett konto för hemsidans sidor och API. Nya konton får tre dagars provperiod. Standardabonnemanget kostar 40 kr den första betalda månaden, 35 kr den andra och 30 kr per månad från den tredje månaden. Varje betalning ger 30 dagars åtkomst. Kontot kan vara inloggat på en dator och en mobil. `/account.html` används för att skapa konto, logga in och förnya. Swish öppnas från mobilen eller kan skannas som QR-kod från en annan enhet.
+
+Swish Commerce skickar betalningsresultatet till `/api/swish/callback`. Endast en verifierad `PAID`-bekräftelse med rätt belopp, valuta, betalningsreferens och callback-kod förlänger medlemskapet. Admin får en notis vid godkänd betalning och kan se hela betalningshistoriken. I adminpanelen kan du ändra abonnemangsnamn och priser, skapa medlemskonton, ändra namn och slutdatum, pausa konton, byta lösenord och återställa enhetsinloggningar.
+
+Automatisk Swish kräver ett Swish Commerce-avtal via banken, ett bankutfärdat Swish Commerce-nummer och ett API-certifikat. Ett privat Swish-nummer i sig räcker inte för serverns automatiska betalningsbesked. Lägg dessa serverhemligheter i värdens inställningar, aldrig i GitHub:
+
+- `SWISH_ENV=production` för riktiga betalningar, eller `mss` för Swish Merchant Simulator.
+- `SWISH_PAYEE_ALIAS` är numret som banken har anslutit till Commerce-avtalet.
+- `SWISH_CALLBACK_URL` är webbplatsens fullständiga HTTPS-adress följd av `/api/swish/callback`.
+- `SWISH_CERT_P12_BASE64` och `SWISH_CERT_PASSWORD` är `.p12`-certifikatet kodat som Base64 och dess lösenord.
+
+Medlemskonton och betalningar sparas i den konfigurerade Upstash Redis-databasen. Lägg även in `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` bland värdens hemliga miljövariabler. Om Swish Commerce-uppgifterna saknas går det inte att starta en betalning. Lösenord lagras som scrypt-hashar; sessionscookies är HttpOnly.
 
 ## Gemensam besöksräkning
 
