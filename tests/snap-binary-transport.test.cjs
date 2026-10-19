@@ -89,3 +89,36 @@ test('full-size final chunk finishes a multi-chunk frame; CURLE_AGAIN keeps the 
   assert.ok(received.subarray(3).every(byte => byte === 7));
   assert.equal(h.socket.recv_buffer.length, 0);
 });
+
+test('Blob WebSocket sends stay in order ahead of later text and binary messages', async () => {
+  class FixtureBlob {
+    constructor() { this.resolve = null; }
+    arrayBuffer() { return new Promise(resolve => { this.resolve = resolve; }); }
+  }
+  class CurlSocket {
+    constructor() { this.sent = []; this.selectedProtocol = ''; }
+    send(data) { this.sent.push(data); }
+    close() {}
+  }
+  class FixtureCloseEvent extends Event {}
+  const start = source.indexOf('  class FakeWebSocket extends EventTarget {');
+  const end = source.indexOf('  class TLSSocket extends CurlSession {', start);
+  assert.ok(start >= 0 && end > start);
+  const C = vm.runInNewContext(source.slice(start, end) + '\nFakeWebSocket', {
+    EventTarget, Event, CloseEvent: FixtureCloseEvent, MessageEvent, DOMException, Uint8Array, ArrayBuffer,
+    TextEncoder, Blob: FixtureBlob, CurlWebSocket: CurlSocket,
+    data_to_array: vendorFunction('data_to_array', 'c_func')
+  });
+  const socket = new C('wss://fixture.invalid/socket');
+  socket.socket.onopen();
+  const image = new FixtureBlob();
+  socket.send(image);
+  socket.send('following control message');
+  socket.send(Uint8Array.of(4, 5));
+  assert.equal(socket.socket.sent.length, 0, 'Later messages wait while Blob bytes are read');
+  image.resolve(Uint8Array.of(1, 2, 3).buffer);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(socket.socket.sent[0], Uint8Array.of(1, 2, 3));
+  assert.equal(socket.socket.sent[1], 'following control message');
+  assert.deepEqual(socket.socket.sent[2], Uint8Array.of(4, 5));
+});
