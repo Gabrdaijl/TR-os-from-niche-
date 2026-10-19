@@ -20,6 +20,39 @@
     <script src="page-fx7b30.js?v=4" defer></script>
     <title>TR-os</title>
   <script src="panic.js"></script>
+    <style>
+      @media (max-width: 700px) {
+        html, body { min-height: 100%; }
+        body { overflow: auto; }
+        body > div.mx-auto {
+          width: 100% !important;
+          height: calc(100dvh - 12px) !important;
+          min-height: 0 !important;
+          margin: 0 auto !important;
+          gap: 6px !important;
+          padding: 8px !important;
+          overflow-x: hidden !important;
+          overflow-y: auto !important;
+          align-content: flex-start !important;
+        }
+        body > div.mx-auto > div:first-child { padding: 4px 0 !important; }
+        body > div.mx-auto input[type="text"] {
+          width: min(100%, 350px) !important;
+          max-width: 100% !important;
+        }
+        body > div.mx-auto input[type="text"]:focus { width: min(100%, 350px) !important; }
+        body > div.mx-auto [data-fx], .tros-card {
+          width: 112px !important;
+          min-width: 112px !important;
+          min-height: 220px !important;
+          margin: 2px !important;
+        }
+        #tros-modal { width: min(100%, 540px); max-height: 90dvh; padding: 16px; }
+        #tros-modal-header { gap: 10px; }
+        #tros-modal-poster { width: 82px; height: 123px; }
+        #tros-modal-title { font-size: 18px; }
+      }
+    </style>
 </head>
 
 <body>

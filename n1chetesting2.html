@@ -6,6 +6,8 @@
 <head>
   <script src="tr-os.config.js"></script>
   <script src="tr-os.runtime.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TR-os</title>
   <script src="theme.black5ce31.js?v=19"></script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net/" crossorigin>
@@ -30,11 +32,15 @@
 
   <script src="gm.count31bce.js?v=7"></script>
   <script>
+    const compactLayout = window.matchMedia
+      ? window.matchMedia('(max-width: 600px)').matches
+      : window.innerWidth <= 600;
+
     TR_OS_GAMES.init({
       container: "#tros",
-      columns: 8,
-      rows: 4,
-      gamesPerPage: 32,
+      columns: compactLayout ? 3 : 8,
+      rows: compactLayout ? 5 : 4,
+      gamesPerPage: compactLayout ? 15 : 32,
       colors: {
         menuBackground: "transparent",
         gameBackground: "transparent",

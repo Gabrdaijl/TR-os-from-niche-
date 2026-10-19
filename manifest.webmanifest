@@ -2,14 +2,14 @@
   "id": "/mobile.html",
   "name": "TR-os",
   "short_name": "TR-os",
-  "description": "TR-os på mobilen",
+  "description": "TR-os, anpassat för mobilen",
   "start_url": "/mobile.html?source=homescreen",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#09111b",
-  "theme_color": "#09111b",
+  "background_color": "#0b1220",
+  "theme_color": "#93c5fd",
   "icons": [
     { "src": "/logo.png", "sizes": "430x430", "type": "image/png", "purpose": "any" },
     { "src": "/pwa-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }

@@ -66,6 +66,32 @@
     <title>TR-os
     </title>
   <script src="panic.js"></script>
+<style>
+  @media (max-width: 700px) {
+    body { padding: 8px !important; overflow: hidden; }
+    #ai-app { width: 100% !important; height: calc(100dvh - 16px) !important; margin: 0 !important; gap: 0 !important; }
+    #ai-side { display: none !important; }
+    #ai-side.ai-mobile-open {
+      position: fixed !important;
+      inset: 8px auto 8px 8px !important;
+      z-index: 10001 !important;
+      display: flex !important;
+      width: min(84vw, 320px) !important;
+      height: auto !important;
+      box-shadow: 0 0 0 100vmax rgb(0 0 0 / 55%), 8px 0 28px rgb(0 0 0 / 40%);
+    }
+    #chat-container { width: 100%; min-width: 0; min-height: 0; }
+    #chat-feed { padding: 12px !important; }
+    #chat-container > .p-4 { padding: 8px !important; }
+    #chat-container > .flex.items-center { gap: 6px !important; padding: 6px !important; }
+    #ai-fullscreen { padding: 6px 8px !important; font-size: 12px; white-space: nowrap; }
+    #chat-title { min-width: 0; font-size: 13px; }
+    #chat-input { padding-right: 10px !important; padding-left: 10px !important; font-size: 14px !important; }
+    #attach-btn, #send-btn { width: 42px !important; height: 42px !important; }
+    #suggestions { grid-template-columns: 1fr !important; }
+  }
+</style>
+
 </head>
 
 <body class="font-sans p-2">
@@ -896,7 +922,12 @@
   document.getElementById('new-chat-btn').addEventListener('click', newChat);
   document.getElementById('side-toggle').addEventListener('click', () => {
     const side = document.getElementById('ai-side');
-    if (side) side.style.display = (side.style.display === 'none') ? '' : 'none';
+    if (!side) return;
+    if (window.matchMedia('(max-width: 700px)').matches) {
+      side.classList.toggle('ai-mobile-open');
+    } else {
+      side.style.display = (side.style.display === 'none') ? '' : 'none';
+    }
   });
   renderHistory();
   checkUnlimited().then(() => { try { updateQuotaUI(); } catch {} });
