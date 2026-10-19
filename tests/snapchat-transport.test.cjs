@@ -278,6 +278,22 @@ for (const failure of ['script', 'init']) test('lazy curl ' + failure + ' failur
   assert.equal(errors.length,1);assert.ok(h.configuration);assert.equal(h.curlConnects.length,0);
 });
 
+test('a failed lazy WASM initialization is retried on the next socket attempt and cached after success', async () => {
+  const sandbox = { window: {} };
+  vm.runInNewContext(lazySource, sandbox);
+  const client = Object.freeze({ ready: true });
+  let attempts = 0;
+  const lazy = sandbox.window.TR_OS_SNAP_CURL.create(async () => {
+    attempts++;
+    if (attempts === 1) throw new RangeError('Out of memory');
+    return client;
+  });
+  await assert.rejects(lazy.client(), RangeError);
+  assert.equal(await lazy.client(), client);
+  assert.equal(await lazy.client(), client);
+  assert.equal(attempts, 2);
+});
+
 test('opt-in TLS check sends only public empty requests and requires bad certificate rejection plus valid HTTPS', async () => {
   const h = await startup(false, { curl: true, tlsCheck: true });
   assert.equal(h.curlRequests.length, 2);

@@ -1,10 +1,20 @@
 // Instantiate the 16 MiB socket WASM only when Snapchat actually opens a socket.
 // Scramjet rejects application send() while CONNECTING; no payload queue is used.
 (() => {
-  const release = '20261018.4';
+  const release = '20261019.1';
   function create(initialize) {
     let initializing;
-    const client = () => initializing ||= Promise.resolve().then(initialize);
+    const client = () => {
+      if (!initializing) {
+        initializing = Promise.resolve().then(initialize).catch(error => {
+          // A temporary WASM allocation failure must not poison every later
+          // socket attempt for the lifetime of this Snapchat page.
+          initializing = undefined;
+          throw error;
+        });
+      }
+      return initializing;
+    };
     function connect(url, protocols, headers, open, data, close, error) {
       let phase = 'opening', callbacks, timer;
       const cleanup = () => clearTimeout(timer);

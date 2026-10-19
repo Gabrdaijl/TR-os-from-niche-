@@ -16,8 +16,18 @@ test('normal Snapchat entry and every executable local asset share one release',
   assert.ok(main.includes("const release = '" + release + "'"));
   assert.ok(fs.readFileSync(path.join(root, 'snap-compat.js'), 'utf8').includes("const release = '" + release + "'"));
   assert.ok(fs.readFileSync(path.join(root, 'snap-report.js'), 'utf8').includes("const release = '" + release + "'"));
+  assert.ok(fs.readFileSync(path.join(root, 'snap-call-diagnostics.js'), 'utf8').includes("const release = '" + release + "'"));
+  assert.ok(fs.readFileSync(path.join(root, 'snap-lazy-curl.js'), 'utf8').includes("const release = '" + release + "'"));
   assert.ok(fs.readFileSync(path.join(root, 'n1browseae24.js'), 'utf8').includes("tab.frame.src = 'snapchat.html?v=" + release + "'"));
   for (const name of ['snap-curl-transport.js', 'snap-engine.js', 'snap-controller.inject.js', 'snap-engine.wasm']) {
     assert.ok(main.includes(name + "?v=' + release"), name + ' must use the same release for dynamic assets');
   }
+  assert.match(html, /snap-call-diagnostics\.js\?v=/);
+  assert.match(main, /TR_OS_SNAP_CALLS\.install\(frame, true/);
+});
+
+test('Snapchat help does not offer a direct Snapchat link or tell users to leave TR-os', () => {
+  const html = fs.readFileSync(path.join(root, 'snapchat.html'), 'utf8');
+  assert.doesNotMatch(html, /<a\b[^>]*href=["']https:\/\/(?:www\.)?snapchat\.com/i);
+  assert.doesNotMatch(html, /open Snapchat as usual|öppna Snapchat direkt/i);
 });
