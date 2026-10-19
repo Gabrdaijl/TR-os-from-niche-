@@ -41,6 +41,34 @@ test('moderation persists only a hashed browser ID and fixed reason, then suppor
   assert.equal(await moderation.isBanned(device), false);
 });
 
+test('moderation support chat persists across server instances using only the hashed device ID', async () => {
+  const hashes = new Map(), sorted = new Map();
+  const request = async (_url, init) => {
+    const parts = JSON.parse(init.body), [op, key, field, value] = parts;
+    let result = 'OK';
+    if (op === 'HSET') { const hash=hashes.get(key)||new Map();hash.set(field,value);hashes.set(key,hash);result=1; }
+    else if (op === 'HGET') result = hashes.get(key)?.get(field) || null;
+    else if (op === 'ZADD') { const set=sorted.get(key)||new Map();set.set(parts[3],Number(parts[2]));sorted.set(key,set);result=1; }
+    else if (op === 'ZREVRANGE') result = [...(sorted.get(key)||new Map())].sort((a,b)=>b[1]-a[1]).slice(Number(parts[2]),Number(parts[3])+1).map(([member])=>member);
+    else if (op === 'HGETALL') result = [...(hashes.get(key)||new Map())].flatMap(entry=>entry);
+    else if (op === 'HEXISTS') result = hashes.get(key)?.has(parts[2]) ? 1 : 0;
+    else if (op === 'HDEL') result = hashes.get(key)?.delete(parts[2]) ? 1 : 0;
+    return { ok: true, json: async () => ({ result }) };
+  };
+  const env={KV_REST_API_URL:'https://redis.example',KV_REST_API_TOKEN:'test-token'};
+  const browserService=createModeration(env,request), adminService=createModeration(env,request);
+  const device=crypto.randomBytes(32).toString('base64url');
+  const ban=await browserService.ban(device);
+  assert.equal((await browserService.sendBrowserMessage(device,'Jag blev blockerad av misstag.')).ok,true);
+  const conversationList=await adminService.listConversations();
+  assert.equal(conversationList.source,'redis');
+  assert.equal(conversationList.conversations[0].id,hashDeviceId(device));
+  assert.equal(conversationList.conversations[0].messages[0].role,'browser');
+  assert.equal((await adminService.sendAdminMessage(ban.id,'Jag kontrollerar spärren.')).ok,true);
+  const inbox=await browserService.messagesForDevice(device);
+  assert.deepEqual(inbox.messages.map(message=>message.role),['browser','admin']);
+});
+
 test('detected adult searches are stopped before external autocomplete and can be unbanned by admin', async t => {
   const originalFetch = global.fetch;
   const externalCalls = [];
@@ -62,7 +90,9 @@ test('detected adult searches are stopped before external autocomplete and can b
   const blockedHome = await localFetch(base + '/', { headers: { cookie } });
   const blockedText = await blockedHome.text();
   assert.equal(blockedHome.status, 403, blockedText);
-  assert.match(blockedText, /Sökningar efter pornografiskt eller annat sexuellt innehåll utlöser en automatisk spärr/);
+  assert.match(blockedText, /Webbläsaren är blockerad/);
+  assert.match(blockedText, /Anledning:<\/strong> Systemet har upptäckt sökningar efter pornografiskt eller annat sexuellt innehåll och blockerat webbläsaren automatiskt\./);
+  assert.match(blockedText, /Kontakta administratören så hjälper han dig med problemet\./);
   assert.equal((await localFetch(base + '/api/health', { headers: { cookie } })).status, 403);
   assert.equal((await localFetch(base + '/admin.html', { headers: { cookie } })).status, 200);
 
@@ -74,6 +104,19 @@ test('detected adult searches are stopped before external autocomplete and can b
   const listed = JSON.parse(listedText);
   assert.equal(listed.bans.length, 1);
   assert.equal(listed.bans[0].id, hashDeviceId(cookie.slice('tros-device='.length)));
+
+  const supportMessage = await localFetch(base + '/api/moderation/messages', { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Hej, jag tror att detta blev fel.' }) });
+  assert.equal(supportMessage.status, 201);
+  const conversations = await localFetch(base + '/api/admin/moderation/conversations', { headers: { authorization } });
+  assert.equal(conversations.status, 200);
+  const chat = await conversations.json();
+  assert.equal(chat.conversations.length, 1);
+  assert.equal(chat.conversations[0].messages[0].role, 'browser');
+  const reply = await localFetch(base + '/api/admin/moderation/conversations/' + listed.bans[0].id + '/messages', { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Jag hjälper dig.' }) });
+  assert.equal(reply.status, 201);
+  const inbox = await (await localFetch(base + '/api/moderation/messages', { headers: { cookie } })).json();
+  assert.deepEqual(inbox.messages.map(message => message.role), ['browser', 'admin']);
+  assert.equal((await localFetch(base + '/api/moderation/messages', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'Ingen spärr' }) })).status, 403);
 
   const remove = await localFetch(base + '/api/admin/moderation/bans/' + listed.bans[0].id, { method: 'DELETE', headers: { authorization } });
   assert.equal(remove.status, 200);
