@@ -27,6 +27,11 @@
     if(!$('report-message').value.trim() && !submissionId && !selectedImage){try { const file = new URL($('mainFrame').src,location.href).pathname.split('/').pop(); $('report-category').value=labels[file] || 'other'; } catch { $('report-category').value='other'; }}
     dialog.showModal();
   });
+  const counter=document.createElement('p');counter.id='report-counter';counter.textContent='0 / 2000';
+  $('report-message').after(counter);
+  $('report-message').setAttribute('aria-describedby','report-counter');
+  $('report-message').addEventListener('input',()=>{counter.textContent=$('report-message').value.length+' / 2000';});
+  dialog.addEventListener('click',event=>{if(event.target===dialog){const bounds=dialog.getBoundingClientRect();if(event.clientX<bounds.left || event.clientX>bounds.right || event.clientY<bounds.top || event.clientY>bounds.bottom)dialog.close();}});
   $('report-close').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('close',()=>{$('site-report').focus();});
   function show(message,error=false) { result.textContent=message;result.dataset.error=String(error); }
@@ -65,7 +70,7 @@
       submissionId ||= uuid();
       const response=await fetch('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,category:$('report-category').value,image:selectedImage,clientId,requestId:submissionId}),signal:AbortSignal.timeout(12000)});
       const data=await response.json();if(!response.ok)throw Error(data.error || 'Rapporten kunde inte skickas.');
-      form.reset();submissionId='';imageVersion++;imageTask=null;selectedImage='';$('report-preview').removeAttribute('src');$('report-preview').hidden=true;show('Tack! Rapporten har skickats till TR-os admin.');
+      form.reset();counter.textContent='0 / 2000';submissionId='';imageVersion++;imageTask=null;selectedImage='';$('report-preview').removeAttribute('src');$('report-preview').hidden=true;show('Tack! Rapporten har skickats till TR-os admin.');
     } catch(error) {show(error.name==='TimeoutError'?'Det tog för lång tid. Försök igen.':error.message,true);}
     finally {sending=false;controls.forEach(control=>{control.disabled=false;});}
   });

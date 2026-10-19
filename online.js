@@ -11,20 +11,22 @@
     // Embedded pages share their parent heartbeat rather than creating sessions.
     if (runtime !== window.TR_OS || runtime.presence.started) return;
     runtime.presence.started = true;
-    let pending = false;
+    let pending = false, viewRecorded = false;
+    const viewId = crypto.randomUUID();
     async function heartbeat() {
       if (pending) return;
       pending = true;
       try {
         let cached;
         try { cached = JSON.parse(localStorage.getItem('tros-presence-cache') || 'null'); } catch {}
-        if (cached && Date.now() - cached.at < 25000) { runtime.presence.publish(cached.data); return; }
+        if (viewRecorded && cached && Date.now() - cached.at < 25000) { runtime.presence.publish(cached.data); return; }
         await runtime.identity();
         let token, secret;
         try { token = localStorage.getItem('tros-online-id'); secret = localStorage.getItem('tros-online-secret'); } catch {}
-        const response = await runtime.fetch('/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret, visitorId: await runtime.visitorId() }), signal: AbortSignal.timeout(10000) });
+        const response = await runtime.fetch('/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret, visitorId: await runtime.visitorId(), viewId: viewRecorded ? undefined : viewId }), signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw Error('Presence unavailable');
         const data = await response.json();
+        viewRecorded = data.trafficRecorded === true;
         try {
           if (data.token) localStorage.setItem('tros-online-id', data.token);
           if (data.secret) localStorage.setItem('tros-online-secret', data.secret);

@@ -23,7 +23,7 @@
     TR_OS_SNAP_WORKER.install($scramjetController);
     support?.stage('transport');
     const transport = new EpoxyTransport.default({ wisp: TR_OS.wispUrl('/wisp-vps/') });
-    await transport.init();
+    await TR_OS.withTimeout(transport.init(), 20000, 'Snapchat-anslutningen kunde inte startas. Försök igen eller öppna Snapchat direkt.');
     const epoxyConnect = transport.connect.bind(transport);
     // Epoxy already supplies the browser's UA. A second copy from Scramjet
     // produces duplicate User-Agent fields in the upstream upgrade request.

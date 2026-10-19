@@ -1,0 +1,24 @@
+# One free web service; no paid databases, disks, cron jobs or workers.
+services:
+  - type: web
+    name: tr-os
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --omit=dev --ignore-scripts
+    startCommand: node server.cjs
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: PROXY_PROVIDER
+        value: direct
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false

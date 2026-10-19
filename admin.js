@@ -2,6 +2,35 @@
   const $ = id => document.getElementById(id);
   let authorization = '', timer, expires = 0, pending = false;
   const imageUrls = new Set();
+  let traffic, period = 'today';
+  const format = value => typeof value === 'number' ? value.toLocaleString('sv-SE') : '—';
+  function renderTraffic() {
+    const values = traffic?.[period];
+    const allTime = period === 'allTime';
+    $('traffic-cards').replaceChildren(...[[allTime?'Unika webbläsare':'Aktiva webbläsare',values?.visitors],['Sidvisningar',values?.pageViews],[allTime?'Nya webbläsare totalt':'Nya webbläsare',values?.newBrowsers]].map(([label,value])=>{
+      const card=document.createElement('article');card.className='card';
+      const heading=document.createElement('h3');heading.textContent=label;
+      const number=document.createElement('div');number.className='big-number';number.textContent=(values?.approximate && typeof value==='number'?'≈ ':'')+format(value);
+      card.append(heading,number);return card;
+    }));
+    let note='Gemensam statistik · uppdateras automatiskt';
+    if(allTime && values) {
+      const since=values.startedAt?new Date(values.startedAt).toLocaleString('sv-SE',{timeZone:'Europe/Stockholm'}):null;
+      note=since?'Totalt sedan '+since+' (Stockholm).':'Insamlingen av totalstatistik börjar vid det första besöket.';
+      note+=' Alla totaler är uppskattningar (cirka 0,81 % standardfel). Ett webbläsar-ID räknas som nytt en gång under hela mätningen. Äldre historik kan inte återskapas.';
+    }
+    $('traffic-note').textContent=traffic?.source==='redis' && values?note:'Statistik är inte tillgänglig. Kontrollera Redis-anslutningen.';
+  }
+  document.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{
+    period=button.dataset.period;
+    document.querySelectorAll('[data-period]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+    renderTraffic();
+  }));
+  $('admin-fullscreen').addEventListener('click',async()=>{
+    try { if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen(); }
+    catch { $('message').textContent='Fullskärm kunde inte startas. Prova F11.'; }
+  });
+  document.addEventListener('fullscreenchange',()=>{$('admin-fullscreen').textContent=document.fullscreenElement?'Avsluta fullskärm':'Fullskärm';});
   let reportSignature = '', authGeneration = 0;
   function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
   function logout() {
@@ -52,8 +81,9 @@
       const response = await fetch('/api/admin/status', { headers: { authorization }, cache: 'no-store', signal: AbortSignal.timeout(10000) });
       const data = await response.json();
       if(generation!==authGeneration || !authorization)return;
-      if (!response.ok) { logout(); throw Error(data.error || 'Status kunde inte hämtas'); }
+      if (!response.ok) { if(response.status===401 || response.status===403)logout(); throw Error(data.error || 'Status kunde inte hämtas'); }
       $('message').textContent = '';
+      traffic=data.traffic;renderTraffic();
       $('login').hidden = true; $('dashboard').hidden = false; $('logout').hidden = false;
       $('active-count').textContent = typeof data.activeSessions === 'number' ? data.activeSessions : '—';
       $('recent-count').textContent = typeof data.recentVisitors === 'number' ? data.recentVisitors : '—';
