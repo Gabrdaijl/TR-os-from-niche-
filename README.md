@@ -58,9 +58,17 @@ Lokal AI: TR-os lokal AI kör SmolLM2 360M med WebLLM på besökarens WebGPU. Mo
 
 
 
+## Supportchatt, push och driftlarm
+
+Spärrade webbläsare kan skriva till admin. Samtalet ligger kvar efter att spärren hävts och fortsätter på `/support.html`. Admin svar och nya användarmeddelanden uppdateras i panelen och skickar push om mottagaren har aktiverat det på sin enhet. Nya spärrar och felrapporter skickar också push till adminenheter.
+
+Tryck **Aktivera push** i adminpanelen på varje enhet som ska få notiser. På iPhone måste TR-os först läggas på hemskärmen och öppnas som app. Användaren kan aktivera avisering för adminsvar i supportchatten. Prenumerationer och en VAPID-nyckel lagras på servern i Redis; den privata nyckeln skickas aldrig till klienten. Notiser kan inte tas emot om användaren nekat systemnotiser, saknar nätanslutning eller om operativsystemet stoppar bakgrundsaviseringar.
+
+En extern GitHub Actions-kontroll kör var femte minut. Vid driftstopp öppnar den ett issue i GitHub och stänger det när TR-os svarar igen. Det kräver att GitHub Actions är aktiverat. Mobilaviseringar för detta driftlarm styrs av GitHubs egna repo- och appnotisinställningar; en server som ligger nere kan inte skicka sina egna pushnotiser.
+
 ## Gemensam besöksräkning
 
-Närvaro lagras i Upstash Redis via serverns KV_REST_API_URL och KV_REST_API_TOKEN (eller UPSTASH_REDIS_REST_URL/TOKEN). Webbläsaren skickar ett anonymt ID var 30:e sekund. Redis räknar gemensamt över alla instanser: aktiva under 90 sekunder och unika webbläsare under ett rullande 30-minutersfönster. Flera flikar delar ID. Databasen sparar bara en hash av ID och senaste tidsstämpeln, inga IP-adresser eller chattmeddelanden. Gamla poster rensas och nyckeln löper ut efter en timme utan livssignaler. Vid databasfel visas okänt, inte falskt noll eller lokala sessionsantal.
+Närvaro lagras i Upstash Redis via serverns KV_REST_API_URL och KV_REST_API_TOKEN (eller UPSTASH_REDIS_REST_URL/TOKEN). Webbläsaren skickar ett anonymt ID var 30:e sekund. Redis räknar gemensamt över alla instanser: aktiva under 90 sekunder och unika webbläsare under ett rullande 30-minutersfönster. Flera flikar delar ID. Närvaronycklarna sparar bara en hash av ID och senaste tidsstämpeln, inga IP-adresser. Gamla poster rensas och nyckeln löper ut efter en timme utan livssignaler. Vid databasfel visas okänt, inte falskt noll eller lokala sessionsantal.
 
 Adminens servervärden gäller fortfarande den aktuella serverinstansen. Chattmeddelanden och sessionsautentisering använder befintlig serverlagring och omfattas inte av närvarodatabasen. Production har databasanslutning; Preview delar inte besöksdata.
 

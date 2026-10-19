@@ -11,9 +11,10 @@ const { createPresence } = require('./presence.cjs');
 const { createTraffic } = require('./traffic.cjs');
 const { createReports } = require('./reports.cjs');
 const { COOKIE: MODERATION_COOKIE, cookieDeviceId, createModeration } = require('./moderation.cjs');
+const { createPushNotifications } = require('./push.cjs');
 const { detects: detectsAdultSearch } = require('./adult-search.js');
 
-const BLOCKED_HTML = '<!doctype html><html lang="sv"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Webbläsaren är blockerad · TR-os</title><body style="margin:0;min-height:100vh;background:#0b111a;color:#edf3fc;font:16px system-ui;padding:24px;box-sizing:border-box"><main style="max-width:720px;margin:6vh auto;padding:clamp(22px,5vw,38px);border:1px solid #344657;border-radius:20px;background:#121d28"><p style="color:#f6df28;font-size:12px;letter-spacing:2px">TR-OS · ÅTKOMST SPÄRRAD</p><h1>Webbläsaren är blockerad</h1><p><strong>Anledning:</strong> Systemet har upptäckt sökningar efter pornografiskt eller annat sexuellt innehåll och blockerat webbläsaren automatiskt.</p><p>Kontakta administratören så hjälper han dig med problemet.</p><section id="moderation-chat" style="margin-top:28px;padding-top:20px;border-top:1px solid #344657"><h2 style="font-size:18px">Meddelande till administratören</h2><div id="moderation-chat-messages" role="log" aria-live="polite" style="max-height:300px;overflow:auto;display:grid;gap:9px;margin:14px 0"></div><form id="moderation-chat-form" style="display:grid;gap:10px"><label for="moderation-chat-input">Skriv ett meddelande</label><textarea id="moderation-chat-input" maxlength="2000" required rows="3" style="resize:vertical;padding:12px;border-radius:10px;background:#0b111a;color:#edf3fc;border:1px solid #344657;font:inherit"></textarea><button style="justify-self:start;padding:11px 16px;border-radius:9px;border:0;background:#f6df28;color:#171717;font:600 14px system-ui;cursor:pointer">Skicka till administratören</button><span id="moderation-chat-state" role="status" style="color:#aab8c8;font-size:13px"></span></form></section></main><script src="/moderation-client.js?v=20261019.6" defer></script></body></html>';
+const BLOCKED_HTML = '<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b111a"><title>Webbläsaren är blockerad · TR-os</title><link rel="stylesheet" href="/support.css?v=20261020.1"></head><body><main class="support-shell blocked-shell"><a class="support-brand" href="/" aria-label="TR-os"><span class="brand-mark">T</span><span>TR-os<small>Hjälpcenter</small></span></a><section class="block-card"><div class="block-icon" aria-hidden="true">!</div><p class="support-eyebrow">ÅTKOMST SPÄRRAD</p><h1>Webbläsaren är blockerad</h1><p class="block-reason"><strong>Anledning:</strong> Systemet har upptäckt sökningar efter pornografiskt eller annat sexuellt innehåll och blockerat webbläsaren automatiskt.</p><p class="block-help">Kontakta administratören så hjälper han dig med problemet.</p><section class="support-chat-card" aria-labelledby="moderation-chat-title"><div class="chat-heading"><div><p class="support-eyebrow">SUPPORT</p><h2 id="moderation-chat-title">Skriv till admin</h2></div><span class="chat-status"><i></i> Privat ärende</span></div><p class="chat-intro">Beskriv vad som hänt. Du kan fortsätta chatten även efter att spärren hävts.</p><div id="moderation-chat-messages" class="support-messages" role="log" aria-live="polite"></div><form id="moderation-chat-form" class="support-form"><label class="sr-only" for="moderation-chat-input">Ditt meddelande</label><textarea id="moderation-chat-input" maxlength="2000" required rows="3" placeholder="Skriv ditt meddelande…"></textarea><div class="support-form-bottom"><span id="moderation-chat-state" role="status" aria-live="polite"></span><button type="submit"><span>Skicka</span><span aria-hidden="true">↗</span></button></div></form><button id="moderation-push" class="push-opt-in" type="button">Få en notis när admin svarar</button><span id="moderation-push-state" class="push-state" role="status" aria-live="polite"></span><a class="support-link" href="/support.html">Öppna supportchatten senare <span aria-hidden="true">→</span></a></section></section><footer class="support-footer">TR-os · Hjälpcenter</footer></main><script src="/moderation-client.js?v=20261020.1" defer></script></body></html>';
 
 function deviceCookie(req, res, env) {
   const existing = cookieDeviceId(req.headers.cookie);
@@ -54,6 +55,8 @@ function createApp(options = {}) {
   const traffic = createTraffic(env);
   const moderation = createModeration(env);
   const reports = createReports(env);
+  const push = options.push || createPushNotifications(env);
+  function notify(promise) { Promise.resolve(promise).catch(error => console.warn('Push delivery failed:', error.message)); }
   const json = (res, status, data) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
@@ -136,7 +139,7 @@ function createApp(options = {}) {
     const currentDevice = suppliedDevice || deviceCookie(req, res, env);
     const adminRoute = route === '/admin.html' || route.startsWith('/api/admin/');
     const documentRequest = ['GET', 'HEAD'].includes(req.method) && (route === '/' || route === '/join' || route === '/join/' || route.endsWith('.html'));
-    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && route !== '/api/moderation/messages';
+    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/push/vapid-public'].includes(route);
     if (suppliedDevice && !adminRoute && (documentRequest || protectedApi) && await moderation.isBanned(currentDevice)) {
       if (documentRequest) {
         res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -148,14 +151,42 @@ function createApp(options = {}) {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
       return json(res, 200, { banned: false, storage: moderation.configured ? 'redis' : 'memory' });
     }
+    if (route === '/api/push/vapid-public') {
+      if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
+      try {
+        const publicKey = await push.publicKey();
+        if (!publicKey) return json(res, 503, { error: 'Pushnotiser kräver den anslutna Redis-databasen.' });
+        return json(res, 200, { publicKey });
+      } catch { return json(res, 503, { error: 'Pushnotiser kunde inte startas just nu.' }); }
+    }
+    if (route === '/api/admin/push/subscription') {
+      if (!['POST', 'DELETE'].includes(req.method)) return json(res, 405, { error: 'Use POST or DELETE' });
+      if (!adminAuthorized(req, res)) return;
+      try {
+        const data = await body(req, 6000);
+        const result = req.method === 'POST' ? await push.registerAdmin(data.subscription) : await push.removeAdmin(data.subscription);
+        return json(res, result.ok ? 200 : 400, result);
+      } catch { return json(res, 503, { error: 'Pushprenumerationen kunde inte sparas.' }); }
+    }
+    if (route === '/api/moderation/push/subscription') {
+      if (!['POST', 'DELETE'].includes(req.method)) return json(res, 405, { error: 'Use POST or DELETE' });
+      if (!(await moderation.isBanned(currentDevice)) && !(await moderation.hasConversation(currentDevice))) return json(res, 403, { error: 'Supportnotiser kräver ett pågående supportärende.' });
+      if (!allowed(req, 'moderation-push', 5)) return json(res, 429, { error: 'Vänta lite innan du ändrar notisinställningen.' });
+      try {
+        const data = await body(req, 6000);
+        const result = req.method === 'POST' ? await push.registerBrowser((await moderation.messagesForDevice(currentDevice)).id, data.subscription) : await push.removeBrowser((await moderation.messagesForDevice(currentDevice)).id, data.subscription);
+        return json(res, result.ok ? 200 : 400, result);
+      } catch { return json(res, 503, { error: 'Pushprenumerationen kunde inte sparas.' }); }
+    }
     if (route === '/api/moderation/messages') {
       if (!['GET', 'POST'].includes(req.method)) return json(res, 405, { error: 'Use GET or POST' });
-      if (!(await moderation.isBanned(currentDevice))) return json(res, 403, { error: 'Supportchatten är bara tillgänglig för spärrade webbläsare.' });
+      if (!(await moderation.isBanned(currentDevice)) && !(await moderation.hasConversation(currentDevice))) return json(res, 403, { error: 'Supportchatten är bara tillgänglig för spärrade webbläsare och öppna supportärenden.' });
       if (req.method === 'GET') return json(res, 200, await moderation.messagesForDevice(currentDevice));
       if (!allowed(req, 'moderation-chat', 10)) return json(res, 429, { error: 'Vänta lite innan du skickar ett nytt meddelande.' });
       const data = await body(req, 5000);
       const result = await moderation.sendBrowserMessage(currentDevice, data.text);
       if (!result.ok) return json(res, 400, { error: 'Skriv ett meddelande på högst 2000 tecken.' });
+      notify(push.notifyAdmins('Nytt supportmeddelande', 'En besökare har skrivit i supportchatten.', '/admin.html#support', 'support-' + result.message.id));
       return json(res, 201, { ok: true, message: result.message });
     }
     if (route === '/api/moderation/flag') {
@@ -163,6 +194,7 @@ function createApp(options = {}) {
       if (!allowed(req, 'moderation', 5)) return json(res, 429, { error: 'Too many moderation events; try again shortly.' });
       const result = await moderation.ban(currentDevice);
       if (!result.ok) return json(res, 503, { error: 'The moderation service is not available.' });
+      notify(push.notifyAdmins('Ny spärr', 'En webbläsare har blockerats automatiskt.', '/admin.html#bans', 'ban-' + result.id));
       return json(res, 200, { banned: true, storage: result.source });
     }
     if (route === '/api/admin/moderation/bans') {
@@ -176,6 +208,7 @@ function createApp(options = {}) {
       if (!adminAuthorized(req, res)) return;
       const result = await moderation.unban(unbanMatch[1].toLowerCase());
       if (result.source === 'unavailable') return json(res, 503, { error: 'The moderation storage is not available.' });
+      if (result.removed) notify(push.notifyBrowser(unbanMatch[1].toLowerCase(), 'Spärren är hävd', 'Du kan använda TR-os igen. Supportchatten finns kvar här.', '/support.html', 'unban'));
       return json(res, 200, result);
     }
     if (route === '/api/admin/moderation/conversations') {
@@ -189,8 +222,10 @@ function createApp(options = {}) {
       if (!adminAuthorized(req, res)) return;
       if (!allowed(req, 'admin-support-chat', 30)) return json(res, 429, { error: 'Vänta lite innan du svarar igen.' });
       const data = await body(req, 5000);
-      const result = await moderation.sendAdminMessage(conversationMatch[1].toLowerCase(), data.text);
+      const deviceId = conversationMatch[1].toLowerCase();
+      const result = await moderation.sendAdminMessage(deviceId, data.text);
       if (!result.ok) return json(res, 400, { error: 'Skriv ett meddelande på högst 2000 tecken.' });
+      notify(push.notifyBrowser(deviceId, 'Svar från TR-os admin', 'Administratören har svarat i supportchatten.', '/support.html', 'admin-reply-' + result.message.id));
       return json(res, 201, { ok: true, message: result.message });
     }
     if (route === '/api/admin/snapchat' || route === '/api/admin/snapchat/stop' || route === '/api/admin/snapchat/forget') {
@@ -220,7 +255,9 @@ function createApp(options = {}) {
       if (req.method !== 'POST') return json(res, 405, {error:'Use POST'});
       if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) return json(res,415,{error:'Use application/json'});
       if (!allowed(req,'reports',5)) return json(res,429,{error:'För många rapporter. Försök senare.'});
-      return json(res,201,await reports.submit(await body(req,150000)));
+      const result = await reports.submit(await body(req,150000));
+      notify(push.notifyAdmins('Ny felrapport', 'En besökare har rapporterat ett fel.', '/admin.html#reports', 'report-' + (result.id || Date.now())));
+      return json(res,201,result);
     }
     if (route === '/api/admin/reports' || route.startsWith('/api/admin/reports/')) {
       if (!adminAuthorized(req,res)) return;
@@ -295,6 +332,7 @@ function createApp(options = {}) {
         // ID hash, timestamp, and fixed moderation reason are retained.
         const result = await moderation.ban(currentDevice);
         if (!result.ok) return json(res, 503, { error: 'The moderation service is not available.' });
+        notify(push.notifyAdmins('Ny spärr', 'En webbläsare har blockerats automatiskt.', '/admin.html#bans', 'ban-' + result.id));
         return json(res, 403, { banned: true, error: 'This browser is blocked by site moderation.' });
       }
       try {

@@ -155,6 +155,11 @@ function createModeration(env = process.env, request = fetch) {
     return { id, messages: await conversation(id) };
   }
 
+  async function hasConversation(deviceId) {
+    const id = hashDeviceId(deviceId);
+    return !!id && (await conversation(id)).length > 0;
+  }
+
   async function listConversations() {
     if (!endpoint) return { source: 'memory', conversations: [...conversations.entries()].map(([id, value]) => ({ id, ...value })).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50) };
     try {
@@ -167,7 +172,7 @@ function createModeration(env = process.env, request = fetch) {
     }
   }
 
-  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: !!endpoint, cookieName: COOKIE });
+  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, hasConversation, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: !!endpoint, cookieName: COOKIE });
 }
 
 module.exports = { COOKIE, REDIS_KEY, CONVERSATIONS_KEY, CONVERSATION_INDEX_KEY, cookieDeviceId, createModeration, hashDeviceId };

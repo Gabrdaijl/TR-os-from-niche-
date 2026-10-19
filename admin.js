@@ -1,14 +1,34 @@
 (() => {
   const $ = id => document.getElementById(id);
-  let authorization = '', timer, expires = 0, pending = false;
+  let authorization = '', timer, expires = 0, pending = false, pushReady = false, pushRegistration = null;
   const imageUrls = new Set();
   let traffic, period = 'today';
   let reportIds = null, banIds = null, conversationData = [], selectedConversation = '', conversationSignature = '', healthDown = null;
   function notifyAdmin(title, body) {
     $('notice').textContent = title + ' · ' + body;
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (!pushReady && 'Notification' in window && Notification.permission === 'granted') {
       try { new Notification(title, { body, tag: 'tr-os-admin-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }); } catch {}
     }
+  }
+  function applicationServerKey(value) {
+    const base64=value.replace(/-/g,'+').replace(/_/g,'/');
+    return Uint8Array.from(atob(base64+'='.repeat((4-base64.length%4)%4)),character=>character.charCodeAt(0));
+  }
+  async function saveAdminSubscription(subscription) {
+    const response=await fetch('/api/admin/push/subscription',{method:'POST',headers:{authorization,'content-type':'application/json'},body:JSON.stringify({subscription:subscription.toJSON()}),cache:'no-store',signal:AbortSignal.timeout(10000)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(data.error||'Pushprenumerationen kunde inte sparas.');
+    pushReady=true;pushRegistration=await navigator.serviceWorker.getRegistration('/push/');
+    $('notifications').textContent='Push aktivt på denna enhet';
+    $('notice').textContent='Enheten får notiser även när TR-os är stängt. Aktivera push på varje enhet du vill nå.';
+  }
+  async function syncAdminSubscription() {
+    if(!authorization||!('Notification' in window)||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
+    try{
+      const registration=await navigator.serviceWorker.getRegistration('/push/');
+      const subscription=await registration?.pushManager.getSubscription();
+      if(subscription)await saveAdminSubscription(subscription);
+    }catch{}
   }
   function reportHealth(ok, detail = '') {
     if (healthDown === null) { healthDown = !ok; return; }
@@ -47,7 +67,7 @@
   let reportSignature = '', banSignature = '', authGeneration = 0;
   function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
   function logout() {
-    authGeneration++;pending=false;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];selectedConversation='';conversationSignature='';healthDown=null;$('notice').textContent='';$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
+    authGeneration++;pending=false;pushReady=false;pushRegistration=null;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];selectedConversation='';conversationSignature='';healthDown=null;$('notice').textContent='';$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
     authorization = ''; clearInterval(timer); $('password').value = '';
     $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
     $('login').hidden = false; $('logout').hidden = true;
@@ -111,7 +131,9 @@
         : 'Tillfällig lagring. Spärrar kan försvinna vid omstart.';
       const signature = JSON.stringify({ source: data.source, bans });
       const currentIds=new Set(bans.map(ban=>ban.id));
-      if(banIds)for(const id of currentIds)if(!banIds.has(id))notifyAdmin('Ny spärr', 'En webbläsare har blockerats automatiskt.');
+      banIds=currentIds;
+      const previousIds=banIds;
+      if(previousIds)for(const id of currentIds)if(!previousIds.has(id))notifyAdmin('Ny spärr', 'En webbläsare har blockerats automatiskt.');
       banIds=currentIds;
       if (signature === banSignature) return;
       banSignature = signature;
@@ -136,6 +158,7 @@
             if (!result.ok) throw Error(body.error || 'Spärren kunde inte hävas.');
             banSignature = '';
             await refreshBans();
+            await refreshConversations();
           } catch (error) {
             if (generation === authGeneration) { $('bans-state').textContent = error.message; remove.disabled = false; remove.textContent = 'Försök igen'; }
           }
@@ -157,7 +180,9 @@
       const title=document.createElement('strong');title.textContent='Webbläsare '+item.id.slice(0,12)+'…';
       const last=item.messages?.at(-1);const preview=document.createElement('span');preview.textContent=last?.text||'Inget meddelande';
       const time=document.createElement('time');if(last?.createdAt){time.dateTime=last.createdAt;time.textContent=new Date(last.createdAt).toLocaleString('sv-SE');}
-      button.append(title,preview,time);button.addEventListener('click',()=>{selectedConversation=item.id;conversationSignature='';renderConversations();renderConversation();});return button;
+      const badge=document.createElement('em');badge.className='conversation-badge'+(last?.role==='browser'?' unread':'');badge.textContent=last?.role==='browser'?'Nytt':banIds?.has(item.id)?'Spärrad':'Spärr hävd';
+      const top=document.createElement('span');top.className='conversation-choice-top';top.append(title,badge);
+      button.append(top,preview,time);button.addEventListener('click',()=>{selectedConversation=item.id;conversationSignature='';renderConversations();renderConversation();if(matchMedia('(max-width: 760px)').matches)$('conversation-panel').scrollIntoView({behavior:'smooth',block:'start'});});return button;
     }));
     renderConversation();
   }
@@ -169,7 +194,7 @@
     const signature=JSON.stringify({id:item.id,messages});if(signature===conversationSignature)return;conversationSignature=signature;
     $('conversation-messages').replaceChildren(...messages.map(message=>{
       const card=document.createElement('article');card.className='conversation-message'+(message.role==='admin'?' from-admin':'');
-      const heading=document.createElement('strong');heading.textContent=message.role==='admin'?'Admin':'Spärrad webbläsare';
+      const heading=document.createElement('strong');heading.textContent=message.role==='admin'?'Du · Admin':'Webbläsare';
       const text=document.createElement('p');text.textContent=message.text;
       const time=document.createElement('time');time.textContent=new Date(message.createdAt).toLocaleString('sv-SE');
       card.append(heading,text,time);return card;
@@ -188,7 +213,7 @@
         const previous=new Map(conversationData.map(item=>[item.id,item.messages?.at(-1)?.id]));
         for(const item of entries){const latest=item.messages?.at(-1)?.id;if(latest&&previous.has(item.id)&&previous.get(item.id)!==latest&&item.messages?.at(-1)?.role==='browser')notifyAdmin('Nytt supportmeddelande','En spärrad webbläsare har skrivit till dig.');}
       }
-      conversationData=entries;$('conversation-count').textContent=format(entries.length);
+      conversationData=entries;$('conversation-count').textContent=format(entries.filter(item=>item.messages?.at(-1)?.role==='browser').length);
       if(!entries.some(item=>item.id===selectedConversation))selectedConversation=entries[0]?.id||'';
       renderConversations();
     }catch(error){if(generation===authGeneration&&authorization)$('conversation-state').textContent=error.message;}
@@ -256,17 +281,24 @@
     const bytes = new TextEncoder().encode('admin:' + $('password').value);
     authorization = 'Basic ' + btoa(Array.from(bytes, b => String.fromCharCode(b)).join(''));
     $('password').value = ''; expires = Date.now() + 30 * 60000;
-    clearInterval(timer); await refresh(); if (authorization && $('login').hidden) timer = setInterval(refresh, 15000);
+    clearInterval(timer); await refresh(); if (authorization && $('login').hidden) { timer = setInterval(refresh, 15000); await syncAdminSubscription(); }
   });
   $('logout').addEventListener('click', logout);
   $('refresh').addEventListener('click', refresh);
   $('notifications').addEventListener('click',async()=>{
-    if(!('Notification' in window)){ $('notice').textContent='Den här webbläsaren stöder inte notiser.';return; }
+    if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){ $('notice').textContent='Den här webbläsaren stöder inte pushnotiser.';return; }
+    if(/iPhone|iPad|iPod/i.test(navigator.userAgent)&&!navigator.standalone&&!matchMedia('(display-mode: standalone)').matches){$('notice').textContent='På iPhone: lägg först TR-os på hemskärmen och öppna admin därifrån.';return;}
     try{
       const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;
-      $('notifications').textContent=permission==='granted'?'Notiser aktiverade':permission==='denied'?'Notiser blockerade':'Aktivera notiser';
-      $('notice').textContent=permission==='granted'?'Webbläsarnotiser är aktiverade. Adminpanelen visar också nya händelser här.':'Tillåt notiser i webbläsarens webbplatsinställningar för att få notiser.';
-    }catch{$('notice').textContent='Notiser kunde inte aktiveras i den här webbläsaren.';}
+      if(permission!=='granted'){ $('notifications').textContent=permission==='denied'?'Notiser blockerade':'Aktivera push';$('notice').textContent='Tillåt notiser i enhetens webbplatsinställningar för att få pushnotiser.';return; }
+      $('notifications').disabled=true;$('notice').textContent='Ansluter den här enheten…';
+      const keyResponse=await fetch('/api/push/vapid-public',{cache:'no-store',signal:AbortSignal.timeout(10000)}),keyData=await keyResponse.json();
+      if(!keyResponse.ok||!keyData.publicKey)throw Error(keyData.error||'Pushnotiser är inte tillgängliga just nu.');
+      const registration=await navigator.serviceWorker.register('/push-sw.js?v=20261020.1',{scope:'/push/'});
+      const subscription=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:applicationServerKey(keyData.publicKey)});
+      await saveAdminSubscription(subscription);
+    }catch(error){$('notice').textContent=error.message||'Notiser kunde inte aktiveras på den här enheten.';}
+    finally{$('notifications').disabled=false;}
   });
   window.addEventListener('pagehide', logout);
 })();
