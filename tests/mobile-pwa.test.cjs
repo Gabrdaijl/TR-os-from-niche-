@@ -49,6 +49,7 @@ test('mobile shell follows the saved app theme and expands Movies player to full
   assert.match(controller, /trosThemeName/);
   assert.match(shell, /--bar-active/);
   assert.match(shell, /movie-player-open/);
+  assert.match(read('nm.html'), /src="nm\.js\?v=20261019\.3"/);
   assert.match(movies, /trosMobilePlayer: open \? 'open' : 'close'/);
   assert.match(movies, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(themeEngine, /#tros-player-bar \{ background: linear-gradient\(180deg,\$\{CARD_BG\}/);
