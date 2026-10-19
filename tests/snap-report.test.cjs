@@ -36,6 +36,9 @@ test('report accepts only fixed outcomes and public hashed assets; all query and
   h.report.stage('page-loaded'); h.report.stage('PRIVATE_STAGE');
   h.report.compatibility('applied'); h.report.compatibility('PRIVATE_OUTCOME');
   h.report.socket('open'); h.report.socket('PRIVATE_SOCKET');
+  h.report.call({ area: 'media', event: 'error', value: 'NotAllowedError', message: 'PRIVATE_MESSAGE' });
+  h.report.call({ area: 'rtc', event: 'connection', value: 'failed', address: 'PRIVATE_IP' });
+  h.report.call({ area: 'rtc', event: 'connection', value: 'PRIVATE_STATE', message: 'PRIVATE_ERROR' });
   h.report.asset('https://cf-st.sc-cdn.net/dw/127ca002fe3599f56576.js?PRIVATE_QUERY', 200);
   for (const value of ['https://private.invalid/dw/127ca002fe3599f56576.js', 'https://PRIVATE@cf-st.sc-cdn.net/dw/127ca002fe3599f56576.js', 'https://cf-st.sc-cdn.net:444/dw/127ca002fe3599f56576.js', 'https://cf-st.sc-cdn.net/dw/PRIVATE.js']) h.report.asset(value, 200);
   h.report.crash({ type: 'TypeError', category: 'null-property', message: 'PRIVATE_MESSAGE', user: 'PRIVATE_USER', frames: [
@@ -46,6 +49,10 @@ test('report accepts only fixed outcomes and public hashed assets; all query and
   await h.elements.get('support-copy').onclick();
   assert.equal(h.copies.length, 1); assert.doesNotMatch(h.copies[0], /PRIVATE/);
   assert.equal(h.state().stage, 'page-loaded'); assert.equal(h.state().socket, 'open'); assert.equal(h.state().scripts.length, 1);
+  assert.deepEqual(h.state().calls, [
+    { area: 'media', event: 'error', value: 'NotAllowedError' },
+    { area: 'rtc', event: 'connection', value: 'failed' }
+  ]);
   assert.deepEqual(h.state().browser, { family: 'Chrome', major: 126, platform: 'ChromeOS' });
   assert.equal(h.state().crashes[0].frames.length, 1); assert.equal(h.state().crashes.length, 1);
 });
@@ -54,8 +61,10 @@ test('report is bounded, clipboard failure leaves a selectable local report and 
   for (let i = 1; i < 35; i++) {
     h.report.asset('https://cf-st.sc-cdn.net/dw/' + i.toString(16).padStart(20, '0') + '.js', 200);
     h.report.crash({ type: 'TypeError', category: 'unknown', frames: [] });
+    h.report.call({ area: 'rtc', event: 'connection', value: 'connected' });
   }
   assert.equal(h.state().scripts.length, 16); assert.equal(h.state().crashes.length, 3);
+  assert.equal(h.state().calls.length, 24);
   assert.equal(h.state().capabilities.digest, false);
   await h.elements.get('support-copy').onclick();
   assert.match(h.elements.get('support-result').textContent, /Ctrl\+C/);
