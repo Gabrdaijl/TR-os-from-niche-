@@ -26,6 +26,7 @@
         body { overflow: auto; }
         body > div.mx-auto {
           width: 100% !important;
+          height: calc(100vh - 12px) !important;
           height: calc(100dvh - 12px) !important;
           min-height: 0 !important;
           margin: 0 auto !important;
@@ -42,11 +43,12 @@
         }
         body > div.mx-auto input[type="text"]:focus { width: min(100%, 350px) !important; }
         body > div.mx-auto [data-fx], .tros-card {
-          width: 112px !important;
-          min-width: 112px !important;
-          min-height: 220px !important;
+          width: 124px !important;
+          min-width: 124px !important;
+          min-height: 230px !important;
           margin: 2px !important;
         }
+        .tros-card img { height: 164px !important; }
         #tros-modal { width: min(100%, 540px); max-height: 90dvh; padding: 16px; }
         #tros-modal-header { gap: 10px; }
         #tros-modal-poster { width: 82px; height: 123px; }
