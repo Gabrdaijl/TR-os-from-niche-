@@ -1,11 +1,16 @@
 // Device-local, opt-in support report. No requests, storage, account data or
 // raw errors enter this report. It never inspects the Snapchat document.
 (() => {
-  const release = '20261018.4';
+  const release = '20261019.1';
   const outcomes = new Set(['applied', 'skipped-status', 'skipped-body', 'oversize', 'idle-timeout', 'total-timeout', 'hash-mismatch', 'source-mismatch', 'read-error', 'hash-error', 'decode-error', 'source-error', 'encode-error']);
   const stages = new Set(['starting', 'service-worker', 'transport', 'engine', 'page-loaded', 'startup-failed']);
   const categories = new Set(['structured-clone', 'cross-origin', 'storage', 'missing-api', 'null-property', 'wasm', 'socket', 'url', 'worker', 'unknown']);
   const types = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError', 'SyntaxError', 'DOMException', 'AssertionError', 'InvariantViolation', 'DataCloneError', 'SecurityError', 'InvalidStateError', 'NotSupportedError', 'NotAllowedError', 'AbortError', 'QuotaExceededError', 'NetworkError', 'OperationError', 'UnhandledRejection', 'Other', 'CompileError', 'LinkError', 'RuntimeError']);
+  const callStates = {
+    capability: { secure: new Set(['yes', 'no', 'unknown']), camera: new Set(['yes', 'no', 'unknown']), microphone: new Set(['yes', 'no', 'unknown']), media: new Set(['yes', 'no', 'unknown']), rtc: new Set(['yes', 'no', 'unknown']) },
+    media: { request: new Set(['getUserMedia']), ready: new Set(['getUserMedia']), error: new Set(['NotAllowedError', 'NotFoundError', 'NotReadableError', 'OverconstrainedError', 'AbortError', 'InvalidStateError', 'SecurityError', 'TypeError', 'NotSupportedError', 'Other']) },
+    rtc: { created: new Set(['new']), connection: new Set(['new', 'connecting', 'connected', 'disconnected', 'failed', 'closed']), ice: new Set(['new', 'checking', 'connected', 'completed', 'disconnected', 'failed', 'closed']), signaling: new Set(['stable', 'have-local-offer', 'have-remote-offer', 'have-local-pranswer', 'have-remote-pranswer', 'closed']), gathering: new Set(['new', 'gathering', 'complete']) }
+  };
   function publicAsset(value) {
     try {
       const url = new URL(value);
@@ -24,7 +29,7 @@
       capabilities: { streams: typeof ReadableStream === 'function', digest: typeof crypto !== 'undefined' && typeof crypto.subtle?.digest === 'function',
         wasm: typeof WebAssembly === 'object', worker: typeof Worker === 'function' },
       stage: 'starting', compatibilityReady: !!compatibilityReady, compatibilityEnabled: options.compatibilityEnabled !== false,
-      socketMode: options.socketMode === 'epoxy' ? 'epoxy' : 'curl', compatibility: 'not-observed', socket: 'not-observed', scripts: [], crashes: [] };
+      socketMode: options.socketMode === 'epoxy' ? 'epoxy' : 'curl', compatibility: 'not-observed', socket: 'not-observed', scripts: [], crashes: [], calls: [] };
     const output = document.getElementById('support-output');
     const text = () => 'TR-os Snapchat\n' + JSON.stringify(state, null, 2);
     const render = () => { if (output) output.value = text(); };
@@ -53,6 +58,13 @@
       stage: value => update(() => { if (stages.has(value)) state.stage = value; }),
       compatibility: value => update(() => { if (outcomes.has(value)) state.compatibility = value; }),
       socket: value => update(() => { if (['opening', 'open', 'failed', 'closed'].includes(value)) state.socket = value; }),
+      call: value => update(() => {
+        if (!value || typeof value !== 'object') return;
+        const allowed = callStates[value.area]?.[value.event];
+        if (!allowed?.has(value.value)) return;
+        state.calls.push({ area: value.area, event: value.event, value: value.value });
+        if (state.calls.length > 24) state.calls.shift();
+      }),
       asset: (value, status) => update(() => {
         const asset = publicAsset(value);
         if (!asset || !Number.isInteger(status) || status < 100 || status > 599) return;

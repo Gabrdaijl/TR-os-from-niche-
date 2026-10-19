@@ -1,7 +1,7 @@
 // Snapchat uses a separate Scramjet 2 controller; the existing proxy is unchanged.
 // Upstream source and pinned versions: see snapchat-notices.html.
 (async () => {
-  const release = '20261018.4';
+  const release = '20261019.1';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -23,7 +23,7 @@
     TR_OS_SNAP_WORKER.install($scramjetController);
     support?.stage('transport');
     const transport = new EpoxyTransport.default({ wisp: TR_OS.wispUrl('/wisp-vps/') });
-    await TR_OS.withTimeout(transport.init(), 20000, 'Snapchat-anslutningen kunde inte startas. Försök igen eller öppna Snapchat direkt.');
+    await TR_OS.withTimeout(transport.init(), 20000, 'Snapchat-anslutningen kunde inte startas. Försök igen.');
     const epoxyConnect = transport.connect.bind(transport);
     // Epoxy already supplies the browser's UA. A second copy from Scramjet
     // produces duplicate User-Agent fields in the upstream upgrade request.
@@ -118,6 +118,11 @@
     });
     await TR_OS.withTimeout(controller.wait(), 20000, 'Snapchat-motorn kunde inte startas. Ladda om TR-os och försök igen.');
     const frame = controller.createFrame(element);
+    try {
+      if (diagnostics && window.TR_OS_SNAP_CALLS?.release === release) {
+        window.TR_OS_SNAP_CALLS.install(frame, true, value => support?.call(value));
+      }
+    } catch {}
     element.addEventListener('load', () => { status.hidden = true; support?.stage('page-loaded'); });
     let lastLocation = '';
     function syncLocation() {

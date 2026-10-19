@@ -6052,7 +6052,10 @@ Several C libraries are used, and their licenses are listed below:
         let data_heap = Module.HEAPU8.subarray(data_ptr, data_ptr + data_size);
         let data = new Uint8Array(data_heap);
         this.recv_buffer.push(data);
-        if (data_size !== buffer_size && !_get_result_bytes_left(result_ptr)) {
+        // libcurl reports completion through bytesleft, including frames whose
+        // final chunk exactly fills this 64 KiB buffer. Never join the next
+        // independent message to a completed buffer-sized frame.
+        if (!_get_result_bytes_left(result_ptr)) {
           let full_data = merge_arrays(this.recv_buffer);
           let is_text = _get_result_is_text(result_ptr);
           this.recv_buffer = [];
