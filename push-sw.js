@@ -13,7 +13,7 @@ self.addEventListener('push', event => {
     data: { url: typeof message.url === 'string' && message.url.startsWith('/') && !message.url.startsWith('//') ? message.url : '/' }
   };
   const tasks = [self.registration.showNotification(title, options)];
-  if (self.registration.setAppBadge) tasks.push(self.registration.setAppBadge(1).catch(() => {}));
+  if (self.navigator && self.navigator.setAppBadge) tasks.push(self.navigator.setAppBadge(1).catch(() => {}));
   event.waitUntil(Promise.all(tasks));
 });
 
@@ -22,7 +22,7 @@ self.addEventListener('notificationclick', event => {
   const target = new URL(event.notification.data?.url || '/', self.location.origin);
   if (target.origin !== self.location.origin) return;
   event.waitUntil((async () => {
-    if (self.registration.clearAppBadge) await self.registration.clearAppBadge().catch(() => {});
+    if (self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge().catch(() => {});
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of clients) {
       if (new URL(client.url).origin === self.location.origin && 'focus' in client) {

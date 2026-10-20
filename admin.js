@@ -329,7 +329,8 @@
     const payments=memberPayments.slice().sort((a,b)=>{
       const waitingA=a.status==='pending'&&a.paidRequested,waitingB=b.status==='pending'&&b.paidRequested;
       if(waitingA!==waitingB)return waitingB-waitingA;
-      return (Number(b.customerReportedPaidAt||b.createdAt)||0)-(Number(a.customerReportedPaidAt||a.createdAt)||0);
+      const time=value=>Date.parse(value||'')||Number(value)||0;
+      return time(b.customerReportedPaidAt||b.createdAt)-time(a.customerReportedPaidAt||a.createdAt);
     }).slice(0,100);
     $('payments-list').replaceChildren(...(payments.length?payments.map(payment=>{
       const card=document.createElement('article');card.className='member-card payment-card';
