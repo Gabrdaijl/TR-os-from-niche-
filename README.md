@@ -39,7 +39,7 @@ Den speglade Scramjet-filen är korrigerad på två ställen: service workerns I
 
 Sätt miljövariabeln `TR_OS_NETWORK_TEST=1` vid testkörning för det extra testet av en riktig utgående Wisp-ström. Övriga tester kräver ingen extern AI- eller molnspelsleverantör.
 
-Spelens HTML filtreras före start och får ett annonsfilter för kända annonsdomäner och popupfönster. Proxade webbsidor körs i en sandbox utan tillstånd att öppna popupfönster eller nya flikar. Filmspelaren erbjuder VidFast och VidLink genom proxyn; upptäckta proxyfelsidor växlar till nästa källa. Tredjepartskällors innehåll/tillgänglighet kan inte garanteras.
+Spelens HTML filtreras före start och får ett annonsfilter för kända annonsdomäner och popupfönster. Appfönstren blockerar `window.open`, och inbäddat innehåll har sandbox utan tillstånd att öppna popupfönster eller navigera appen. Safari använder en direkt inbäddad filmkälla i en popupskyddad sandbox; andra webbläsare använder VidFast och VidLink genom proxyn. Tredjepartskällors innehåll/tillgänglighet kan inte garanteras.
 
 ## Cloud launcher
 

@@ -4,6 +4,7 @@
   const KEY  = '3a73619bbb8fc6d47742d1b5b2b707b5';
   const BASE = 'https://api.themoviedb.org/3';
   const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
+  const IS_SAFARI = /Safari/i.test(navigator.userAgent) && !/(Chrome|Chromium|CriOS|Edg|OPR|Opera|FxiOS|Firefox)/i.test(navigator.userAgent);
   // Mullvad VPN (tros toggle): same-origin relays that exit via the tunnel.
   const MV_ON = () => { if (window.TR_OS.vpnConfigured === false) return false; try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (e) { return true; } };
   let __tmdbProxyEnabled = MV_ON();
@@ -61,6 +62,9 @@
     } catch (e) { return false; }
   }
   async function proxyPlayerUrl(url) {
+    // Safari can stall or reject the nested service-worker/Wisp player proxy.
+    // It loads the provider directly in the sandboxed player frame instead.
+    if (IS_SAFARI) return url;
     let on = true;
     try { on = localStorage.getItem('tros-mullvad') !== '0'; } catch (e) {}
     if (!on) return url;
@@ -356,6 +360,7 @@
       </div>
       <div id="tros-player-status" role="status" aria-live="polite"></div>
       <iframe id="tros-frame"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
         referrerpolicy="no-referrer">
@@ -367,17 +372,27 @@
     document.getElementById('tros-watch-btn').addEventListener('click', onWatchClick);
     document.getElementById('tros-player-back').addEventListener('click', closeFullscreen);
     document.getElementById('tros-player-fullscreen').addEventListener('click', async () => {
-      try { if (document.fullscreenElement) await document.exitFullscreen(); else await player.requestFullscreen(); }
-      catch { document.getElementById('tros-player-sub').textContent = 'Fullskärm kunde inte öppnas. Prova F11.'; }
+      const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      const request = player.requestFullscreen || player.webkitRequestFullscreen;
+      try {
+        if (isFullscreen && exit) await exit.call(document);
+        else if (!isFullscreen && request) await request.call(player);
+        else document.getElementById('tros-player-sub').textContent = 'Spelaren visas redan i helskärmsvyn.';
+      } catch { document.getElementById('tros-player-sub').textContent = 'Spelaren visas redan i helskärmsvyn.'; }
     });
     document.addEventListener('fullscreenchange', () => {
       const button = document.getElementById('tros-player-fullscreen');
-      button.textContent = document.fullscreenElement ? '⛶ Avsluta fullskärm' : '⛶ Fullskärm';
-      button.setAttribute('aria-pressed', String(!!document.fullscreenElement));
+      const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      button.textContent = isFullscreen ? '⛶ Avsluta fullskärm' : '⛶ Fullskärm';
+      button.setAttribute('aria-pressed', String(isFullscreen));
     });
+    document.addEventListener('webkitfullscreenchange', () => document.dispatchEvent(new Event('fullscreenchange')));
     document.getElementById('tros-player-source').addEventListener('change', e => changePlayerSource(e.target.selectedIndex));
     document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 2));
     document.getElementById('tros-frame').addEventListener('load', () => {
+      if (playerFrameGeneration !== playerGeneration) return;
+      playerFrameLoaded = true;
       installMovieAdBlock(document.getElementById('tros-frame'));
       try {
         const doc = document.getElementById('tros-frame').contentDocument;
@@ -403,7 +418,7 @@
       if (!doc?.documentElement || doc.documentElement.dataset.trosMovieAdBlock === '1') return;
       doc.documentElement.dataset.trosMovieAdBlock = '1';
       const script = doc.createElement('script');
-      script.src = new URL('/frame-controls.js?v=20261020.4', location.origin).href;
+      script.src = new URL('/frame-controls.js?v=20261020.5', location.origin).href;
       script.async = false;
       (doc.head || doc.documentElement).appendChild(script);
     } catch (_) {
@@ -523,6 +538,7 @@
   }
 
   let playerSource = 0, playerPath = '', playerGeneration = 0;
+  let playerFrameGeneration = 0, playerFrameLoaded = false;
   function notifyMobilePlayer(open) {
     try {
       if (window.parent !== window) window.parent.postMessage({ trosMobilePlayer: open ? 'open' : 'close' }, location.origin);
@@ -553,9 +569,12 @@
     const src = await proxyPlayerUrl(hosts[index] + playerPath);
     if (generation !== playerGeneration) return;
     const frame = document.getElementById('tros-frame');
+    playerFrameGeneration = generation;
+    playerFrameLoaded = false;
     frame.src = src;
     setTimeout(() => {
       if (generation !== playerGeneration) return;
+      if (!playerFrameLoaded) { failedPlayerSource(generation); return; }
       try {
         const text = frame.contentDocument?.body?.innerText || '';
         if (frame.contentDocument?.querySelector('[data-tros-proxy-error]') || /there was an error loading|this page could not be loaded through TR-os/i.test(text)) failedPlayerSource(generation);

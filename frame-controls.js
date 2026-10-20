@@ -15,15 +15,28 @@
   // allowlist alone misses them. These scripts run in game/movie documents;
   // normal playback stays in the iframe and does not need window.open.
   const denyPopup = function () { return null; };
-  try {
-    Object.defineProperty(window, 'open', {
-      configurable: false,
-      enumerable: true,
-      writable: false,
-      value: denyPopup
-    });
-  } catch (_) {
-    try { window.open = denyPopup; } catch (_) {}
+  function denyPopups(target) {
+    try {
+      Object.defineProperty(target, 'open', {
+        configurable: false,
+        enumerable: true,
+        writable: false,
+        value: denyPopup
+      });
+    } catch (_) {
+      try { target.open = denyPopup; } catch (_) {}
+    }
+  }
+  // Proxied pages can share TR-os's origin. Protect accessible app ancestors
+  // as well, so parent.open and top.open cannot sidestep the frame's guard.
+  let popupScope = window;
+  for (let depth = 0; depth < 8; depth++) {
+    denyPopups(popupScope);
+    try {
+      const parent = popupScope.parent;
+      if (!parent || parent === popupScope || !parent.document?.documentElement) break;
+      popupScope = parent;
+    } catch (_) { break; }
   }
   function popupTarget(value) {
     const target = String(value || '').trim().toLowerCase();
