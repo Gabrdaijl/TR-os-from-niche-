@@ -424,6 +424,7 @@
   document.addEventListener('DOMContentLoaded', boot);
 
   let grid, searchWrap, sectionLoadToken = 0, categoryController = null, searchController = null;
+  let sectionObserver = null;
   let currentItem = null;
 
   function boot() {
@@ -455,6 +456,7 @@
 
   function wipeSections() {
     const token = ++sectionLoadToken;
+    if (sectionObserver) { sectionObserver.disconnect(); sectionObserver = null; }
     [...grid.children].forEach(el => { if (el !== searchWrap) el.remove(); });
     return token;
   }
@@ -463,16 +465,45 @@
     if (categoryController) categoryController.abort();
     const controller = new AbortController();
     categoryController = controller;
-    let next = 0;
-    async function worker() {
-      while (!controller.signal.aborted && token === sectionLoadToken && next < CATS.length) {
-        const cat = CATS[next++];
-        await loadSection(cat, token, controller.signal);
-      }
-    }
-    return Promise.all([worker(), worker(), worker()]).finally(() => {
-      if (categoryController === controller) categoryController = null;
+    const sections = CATS.map(cat => {
+      const shell = mkShell(cat.n);
+      grid.appendChild(shell.wrap);
+      return { cat, shell, loaded: false };
     });
+    const load = section => {
+      if (!section || section.loaded || controller.signal.aborted || token !== sectionLoadToken) return Promise.resolve();
+      section.loaded = true;
+      return loadSection(section.cat, token, controller.signal, section.shell);
+    };
+
+    // Load the first rows immediately; defer the rest until they approach view.
+    sections.slice(0, 3).forEach(load);
+    if (sections.length <= 3) return Promise.resolve();
+    if (typeof IntersectionObserver === 'function') {
+      sectionObserver = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          sectionObserver?.unobserve(entry.target);
+          load(sections[Number(entry.target.dataset.trosSectionIndex)]);
+        }
+      }, { root: null, rootMargin: '700px 0px' });
+      sections.slice(3).forEach((section, offset) => {
+        section.shell.wrap.dataset.trosSectionIndex = String(offset + 3);
+        sectionObserver.observe(section.shell.wrap);
+      });
+      return Promise.resolve();
+    }
+
+    let next = 3;
+    const schedule = callback => typeof window.requestIdleCallback === 'function'
+      ? window.requestIdleCallback(callback, { timeout: 1200 })
+      : window.setTimeout(callback, 400);
+    const warmNext = () => {
+      if (controller.signal.aborted || token !== sectionLoadToken || next >= sections.length) return;
+      load(sections[next++]).finally(() => schedule(warmNext));
+    };
+    schedule(warmNext);
+    return Promise.resolve();
   }
 
   function buildDOM() {
@@ -812,10 +843,10 @@
     return { wrap, row };
   }
 
-  async function loadSection(cat, token = sectionLoadToken, signal) {
+  async function loadSection(cat, token = sectionLoadToken, signal, shell = null) {
     if (token !== sectionLoadToken) return;
-    const { wrap, row } = mkShell(cat.n);
-    grid.appendChild(wrap);
+    const { wrap, row } = shell || mkShell(cat.n);
+    if (!shell) grid.appendChild(wrap);
     try {
       let url = '/' + cat.ep + '?api_key=' + KEY + '&language=en-US&page=1';
       if (cat.px) url += cat.px;
