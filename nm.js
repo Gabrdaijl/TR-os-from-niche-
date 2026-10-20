@@ -4,7 +4,6 @@
   const KEY  = '3a73619bbb8fc6d47742d1b5b2b707b5';
   const BASE = 'https://api.themoviedb.org/3';
   const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
-  const IS_SAFARI = /Safari/i.test(navigator.userAgent) && !/(Chrome|Chromium|CriOS|Edg|OPR|Opera|FxiOS|Firefox)/i.test(navigator.userAgent);
   // Mullvad VPN (tros toggle): same-origin relays that exit via the tunnel.
   const MV_ON = () => { if (window.TR_OS.vpnConfigured === false) return false; try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (e) { return true; } };
   let __tmdbProxyEnabled = MV_ON();
@@ -62,17 +61,13 @@
     } catch (e) { return false; }
   }
   async function proxyPlayerUrl(url) {
-    // Safari can stall or reject the nested service-worker/Wisp player proxy.
-    // It loads the provider directly in the sandboxed player frame instead.
-    if (IS_SAFARI) return url;
-    let on = true;
-    try { on = localStorage.getItem('tros-mullvad') !== '0'; } catch (e) {}
-    if (!on) return url;
+    // Route movie sources through TR-os so the popup guard runs before the
+    // provider code and the iframe can remain sandboxed on every browser.
     try {
       const ok = await ensurePlayerProxy();
-      if (!ok || !__sjPlayReady) return url;
+      if (!ok || !__sjPlayReady) return null;
       return __sjPlay.encodeUrl(url);
-    } catch (e) { return url; }
+    } catch (e) { return null; }
   }
   const movieUrl = id       => `https://vidfast.vc/movie/${id}`;
   const tvUrl    = (id,s,e) => `https://vidfast.vc/tv/${id}/${s}/${e}`;
@@ -397,6 +392,10 @@
       try {
         const doc = document.getElementById('tros-frame').contentDocument;
         const text = doc && doc.body && doc.body.innerText || '';
+        if (/please disable sandbox/i.test(text)) {
+          failedPlayerSource(playerGeneration);
+          return;
+        }
         if (doc?.querySelector('[data-tros-proxy-error]') || /This page could not be loaded through TR-os|There was an error loading|Proxy is not ready/.test(text)) {
           failedPlayerSource(playerGeneration);
           return;
@@ -418,7 +417,7 @@
       if (!doc?.documentElement || doc.documentElement.dataset.trosMovieAdBlock === '1') return;
       doc.documentElement.dataset.trosMovieAdBlock = '1';
       const script = doc.createElement('script');
-      script.src = new URL('/frame-controls.js?v=20261020.5', location.origin).href;
+      script.src = new URL('/frame-controls.js?v=20261020.6', location.origin).href;
       script.async = false;
       (doc.head || doc.documentElement).appendChild(script);
     } catch (_) {
@@ -565,10 +564,18 @@
     const hosts = ['https://vidfast.vc', 'https://vidlink.pro'];
     const names = ['VidFast', 'VidLink'];
     document.getElementById('tros-player-source').selectedIndex = index;
-    document.getElementById('tros-player-sub').textContent = names[index] + ' · Byt källa om uppspelningen inte fungerar';
+    document.getElementById('tros-player-sub').textContent = names[index] + ' · Popupskydd på';
     const src = await proxyPlayerUrl(hosts[index] + playerPath);
     if (generation !== playerGeneration) return;
     const frame = document.getElementById('tros-frame');
+    if (!src) {
+      frame.src = 'about:blank';
+      document.getElementById('tros-player-sub').textContent = 'Den skyddade filmanslutningen kunde inte starta';
+      const status = document.getElementById('tros-player-status');
+      status.textContent = 'Filmspelaren kunde inte starta popupskyddet. Ladda om sidan och försök igen.';
+      status.style.display = 'flex';
+      return;
+    }
     playerFrameGeneration = generation;
     playerFrameLoaded = false;
     frame.src = src;

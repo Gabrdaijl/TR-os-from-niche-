@@ -1,5 +1,92 @@
 (function () {
   'use strict';
+  // Some embedded players refuse to run when they can see the iframe's
+  // sandbox attribute. The browser still enforces the sandbox flags for this
+  // document; hide only the attribute's reflection from same-origin proxied
+  // content so the player can start without gaining popup permissions.
+  function hideParentSandboxMarker() {
+    let frame;
+    try { frame = window.frameElement; } catch (_) { return; }
+    if (!frame) return;
+
+    let hasSandbox = false;
+    try { hasSandbox = frame.hasAttribute('sandbox') || frame.sandbox.length > 0; } catch (_) { return; }
+    if (!hasSandbox) return;
+
+    const emptySandbox = Object.freeze({
+      length: 0,
+      value: '',
+      contains: () => false,
+      item: () => null,
+      supports: () => false,
+      add() {},
+      remove() {},
+      replace() { return false; },
+      toggle() { return false; },
+      [Symbol.iterator]: function* () {}
+    });
+    const nativeHasAttribute = frame.hasAttribute.bind(frame);
+    const nativeGetAttribute = frame.getAttribute.bind(frame);
+    const nativeGetAttributeNames = frame.getAttributeNames.bind(frame);
+    const nativeRemoveAttribute = frame.removeAttribute.bind(frame);
+    const nativeSetAttribute = frame.setAttribute.bind(frame);
+    const nativeToggleAttribute = frame.toggleAttribute.bind(frame);
+    const nativeRemoveAttributeNS = frame.removeAttributeNS.bind(frame);
+    const isSandboxName = name => String(name).toLowerCase() === 'sandbox';
+    const define = (name, descriptor) => {
+      try { Object.defineProperty(frame, name, { configurable: false, ...descriptor }); } catch (_) {}
+    };
+
+    define('sandbox', { enumerable: true, get: () => emptySandbox });
+    define('hasAttribute', { value: name => isSandboxName(name) ? false : nativeHasAttribute(name) });
+    define('getAttribute', { value: name => isSandboxName(name) ? null : nativeGetAttribute(name) });
+    define('getAttributeNames', { value: () => nativeGetAttributeNames().filter(name => !isSandboxName(name)) });
+    define('removeAttribute', { value: name => { if (!isSandboxName(name)) nativeRemoveAttribute(name); } });
+    define('setAttribute', { value: (name, value) => { if (!isSandboxName(name)) nativeSetAttribute(name, value); } });
+    define('toggleAttribute', { value: (name, force) => isSandboxName(name) ? false : nativeToggleAttribute(name, force) });
+    define('removeAttributeNS', { value: (namespace, name) => { if (!isSandboxName(name)) nativeRemoveAttributeNS(namespace, name); } });
+
+    try {
+      const attributes = frame.attributes;
+      const visible = () => Array.from(attributes).filter(attribute => !isSandboxName(attribute.name));
+      const maskedAttributes = new Proxy(attributes, {
+        get(target, property) {
+          const list = visible();
+          if (property === 'length') return list.length;
+          if (property === 'item') return index => list[index] || null;
+          if (property === 'getNamedItem') return name => isSandboxName(name) ? null : target.getNamedItem(name);
+          if (property === 'getNamedItemNS') return (namespace, name) => isSandboxName(name) ? null : target.getNamedItemNS(namespace, name);
+          if (property === 'setNamedItem' || property === 'removeNamedItem') return attribute => isSandboxName(attribute?.name || attribute) ? null : target[property](attribute);
+          if (property === 'removeNamedItemNS') return (namespace, name) => isSandboxName(name) ? null : target.removeNamedItemNS(namespace, name);
+          if (property === Symbol.iterator) return function* () { yield* list; };
+          if (typeof property === 'string' && /^\d+$/.test(property)) return list[Number(property)];
+          return Reflect.get(target, property, target);
+        }
+      });
+      define('attributes', { enumerable: true, get: () => maskedAttributes });
+    } catch (_) {}
+
+    try {
+      const nativeClone = frame.cloneNode.bind(frame);
+      define('outerHTML', {
+        enumerable: true,
+        get() {
+          const clone = nativeClone(false);
+          clone.removeAttribute('sandbox');
+          return clone.outerHTML;
+        }
+      });
+    } catch (_) {}
+  }
+
+  hideParentSandboxMarker();
+  const earlyProxyScript = document.currentScript?.dataset?.trosProxyEarly === '1';
+  const guardKey = '__TR_OS_POPUP_GUARD__';
+  const existingGuard = window[guardKey];
+  if (existingGuard) {
+    if (!earlyProxyScript) existingGuard.installPopups();
+    return;
+  }
   const hosts = ['doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adnxs.com', 'adsterra.com', 'profitablecpmrate.com', 'profitableratecpm.com', 'highperformanceformat.com', 'effectivegatecpm.com', 'popads.net', 'popcash.net', 'onclicka.com', 'exoclick.com', 'adskeeper.com', 'mgid.com', 'amazon-adsystem.com'];
   function blocked(value) {
     try { const h = new URL(String(value), document.baseURI).hostname; return hosts.some(x => h === x || h.endsWith('.' + x)); } catch { return false; }
@@ -29,15 +116,20 @@
   }
   // Proxied pages can share TR-os's origin. Protect accessible app ancestors
   // as well, so parent.open and top.open cannot sidestep the frame's guard.
-  let popupScope = window;
-  for (let depth = 0; depth < 8; depth++) {
-    denyPopups(popupScope);
-    try {
-      const parent = popupScope.parent;
-      if (!parent || parent === popupScope || !parent.document?.documentElement) break;
-      popupScope = parent;
-    } catch (_) { break; }
+  function installPopups() {
+    let popupScope = window;
+    for (let depth = 0; depth < 8; depth++) {
+      denyPopups(popupScope);
+      try {
+        const parent = popupScope.parent;
+        if (!parent || parent === popupScope || !parent.document?.documentElement) break;
+        popupScope = parent;
+      } catch (_) { break; }
+    }
   }
+  try { Object.defineProperty(window, guardKey, { configurable: false, enumerable: false, value: { installPopups } }); } catch (_) {}
+  if (earlyProxyScript) document.addEventListener('DOMContentLoaded', installPopups, { once: true });
+  else installPopups();
   function popupTarget(value) {
     const target = String(value || '').trim().toLowerCase();
     return !!target && !['_self', '_parent', '_top'].includes(target);

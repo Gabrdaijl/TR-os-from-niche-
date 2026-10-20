@@ -49,13 +49,14 @@ test('mobile shell follows the saved app theme and expands Movies player to full
   assert.match(controller, /trosThemeName/);
   assert.match(shell, /--bar-active/);
   assert.match(shell, /movie-player-open/);
-  assert.match(read('nm.html'), /src="nm\.js\?v=20261020\.6"/);
-  assert.match(movies, /const IS_SAFARI =/);
-  assert.match(movies, /if \(IS_SAFARI\) return url;/);
+  assert.match(read('nm.html'), /src="nm\.js\?v=20261020\.7"/);
+  assert.match(movies, /Route movie sources through TR-os so the popup guard runs before the/);
+  assert.match(movies, /if \(!ok \|\| !__sjPlayReady\) return null;/);
   const movieFrame = movies.match(/<iframe id="tros-frame"([\s\S]*?)<\/iframe>/);
   assert.ok(movieFrame);
   assert.match(movieFrame[1], /sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"/);
   assert.doesNotMatch(movieFrame[1], /allow-popups|allow-top-navigation/);
+  assert.match(movies, /Den skyddade filmanslutningen kunde inte starta/);
   assert.match(movies, /trosMobilePlayer: open \? 'open' : 'close'/);
   assert.match(movies, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(themeEngine, /#tros-player-bar \{ background: linear-gradient\(180deg,\$\{CARD_BG\}/);
