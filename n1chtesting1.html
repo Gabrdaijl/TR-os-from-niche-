@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+ tab: 62, Title: "raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/n1chtesting1.html", URL: "https://raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/n1chtesting1.html".
+1 AXWebArea raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/n1chtesting1.html
+	2 text <!DOCTYPE html>
 <html lang="en">
 
 
@@ -28,11 +30,11 @@
             <div class="flex justify-center items-center gap-3 mt-2">
 <button type="button" aria-label="Snapchat" title="Öppna Snapchat i TR-os" onclick="if (parent !== window &amp;&amp; typeof parent.trosOpenSnapchat === 'function') { parent.trosOpenSnapchat(); } else { location.href='snapchat.html'; }" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] p-2 flex items-center justify-center transition hover:-translate-y-1"><img src="snapchat.svg" alt="Snapchat" width="36" height="36"></button>
 
-<div onclick="navigate('https://tiktok.com/')" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] h-auto p-2 flex items-center justify-center transition hover:-translate-y-1">
+<div onclick="window.trosHomeNavigate('https://www.tiktok.com/')" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] h-auto p-2 flex items-center justify-center transition hover:-translate-y-1">
               <img class="rounded-xl w-[85px] h-9 object-contain" src="tt.png">
             </div>
               
-              <div onclick="navigate('https://35.ip.nowgg.fun/apps/a/19900/b.html')" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] h-auto p-2 flex items-center justify-center transition hover:-translate-y-1">
+              <div onclick="window.trosHomeNavigate('https://35.ip.nowgg.fun/apps/a/19900/b.html')" class="bg-blue-300 border border-blue-500 rounded-[15px] w-[60px] h-auto p-2 flex items-center justify-center transition hover:-translate-y-1">
               <img class="rounded-xl w-[45px] h-9 object-contain" src="ro.png">
             </div>
             </div>
@@ -59,6 +61,28 @@
 
 
 </div>
+<script>
+  (() => {
+    function trosHomeNavigate(raw) {
+      try {
+        const browser = window.parent;
+        if (browser !== window && typeof browser.trosBrowserNavigate === 'function') {
+          browser.trosBrowserNavigate(raw);
+          return;
+        }
+      } catch {}
+      try { window.location.assign(raw); } catch {}
+    }
+    window.trosHomeNavigate = trosHomeNavigate;
+    const search = document.getElementById('home-search');
+    search?.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const value = search.value.trim();
+      if (value) trosHomeNavigate(value);
+    });
+  })();
+</script>
 </body>
 
 
