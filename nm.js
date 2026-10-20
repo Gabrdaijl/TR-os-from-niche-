@@ -5,41 +5,43 @@
   const BASE = 'https://api.themoviedb.org/3';
   const IMG  = p => p ? `https://image.tmdb.org/t/p/w342${p}` : '';
   // Mullvad VPN (tros toggle): same-origin relays that exit via the tunnel.
-  const MV_ON = () => { if (window.TR_OS.vpnConfigured === false) return false; try { return localStorage.getItem('tros-mullvad') !== '0'; } catch (e) { return true; } };
-  let __tmdbProxyEnabled = MV_ON();
-  const mvApi = path => __tmdbProxyEnabled ? 'api/tmdb' + path : BASE + path;
-  const mvImg = itemPath => {
-    if (!itemPath) return '';
-    if (__tmdbProxyEnabled) return window.TR_OS.apiUrl('api/tmdb-img/t/p/w342' + itemPath);
-    return IMG(itemPath);
-  };
+  const TMDB_JSON_CACHE = new Map();
+  const TMDB_CACHE_TTL = 60000;
+  const TMDB_CACHE_LIMIT = 80;
+  const mvImg = itemPath => itemPath ? IMG(itemPath) : '';
   async function readJsonSafe(res) {
     const ct = (res.headers.get('content-type') || '').toLowerCase();
     if (ct.includes('application/json')) return res.json();
     const text = await res.text();
     try { return JSON.parse(text); } catch (e) { return null; }
   }
-  async function tmdbJson(path) {
-    if (__tmdbProxyEnabled) {
-      try {
-        const proxyRes = await window.TR_OS.fetch('api/tmdb' + path);
-        if (proxyRes.ok) {
-          const data = await readJsonSafe(proxyRes);
-          if (data && typeof data === 'object') return data;
-        }
-      } catch (e) {}
-      __tmdbProxyEnabled = false;
+  function cacheTMDB(path, data) {
+    const now = Date.now();
+    for (const [key, entry] of TMDB_JSON_CACHE) if (entry.expiresAt <= now) TMDB_JSON_CACHE.delete(key);
+    if (!TMDB_JSON_CACHE.has(path) && TMDB_JSON_CACHE.size >= TMDB_CACHE_LIMIT) {
+      TMDB_JSON_CACHE.delete(TMDB_JSON_CACHE.keys().next().value);
     }
-    const directRes = await window.TR_OS.fetch(BASE + path);
-    if (!directRes.ok) throw new Error(`tmdb-${directRes.status}`);
-    const data = await readJsonSafe(directRes);
-    if (!data || typeof data !== 'object') throw new Error('tmdb-invalid-json');
+    TMDB_JSON_CACHE.set(path, { data, expiresAt: now + TMDB_CACHE_TTL });
+  }
+  async function tmdbJson(path, signal) {
+    const key = String(path);
+    const cached = TMDB_JSON_CACHE.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.data;
+    if (cached) TMDB_JSON_CACHE.delete(key);
+    const res = await window.TR_OS.fetch('/api/tmdb' + path, { cache: 'no-store', signal });
+    if (!res.ok) throw new Error('tmdb-' + res.status);
+    const data = await readJsonSafe(res);
+    if (!data || typeof data !== 'object' || Array.isArray(data) || (Number.isFinite(Number(data.status_code)) && Number(data.status_code) > 0)) {
+      throw new Error('tmdb-invalid-json');
+    }
+    if (!signal || !signal.aborted) cacheTMDB(key, data);
     return data;
   }
   const ANIME_PX = '&with_original_language=ja&with_genres=16';
 
   let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null, __barePlayWorker = null;
   const __scramjetLoadPromises = new WeakMap();
+  const __scramjetClientPromises = new WeakMap();
 
   function movieHostWindow() {
     let host = window;
@@ -77,19 +79,27 @@
   }
 
   async function createMovieScramjetClient(context, runtime, stagePrefix) {
-    __sjPlayStage = stagePrefix + '-script';
-    const { ScramjetController } = await loadMovieScramjet(context, runtime);
-    if (typeof ScramjetController !== 'function') throw new Error('Scramjet controller is unavailable.');
-    const client = new ScramjetController({ files: {
-      wasm: runtime.assetUrl('scram/scramjet.wasm.wasm'),
-      all: runtime.assetUrl('scram/scramjet.all.js'),
-      sync: runtime.assetUrl('scram/scramjet.sync.js'),
-    }});
+    let pending = __scramjetClientPromises.get(context);
+    if (!pending) {
+      pending = (async () => {
+        __sjPlayStage = stagePrefix + '-script';
+        const { ScramjetController } = await runtime.withTimeout(loadMovieScramjet(context, runtime), 20000, 'Scramjet-skriptet kunde inte laddas i tid.');
+        if (typeof ScramjetController !== 'function') throw new Error('Scramjet controller is unavailable.');
+        const client = new ScramjetController({ files: {
+          wasm: runtime.assetUrl('scram/scramjet.wasm.wasm'),
+          all: runtime.assetUrl('scram/scramjet.all.js'),
+          sync: runtime.assetUrl('scram/scramjet.sync.js'),
+        }});
+        __sjPlayStage = stagePrefix + '-init';
+        await client.init();
+        return client;
+      })();
+      __scramjetClientPromises.set(context, pending);
+      pending.catch(() => { if (__scramjetClientPromises.get(context) === pending) __scramjetClientPromises.delete(context); });
+    }
     __sjPlayStage = stagePrefix + '-init';
-    await runtime.withTimeout(client.init(), 45000, 'Filmens proxy kunde inte starta i tid.');
-    return client;
+    return runtime.withTimeout(pending, 20000, 'Filmens proxy kunde inte starta i tid.');
   }
-
 
   function createMovieMuxConnection(preferDedicated = false) {
     const workerUrl = window.TR_OS.assetUrl('baremux/worker.js');
@@ -137,6 +147,9 @@
       __sjPlayStage = 'service-worker';
       const host = movieHostWindow();
       const hostRuntime = host.TR_OS || window.TR_OS;
+      const serverReady = Promise.resolve().then(() => {
+        return typeof hostRuntime.warmProxyServer === 'function' ? hostRuntime.warmProxyServer() : true;
+      }).then(() => null, error => error);
       if (hostRuntime !== window.TR_OS) await hostRuntime.ensureServiceWorker();
       await window.TR_OS.ensureServiceWorker();
 
@@ -153,6 +166,9 @@
           throw frameError;
         }
       }
+
+      const warmError = await serverReady;
+      if (warmError) throw warmError;
 
       __sjPlayStage = 'movie-worker';
       let conn = createMovieMuxConnection();
@@ -407,7 +423,7 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 
-  let grid, searchWrap, sectionLoadToken = 0;
+  let grid, searchWrap, sectionLoadToken = 0, categoryController = null, searchController = null;
   let currentItem = null;
 
   function boot() {
@@ -430,8 +446,10 @@
     input.addEventListener('input', e => {
       clearTimeout(timer);
       const q = e.target.value.trim();
+      if (searchController) { searchController.abort(); searchController = null; }
+      if (categoryController) { categoryController.abort(); categoryController = null; }
       if (!q) { const token = wipeSections(); loadCategorySections(token); return; }
-      timer = setTimeout(() => doSearch(q), 480);
+      timer = setTimeout(() => doSearch(q), 300);
     });
   }
 
@@ -442,16 +460,20 @@
   }
 
   function loadCategorySections(token) {
+    if (categoryController) categoryController.abort();
+    const controller = new AbortController();
+    categoryController = controller;
     let next = 0;
     async function worker() {
-      while (token === sectionLoadToken && next < CATS.length) {
+      while (!controller.signal.aborted && token === sectionLoadToken && next < CATS.length) {
         const cat = CATS[next++];
-        await loadSection(cat, token);
+        await loadSection(cat, token, controller.signal);
       }
     }
-    return Promise.all([worker(), worker(), worker()]);
+    return Promise.all([worker(), worker(), worker()]).finally(() => {
+      if (categoryController === controller) categoryController = null;
+    });
   }
-
 
   function buildDOM() {
     if (document.getElementById('tros-overlay')) return;
@@ -790,14 +812,14 @@
     return { wrap, row };
   }
 
-  async function loadSection(cat, token = sectionLoadToken) {
+  async function loadSection(cat, token = sectionLoadToken, signal) {
     if (token !== sectionLoadToken) return;
     const { wrap, row } = mkShell(cat.n);
     grid.appendChild(wrap);
     try {
       let url = '/' + cat.ep + '?api_key=' + KEY + '&language=en-US&page=1';
       if (cat.px) url += cat.px;
-      const d = await tmdbJson(url);
+      const d = await tmdbJson(url, signal);
       if (token !== sectionLoadToken) return;
       const items = (d.results || [])
         .filter(i => i.poster_path)
@@ -810,24 +832,31 @@
       }
       items.forEach(i => row.appendChild(mkCard(i)));
     } catch {
-      if (token !== sectionLoadToken) return;
+      if (signal?.aborted || token !== sectionLoadToken) return;
       row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">Failed to load.</p>';
     }
   }
 
   async function doSearch(q) {
+    if (categoryController) { categoryController.abort(); categoryController = null; }
+    if (searchController) searchController.abort();
+    const controller = new AbortController();
+    searchController = controller;
     const token = wipeSections();
     const { wrap, row } = mkShell('Results for "' + q + '"');
     grid.appendChild(wrap);
     try {
-      const [tvR, movR] = await Promise.all([
-        tmdbJson('/search/tv?api_key=' + KEY + '&query=' + encodeURIComponent(q) + '&language=en-US'),
-        tmdbJson('/search/movie?api_key=' + KEY + '&query=' + encodeURIComponent(q) + '&language=en-US'),
+      const outcomes = await Promise.allSettled([
+        tmdbJson('/search/tv?api_key=' + KEY + '&query=' + encodeURIComponent(q) + '&language=en-US', controller.signal),
+        tmdbJson('/search/movie?api_key=' + KEY + '&query=' + encodeURIComponent(q) + '&language=en-US', controller.signal),
       ]);
-      if (token !== sectionLoadToken) return;
+      if (token !== sectionLoadToken || controller.signal.aborted) return;
+      const tvR = outcomes[0].status === 'fulfilled' ? outcomes[0].value : null;
+      const movR = outcomes[1].status === 'fulfilled' ? outcomes[1].value : null;
+      if (!tvR && !movR) throw new Error('tmdb-search-unavailable');
       const items = [
-        ...(tvR.results || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'tv' })),
-        ...(movR.results || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'movie' })),
+        ...((tvR && tvR.results) || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'tv' })),
+        ...((movR && movR.results) || []).filter(i => i.poster_path).map(i => ({ ...i, media_type: 'movie' })),
       ].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 40);
       row.innerHTML = '';
       if (!items.length) {
@@ -835,12 +864,13 @@
         return;
       }
       items.forEach(i => row.appendChild(mkCard(i)));
-    } catch {
-      if (token !== sectionLoadToken) return;
-      row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">Search failed.</p>';
+    } catch (error) {
+      if (token !== sectionLoadToken || controller.signal.aborted) return;
+      row.innerHTML = '<p class="font-sans text-blue-500 text-sm p-4">Search failed. Check your connection and try again.</p>';
+    } finally {
+      if (searchController === controller) searchController = null;
     }
   }
-
 
   function mkCard(item) {
     const title = item.title || item.name || '—';
