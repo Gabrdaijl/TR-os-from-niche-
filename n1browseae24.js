@@ -32,17 +32,13 @@
     try { proxied = typeof url === 'string' && url !== HOME && /^https?:\/\//i.test(url); } catch {}
     setLock(proxied);
   }
-  var TROS_HOME_URL = 'tr-os://browser';
   function displayUrl(u) {
-    if (!u || u === HOME) return TROS_HOME_URL;
+    if (!u || u === HOME) return 'Hem';
     try {
       var uu = new URL(u, location.href);
-      if (uu.origin === location.origin && uu.pathname.replace(/\/+$/, '').endsWith('n1chtesting1.html')) {
-        return TROS_HOME_URL;
-      }
+      if (uu.origin === location.origin && uu.pathname.replace(/\/+$/, '').endsWith('n1chtesting1.html')) return 'Hem';
     } catch (e) {}
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(u)) return u;
-    return 'https://' + u;
+    return 'Skyddad sida';
   }
   let __bareConn = null;
   async function applyTransport() {
@@ -60,7 +56,7 @@
   const input = document.getElementById('browser-input');
   const tabStrip = document.getElementById('tab-strip');
   const HOME = 'n1chtesting1.html';
-  const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals';
+  const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock';
 
   var RESI_ALIAS = { paloalto: 'mullvad-us', boston: 'mullvad-us', milan: 'mullvad-eu' };
   var MV_LOCS = ['mullvad-us', 'mullvad-eu', 'mullvad-se'];
@@ -105,7 +101,7 @@
       var route = '';
       try { route = wispRoute(); } catch (e9) {}
       if (route === WISP_ROUTES.vps) {
-        ex.textContent = 'Direct proxy';
+        ex.textContent = 'Webbproxy';
         ex.title = 'Proxy connection without the Mullvad tunnel';
       } else if (MV_EXIT_STATE !== 'vpn') {
         ex.textContent = MV_EXIT_STATE === 'direct' ? 'VPN verification failed' : 'Checking VPN…';
@@ -114,7 +110,7 @@
         ex.textContent = mvExitText();
         ex.title = 'Live proxy exit via Mullvad';
       } else if (!on) {
-        ex.textContent = 'VPS direct';
+        ex.textContent = 'Webbproxy';
         ex.title = 'Mullvad is OFF - traffic exits via VPS (server IP)';
       } else {
         ex.textContent = '...';
@@ -133,6 +129,26 @@
     return WISP_ROUTES.mullvad;
   }
 
+  let __bareConn = null, __bareProxyWorker = null;
+  async function createBrowserMuxConnection() {
+    const sharedWorkerUrl = window.TR_OS.assetUrl('baremux/worker.js');
+    if (typeof Worker === 'function' && typeof MessageChannel === 'function') {
+      let worker;
+      try {
+        worker = new Worker(window.TR_OS.assetUrl('baremux/compat-worker.js'));
+        const channel = new MessageChannel();
+        worker.postMessage({ type: 'tros-connect' }, [channel.port2]);
+        __bareProxyWorker = worker;
+        return new BareMux.BareMuxConnection(channel.port1);
+      } catch (error) {
+        try { worker?.terminate(); } catch (_) {}
+        console.warn('TR-os browser dedicated worker unavailable; trying SharedWorker:', error);
+      }
+    }
+    if (typeof SharedWorker === 'function') return new BareMux.BareMuxConnection(sharedWorkerUrl);
+    throw new Error('browser-worker-unavailable');
+  }
+
   async function initScramjet() {
     if (__sjReady) return true;
     if (__sjInitPromise) return __sjInitPromise;
@@ -147,24 +163,27 @@
     }
     __sjInitPromise = (async () => {
       try {
+        const withTimeout = window.TR_OS.withTimeout;
         const loadScript = src => {
           if (__proxyScripts.has(src)) return __proxyScripts.get(src);
-          const promise = new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
+          const script = document.createElement('script');
+          script.src = src;
+          const loaded = new Promise((resolve, reject) => {
             script.onload = resolve;
             script.onerror = () => reject(new Error('A browser component could not be loaded.'));
             document.head.append(script);
           });
-          __proxyScripts.set(src, promise);
-          promise.catch(() => __proxyScripts.delete(src));
-          return promise;
+          const bounded = withTimeout(loaded, 20000, 'En del av webbproxyn svarade inte.');
+          __proxyScripts.set(src, bounded);
+          bounded.catch(() => {
+            try { script.remove(); } catch (_) {}
+            if (__proxyScripts.get(src) === bounded) __proxyScripts.delete(src);
+          });
+          return bounded;
         };
-        // Keep proxy code, its WASM rewriter, and Epoxy out of the mobile
-        // startup path. The local TR-os home page does not need them.
         await loadScript(window.TR_OS.assetUrl('baremux/index.js'));
         await loadScript(window.TR_OS.assetUrl('scram/scramjet.all.js'));
-        const epoxyWarm = import('epoxy/index.mjs').catch(() => null);
+        await withTimeout(import('epoxy/index.mjs'), 20000, 'Webbproxyns anslutning kunde inte laddas.');
         const { ScramjetController } = $scramjetLoadController();
         const client = new ScramjetController({
           files: {
@@ -173,18 +192,32 @@
             sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
           },
         });
-        await client.init();
-        await window.TR_OS.ensureServiceWorker();
-        const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl('baremux/worker.js'));
-        __bareConn = conn;
-        await epoxyWarm;
+        await withTimeout(client.init(), 45000, 'Webbproxyn tog för lång tid att starta.');
+
+        let shellRuntime = window.TR_OS;
         try {
-          await conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
-        } catch {
-          try {
-            await conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]);
-          } catch {}
+          if (window.parent !== window && window.parent.TR_OS?.ensureServiceWorker) shellRuntime = window.parent.TR_OS;
+        } catch (_) {}
+        await withTimeout(shellRuntime.ensureServiceWorker(), 20000, 'Webbproxyns service worker kunde inte starta.');
+        if (shellRuntime !== window.TR_OS) {
+          await withTimeout(window.TR_OS.ensureServiceWorker(), 20000, 'Webbproxyn kunde inte koppla den här fliken.');
         }
+
+        const conn = await createBrowserMuxConnection();
+        __bareConn = conn;
+        const transport = [{ wisp: window.TR_OS.wispUrl(wispRoute()) }];
+        let transportError;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            await withTimeout(conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), transport), 20000, 'Webbproxyns server svarade inte.');
+            transportError = null;
+            break;
+          } catch (error) {
+            transportError = error;
+            if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+        if (transportError) throw transportError;
         __sj = client;
         __sjReady = true;
         const status = document.getElementById('browser-status');
@@ -195,18 +228,22 @@
           navigate(next);
         }
         return true;
-      } catch {
+      } catch (error) {
         __sjInitPromise = null;
+        try { __bareProxyWorker?.terminate(); } catch (_) {}
+        __bareProxyWorker = null;
+        __bareConn = null;
         if (pendingNav) {
           pendingNav = null;
           const status = document.getElementById('browser-status');
           const retry = document.getElementById('browser-retry');
           if (status) {
-            status.querySelector('span').textContent = 'Webbläsarens proxy kunde inte starta på den här enheten. Stäng andra flikar och försök igen.';
+            status.querySelector('span').textContent = 'Webbproxyn kunde inte starta. Kontrollera anslutningen och tryck på Försök igen.';
             status.hidden = false;
           }
           if (retry) retry.hidden = false;
         }
+        console.warn('TR-os browser proxy startup failed:', error);
         return false;
       }
     })();
@@ -1078,7 +1115,7 @@
       readHistory().forEach((h) => {
         if (!h || !h.u) return;
         if ((h.t + ' ' + h.u).toLowerCase().includes(low)) {
-          if (!out.some((o) => o.sub === h.u)) out.push({ kind: 'hist', title: h.t, sub: h.u, fav: null });
+          if (!out.some((o) => o.url === h.u)) out.push({ kind: 'hist', title: h.t, sub: '', url: h.u, fav: null });
         }
       });
     } catch (e) {}
@@ -1130,9 +1167,10 @@
       activate(it.tabId);
       return;
     }
-    input.value = it.kind === 'search' ? it.title : it.sub;
+    const destination = it.kind === 'search' ? it.title : (it.url || it.sub);
+    input.value = it.kind === 'search' ? it.title : displayUrl(destination);
     closeSuggest();
-    navigate(input.value);
+    navigate(destination);
   }
   input.addEventListener('input', () => {
     try { clearTimeout(suggestTimer); } catch (e) {}
