@@ -42,7 +42,7 @@
 
   function movieHostWindow() {
     try {
-      if (window.parent !== window && window.parent.location.origin === window.location.origin && window.parent.TR_OS) return window.parent;
+      if (window.parent !== window && window.parent.location.origin === window.location.origin && window.parent.TR_OS && typeof window.parent.BareMux?.BareMuxConnection === 'function') return window.parent;
     } catch (_) {}
     return window;
   }
