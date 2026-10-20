@@ -59,6 +59,8 @@ const CONFIG = {
         ".doubleclick.net", ".googlesyndication.com", ".googleadservices.com",
         ".adsterra.com", ".popads.net", ".popcash.net", ".highperformanceformat.com",
         ".profitablecpmrate.com", ".profitableratecpm.com", ".effectivegatecpm.com",
+        ".adsco.re",
+        ".intellipopup.com",
 		"youtube.com/get_video_info?*adformat=*",
 		"youtube.com/api/stats/ads/*",
 		"youtube.com/pagead/*",
