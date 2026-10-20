@@ -601,7 +601,12 @@ function createApp(options = {}) {
     const types = { '.html': 'text/html; charset=utf-8', '.webmanifest': 'application/manifest+json; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.cur': 'image/x-icon', '.ani': 'application/octet-stream', '.woff2': 'font/woff2' };
     const type = types[path.extname(file)];
     if (!type || !fs.existsSync(file)) return json(res, 404, { error: 'Not found' });
-    res.writeHead(200, { 'content-type': type, 'cache-control': 'no-cache', ...(file.endsWith('sw.js') ? { 'service-worker-allowed': '/' } : {}) });
+    const cacheControl = file.endsWith('sw.js') || type.startsWith('text/html')
+      ? 'no-cache'
+      : url.searchParams.has('v')
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=60, stale-while-revalidate=300';
+    res.writeHead(200, { 'content-type': type, 'cache-control': cacheControl, ...(file.endsWith('sw.js') ? { 'service-worker-allowed': '/' } : {}) });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
   }
