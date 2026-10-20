@@ -38,6 +38,26 @@
   }
   const ANIME_PX = '&with_original_language=ja&with_genres=16';
 
+  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null, __barePlayWorker = null;
+  function createMovieMuxConnection() {
+    const workerUrl = window.TR_OS.assetUrl("baremux/worker.js");
+    if (typeof Worker === 'function' && typeof MessageChannel === 'function') {
+      let worker;
+      try {
+        worker = new Worker(window.TR_OS.assetUrl("baremux/compat-worker.js"));
+        const channel = new MessageChannel();
+        worker.postMessage({ type: 'tros-connect' }, [channel.port2]);
+        __barePlayWorker = worker;
+        return new BareMux.BareMuxConnection(channel.port1);
+      } catch (error) {
+        try { worker?.terminate(); } catch (_) {}
+        console.warn('TR-os movie dedicated worker unavailable; trying SharedWorker:', error);
+      }
+    }
+    if (typeof SharedWorker === 'function') return new BareMux.BareMuxConnection(workerUrl);
+    throw new Error('movie-worker-unavailable');
+  }
+
   let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null;
   async function ensurePlayerProxy() {
     if (__sjPlayReady) return true;
@@ -63,11 +83,10 @@
           sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
         },
       });
-      await window.TR_OS.withTimeout(client.init(), 15000, 'Filmens proxy kunde inte starta i tid.');
+      await window.TR_OS.withTimeout(client.init(), 45000, 'Filmens proxy kunde inte starta i tid.');
 
-      __sjPlayStage = 'shared-worker';
-      if (typeof SharedWorker !== 'function') throw new Error('shared-worker-unavailable');
-      const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
+      __sjPlayStage = 'movie-worker';
+      const conn = createMovieMuxConnection();
 
       __sjPlayStage = 'transport';
       const transport = [{ wisp: window.TR_OS.wispUrl("/wisp-movies/") }];
@@ -96,6 +115,8 @@
       return true;
     })().catch(error => {
       __sjPlayError = error;
+      try { __barePlayWorker?.terminate(); } catch (_) {}
+      __barePlayWorker = null;
       console.warn('TR-os movie connection could not start at ' + (__sjPlayStage || 'unknown stage') + ':', error);
       return false;
     }).finally(() => { __sjPlayPromise = null; });
@@ -620,11 +641,9 @@
     if (!src) {
       frame.src = 'about:blank';
       document.getElementById('tros-player-sub').textContent = 'Den skyddade filmanslutningen kunde inte starta';
-      const reason = __sjPlayStage === 'shared-worker'
-        ? 'Den här webbläsaren saknar stöd för den delade worker som filmanslutningen behöver. Öppna sidan direkt i Safari och ladda om.'
-        : __sjPlayStage === 'service-worker'
-          ? 'Safari kunde inte starta webbproxyn. Stäng sidan, öppna den direkt i Safari och ladda om.'
-          : 'Filmanslutningen kunde inte starta (' + (__sjPlayStage || 'okänt steg') + '). Ladda om sidan och försök igen.';
+      const reason = __sjPlayStage === 'service-worker'
+        ? 'Webbläsaren kunde inte starta webbproxyn. Kontrollera att webbplatsdata är tillåtna och försök igen.'
+        : 'Filmanslutningen kunde inte starta (' + (__sjPlayStage || 'okänt steg') + '). Tryck på Byt källa eller ladda om sidan.';
       status.textContent = reason;
       status.style.display = 'flex';
       return;
