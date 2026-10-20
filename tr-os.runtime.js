@@ -21,6 +21,8 @@
   let workerReady;
   let identityPromise;
   let memoryVisitorId;
+  let backendWarmPromise;
+  let backendWarmAt = 0;
   const presenceListeners = new Set();
   const presence = {
     latest: null,
@@ -68,6 +70,45 @@
     }
     return root;
   }
+  function warmProxyServer() {
+    const root = proxyRootWindow();
+    if (root !== window) {
+      try {
+        if (root.TR_OS && typeof root.TR_OS.warmProxyServer === 'function') return root.TR_OS.warmProxyServer();
+      } catch (_) {}
+    }
+    if (!backendWarmPromise || (backendWarmAt && Date.now() - backendWarmAt > 60000)) {
+      backendWarmPromise = null;
+      backendWarmAt = 0;
+      const controller = new AbortController();
+      let timer;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error('The TR-os server did not start in time.'));
+        }, 90000);
+      });
+      const request = nativeFetch(apiUrl('/api/health'), {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        signal: controller.signal,
+      }).then(async response => {
+        if (!response.ok) throw new Error('The TR-os server returned ' + response.status + '.');
+        const data = await response.json();
+        if (!data || data.ok !== true) throw new Error('The TR-os server is unavailable.');
+        return true;
+      });
+      backendWarmPromise = Promise.race([request, timeout]).then(value => {
+        backendWarmAt = Date.now();
+        return value;
+      }).catch(error => {
+        backendWarmPromise = null;
+        backendWarmAt = 0;
+        throw error;
+      }).finally(() => clearTimeout(timer));
+    }
+    return backendWarmPromise;
+  }
   function ensureServiceWorker() {
     const root = proxyRootWindow();
     if (root !== window) {
@@ -104,6 +145,9 @@
   function apiUrl(path) { return new URL(String(path).replace(/^\//, ''), apiBase + '/').href; }
   function watchMembership() {
     if (['/admin.html', '/account.html', '/support.html'].includes(location.pathname)) return;
+    if (window.top !== window) {
+      try { if (window.top.location.origin === location.origin && window.top.TR_OS) return; } catch (_) {}
+    }
     let checking = false;
     setInterval(async function () {
       if (checking || document.visibilityState === 'hidden') return;
@@ -128,6 +172,7 @@
     cloudKeyOnServer: !!cfg.cloudKeyOnServer,
     cloudConfigured: cfg.cloudConfigured,
     ensureServiceWorker,
+    warmProxyServer,
     withTimeout,
     aiUrl: new URL(cfg.aiUrl || '/api/ai', apiBase + '/').href,
     apiUrl,
