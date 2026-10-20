@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
   <title>TR-os &middot; Admin</title>
-  <link rel="stylesheet" href="admin.css?v=20261020.2">
+  <link rel="stylesheet" href="admin.css?v=20261020.3">
   <script src="tr-os.config.js"></script>
   <script src="tr-os.runtime.js"></script>
   <script src="theme.js" defer></script>
@@ -64,45 +64,44 @@
           </article>
         </div>
         <section id="members" class="admin-section" aria-labelledby="members-title">
-          <div class="section-top"><div class="section-heading"><h2 id="members-title">Medlemmar <span id="member-count" class="count-badge">0</span></h2><p>Betalningar, abonnemangstid och tillåtna enheter.</p></div><button id="member-refresh" type="button">Uppdatera</button></div>
+          <div class="section-top"><div class="section-heading"><h2 id="members-title">Kunder <span id="member-count" class="count-badge">0</span></h2><p>Konton, åtkomsttid och tillåtna enheter. Ingen månadsprenumeration.</p></div><button id="member-refresh" type="button">Uppdatera</button></div>
           <p id="members-state" class="moderation-state" role="status" aria-live="polite"></p>
           <div id="member-stats" class="member-stats" aria-label="Medlemsöversikt"></div>
           <div class="member-admin-grid">
             <section class="member-admin-box" aria-labelledby="add-member-title">
-              <h3 id="add-member-title">Lägg till medlem</h3>
+              <h3 id="add-member-title">Skapa kundkonto</h3>
               <form id="add-member-form" class="member-admin-form">
                 <label>Förnamn<input name="firstName" maxlength="80" required></label>
                 <label>Efternamn<input name="lastName" maxlength="80" required></label>
                 <label>E-post<input name="email" type="email" maxlength="254" required></label>
                 <label>Startlösenord<input name="password" type="password" minlength="10" maxlength="128" required></label>
-                <button class="primary" type="submit">Skapa konto med 3 dagars provperiod</button>
+                <label>Åtkomst i dagar<input name="accessDays" type="number" min="0" max="3650" step="1" value="30" required></label>
+                <p class="member-form-hint">Åtkomsten börjar direkt när kontot skapas. Välj 0 dagar om du vill skapa kontot först och lägga till tid senare.</p>
+                <button class="primary" type="submit">Skapa kund med vald åtkomst</button>
               </form>
             </section>
-            <section class="member-admin-box" aria-labelledby="plans-title">
-              <h3 id="plans-title">Abonnemang och priser</h3>
-              <p>Ändra namn och pris för månad 1, 2 och 3 och framåt.</p>
-              <div id="plans-list" class="plans-list"></div>
-              <form id="add-plan-form" class="plan-form">
-                <h4>Nytt abonnemang</h4>
-                <label>Namn<input name="name" maxlength="80" required></label>
-                <div class="price-fields"><label>Månad 1, kr<input name="price1" type="number" min="0" max="100000" required></label><label>Månad 2, kr<input name="price2" type="number" min="0" max="100000" required></label><label>Månad 3+, kr<input name="price3" type="number" min="0" max="100000" required></label></div>
-                <button type="submit">Lägg till abonnemang</button>
-              </form>
-              <button id="save-plans" class="primary" type="button">Spara abonnemang</button>
+            <section class="member-admin-box access-info-box" aria-labelledby="access-info-title">
+              <h3 id="access-info-title">Så fungerar åtkomsten</h3>
+              <p>Du väljer själv hur många dagar varje kund får. Tiden räknas från när du skapar kontot.</p>
+              <ul>
+                <li>Kunden loggar in och ser återstående dagar och slutdatum.</li>
+                <li>Lägg till fler dagar eller timmar när du vill.</li>
+                <li>Ta bort ett konto för att stänga dess inloggning.</li>
+              </ul>
             </section>
           </div>
           <section class="member-admin-box grant-time-box" aria-labelledby="bulk-grant-time-title">
             <h3 id="bulk-grant-time-title">Ge extra tid till konton utan aktiv åtkomst</h3>
-            <p>Gäller alla aktiva, inte pausade konton vars provperiod och betalda tid har gått ut.</p>
+            <p>Gäller konton utan aktiv åtkomst.</p>
             <form id="bulk-grant-time-form" class="member-time-form">
               <label>Dagar<input name="days" type="number" min="0" max="3650" step="1" value="1" required></label>
               <label>Timmar<input name="hours" type="number" min="0" max="23" step="1" value="0" required></label>
               <button class="primary" type="submit">Lägg till tid till alla utan aktiv åtkomst</button>
             </form>
           </section>
-          <h3 class="members-subtitle">Swishbetalningar</h3>
+          <h3 class="members-subtitle">Tidigare betalningar</h3>
           <div id="payments-list" class="members-list"></div>
-          <h3 class="members-subtitle">Alla konton</h3>
+          <h3 class="members-subtitle">Alla kundkonton</h3>
           <div id="members-list" class="members-list"></div>
         </section>
         <section id="bans" class="admin-section" aria-labelledby="bans-title">
@@ -157,7 +156,7 @@
       </section>
     </main>
   </div>
-  <script src="admin.js?v=20261020.2" defer></script>
+  <script src="admin.js?v=20261020.3" defer></script>
   <script src="online.js" defer></script>
 </body>
 </html>

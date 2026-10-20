@@ -169,7 +169,7 @@ function createApp(options = {}) {
       try { account = await memberships.authenticate(req); }
       catch (error) { return json(res, error.status || 503, { error: error.message || 'Medlemskapet kunde inte kontrolleras.' }); }
       if (!account) return json(res, 401, { error: 'Logga in för att använda TR-os.', code: 'membership_login' });
-      if (!memberships.hasAccess(account.user)) return json(res, 402, { error: 'Abonnemanget har gått ut. Betala för att få åtkomst igen.', code: 'membership_expired' });
+      if (!memberships.hasAccess(account.user)) return json(res, 402, { error: 'Åtkomsttiden har gått ut. Kontakta administratören om du behöver mer tid.', code: 'membership_expired' });
     }
     if (route.startsWith('/api/membership/')) {
       if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
@@ -183,8 +183,10 @@ function createApp(options = {}) {
         const data = await body(req, 12000);
         const result = route.endsWith('/register') ? await memberships.register(data, req) : await memberships.login(data, req);
         appendCookie(res, memberships.sessionCookie(result.token, req, env));
-        const plans = await memberships.getPlans();
-        return json(res, route.endsWith('/register') ? 201 : 200, { user: memberships.publicUser(result.user, plans), deviceType: result.deviceType });
+        if (route.endsWith('/register')) {
+          notify(push.notifyAdmins('Nytt kundkonto', result.user.firstName + ' ' + result.user.lastName + ' skapade ett konto och väntar på åtkomsttid.', '/admin.html#members', 'member-register-' + result.user.id));
+        }
+        return json(res, route.endsWith('/register') ? 201 : 200, { user: memberships.publicUser(result.user), deviceType: result.deviceType });
       }
       if (route === '/api/membership/logout') {
         if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
@@ -192,20 +194,8 @@ function createApp(options = {}) {
         appendCookie(res, memberships.clearSessionCookie(req, env));
         return json(res, 200, { ok: true });
       }
-      if (route === '/api/membership/payments') {
-        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
-        const payment = await memberships.createPayment(req);
-        return json(res, 201, { payment, swishNumber: memberships.swishNumber });
-      }
-      const reportPaymentMatch = route.match(/^\/api\/membership\/payments\/([a-f0-9-]{36})\/report$/i);
-      if (reportPaymentMatch) {
-        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
-        const result = await memberships.markPaid(req, reportPaymentMatch[1], await body(req, 4000));
-        if (result.notified) {
-          const payment = result.payment;
-          notify(push.notifyAdmins('Swishbetalning att godkänna', 'Betalare: ' + payment.reportedFirstName + ' ' + payment.reportedLastName + '. Konto: ' + payment.firstName + ' ' + payment.lastName + '. ' + payment.amount + ' kr för ' + payment.durationDays + ' dagar. Referens: ' + payment.reference + '.', '/admin.html#payments-list', 'member-payment-report-' + payment.id));
-        }
-        return json(res, 200, { payment: result.payment });
+      if (route === '/api/membership/payments' || /^\/api\/membership\/payments\/[^/]+\/report$/.test(route)) {
+        return json(res, 410, { error: 'Månadsbetalningar har tagits bort. Kontakta administratören för att få åtkomsttid.' });
       }
       return json(res, 404, { error: 'Not found' });
     }
@@ -290,17 +280,15 @@ function createApp(options = {}) {
       if (!adminAuthorized(req, res)) return;
       if (!memberships.configured) return json(res, 503, { error: 'Medlemskap kräver en ansluten Redis-databas på servern.' });
       if (route.endsWith('/plans')) {
-        if (req.method === 'GET') return json(res, 200, { plans: await memberships.getPlans() });
-        if (req.method !== 'PUT') return json(res, 405, { error: 'Use GET or PUT' });
-        return json(res, 200, { plans: await memberships.updatePlans((await body(req, 20000)).plans) });
+        return json(res, 410, { error: 'Abonnemang har tagits bort. Åtkomsttid hanteras direkt på kundkontot.' });
       }
       if (req.method === 'GET') {
-        const [users, payments, plans] = await Promise.all([memberships.listUsers(), memberships.listPayments(), memberships.getPlans()]);
-        return json(res, 200, { users, payments, plans, swishNumber: memberships.swishNumber });
+        const [users, payments] = await Promise.all([memberships.listUsers(), memberships.listPayments()]);
+        return json(res, 200, { users, payments });
       }
       if (req.method !== 'POST') return json(res, 405, { error: 'Use GET or POST' });
       const created = await memberships.adminCreateUser(await body(req, 12000));
-      return json(res, 201, { user: memberships.publicUser(created, await memberships.getPlans()) });
+      return json(res, 201, { user: memberships.publicUser(created) });
     }
     const adminMemberMatch = route.match(/^\/api\/admin\/members\/([a-f0-9-]{36})(?:\/(reset-devices|add-time))?$/i);
     if (adminMemberMatch) {
@@ -315,6 +303,10 @@ function createApp(options = {}) {
         const data = await body(req, 4000);
         const result = await memberships.addTime(adminMemberMatch[1], data.days, data.hours);
         return json(res, 200, result);
+      }
+      if (req.method === 'DELETE') {
+        await memberships.deleteUser(adminMemberMatch[1]);
+        return json(res, 200, { ok: true });
       }
       if (req.method !== 'PATCH') return json(res, 405, { error: 'Use PATCH' });
       return json(res, 200, { user: await memberships.updateUser(adminMemberMatch[1], await body(req, 8000)) });

@@ -11,7 +11,7 @@
     const heading=document.createElement('strong');heading.textContent=title;
     const detail=document.createElement('span');detail.textContent=body;copy.append(heading,detail);
     const children=[icon,copy];
-    if(title.includes('Swish')){const action=document.createElement('a');action.className='notice-action';action.href='#payments-list';action.textContent='Granska';children.push(action);}
+    if(title.includes('Swish')||title.includes('kundkonto')){const action=document.createElement('a');action.className='notice-action';action.href=title.includes('Swish')?'#payments-list':'#members';action.textContent='Granska';children.push(action);}
     const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='notice-dismiss';dismiss.setAttribute('aria-label','Stäng notis');dismiss.textContent='×';
     dismiss.addEventListener('click',()=>notice.replaceChildren());children.push(dismiss);
     notice.classList.add('has-notice');notice.replaceChildren(...children);
@@ -237,7 +237,7 @@
     }catch(error){$('conversation-state').textContent=error.message;}
     finally{button.disabled=false;}
   });
-  let memberUsers=[],memberPayments=[],memberPlans=[],reportedPaymentIds=null;
+  let memberUsers=[],memberPayments=[],reportedPaymentIds=null,knownMemberIds=null;
   async function memberRequest(path,options={}){
     const response=await fetch(path,{cache:'no-store',...options,headers:{authorization,...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})},signal:AbortSignal.timeout(10000)});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Medlemsuppgifterna kunde inte sparas.');return data;
@@ -246,30 +246,13 @@
     const wrapper=document.createElement('label');wrapper.append(document.createTextNode(label));
     const input=document.createElement('input');input.type=type;input.name=name;if(value!==undefined&&value!==null)input.value=String(value);Object.assign(input,extra);wrapper.append(input);return wrapper;
   }
-  function renderPlans(){
-    const list=$('plans-list');
-    if(!memberPlans.length){list.textContent='Inga abonnemang.';return;}
-    list.replaceChildren(...memberPlans.map((plan,index)=>{
-      const row=document.createElement('fieldset');row.className='plan-editor';
-      const legend=document.createElement('legend');legend.textContent=plan.name;row.append(legend);
-      row.append(memberField('Namn','text',plan.name,'name',{maxLength:80,required:true}));
-      const prices=document.createElement('div');prices.className='price-fields';
-      ['Månad 1, kr','Månad 2, kr','Månad 3+, kr'].forEach((label,priceIndex)=>prices.append(memberField(label,'number',plan.prices[priceIndex],'price'+(priceIndex+1),{min:0,max:100000,required:true})));
-      row.append(prices);
-      row.querySelectorAll('input').forEach(input=>input.addEventListener('input',()=>{
-        if(input.name==='name'){memberPlans[index].name=input.value.trim();legend.textContent=input.value.trim()||'Nytt abonnemang';}
-        else{const priceIndex=Number(input.name.slice(-1))-1;memberPlans[index].prices[priceIndex]=Number(input.value);}
-      }));
-      return row;
-    }));
-  }
   function renderPayments(){
     const payments=memberPayments.slice(0,100);
     $('payments-list').replaceChildren(...(payments.length?payments.map(payment=>{
       const card=document.createElement('article');card.className='member-card payment-card';
       const detail=document.createElement('div');detail.className='member-card-details';
       const name=document.createElement('strong');name.textContent=payment.firstName+' '+payment.lastName;
-      const meta=document.createElement('span');meta.textContent=payment.email+' · '+payment.planName+' · '+payment.amount+' kr · '+payment.durationDays+' dagar';
+      const meta=document.createElement('span');meta.textContent=payment.email+' · '+payment.amount+' kr · '+payment.durationDays+' dagar';
       const status=document.createElement('span');
       status.textContent=payment.status==='paid'?'Betalning godkänd manuellt':payment.status==='pending'&&payment.paidRequested?'Anmäld · väntar på din kontroll':payment.status==='pending'?'Väntar på att medlemmen anmäler betalningen':'Betalning '+payment.status;
       const when=document.createElement('time');when.textContent=(payment.confirmedAt?'Godkänd ':payment.customerReportedPaidAt?'Anmäld ':'Skapad ')+new Date(payment.confirmedAt||payment.customerReportedPaidAt||payment.createdAt).toLocaleString('sv-SE');
@@ -309,18 +292,14 @@
       const title=document.createElement('strong');title.textContent=user.firstName+' '+user.lastName;
       const badge=document.createElement('span');badge.className='member-badge '+(user.active?'active':'expired');badge.textContent=user.active?'Aktiv · '+user.daysLeft+' d kvar':user.enabled?'Åtkomst utgången':'Pausad';
       const email=document.createElement('p');email.textContent=user.email;
-      const lastPayment=memberPayments.filter(payment=>payment.userId===user.id&&payment.status==='paid').sort((a,b)=>String(b.confirmedAt).localeCompare(String(a.confirmedAt)))[0];
-      const lastPaid=lastPayment?' · senast betald '+lastPayment.amount+' kr ('+new Date(lastPayment.confirmedAt).toLocaleDateString('sv-SE')+')':'';
-      const sub=document.createElement('p');sub.className='member-meta';sub.textContent=user.planName+' · '+user.paidMonths+' betalda månader'+lastPaid+' · till '+(user.accessUntilMs?new Date(user.accessUntilMs).toLocaleDateString('sv-SE'):'—')+' · dator '+(user.devices.computer?'upptagen':'ledig')+' · mobil '+(user.devices.mobile?'upptagen':'ledig');
+      const expiryLabel=user.accessUntilMs?new Date(user.accessUntilMs).toLocaleString('sv-SE'):'ingen sluttid';
+      const sub=document.createElement('p');sub.className='member-meta';sub.textContent=(user.active?'Åtkomst till ':'Slutade eller saknas · åtkomst till ')+expiryLabel+' · dator '+(user.devices.computer?'upptagen':'ledig')+' · mobil '+(user.devices.mobile?'upptagen':'ledig');
       heading.append(title,badge);card.append(heading,email,sub);
       const form=document.createElement('form');form.className='member-edit-form';
       form.append(memberField('Förnamn','text',user.firstName,'firstName',{maxLength:80,required:true}),memberField('Efternamn','text',user.lastName,'lastName',{maxLength:80,required:true}));
-      const planLabel=document.createElement('label');planLabel.textContent='Abonnemang';const planSelect=document.createElement('select');planSelect.name='planId';
-      for(const plan of memberPlans){const option=document.createElement('option');option.value=plan.id;option.textContent=plan.name;option.selected=plan.id===user.planId;planSelect.append(option);}planLabel.append(planSelect);form.append(planLabel);
-      const expiry=user.paidUntilMs?new Date(user.paidUntilMs):null;
+      const expiry=user.accessUntilMs?new Date(user.accessUntilMs):null;
       const dateValue=expiry?expiry.getFullYear()+'-'+String(expiry.getMonth()+1).padStart(2,'0')+'-'+String(expiry.getDate()).padStart(2,'0'):'';
-      form.append(memberField('Betald till','date',dateValue,'paidUntil'));
-      form.append(memberField('Betalda månader','number',user.paidMonths,'paidMonths',{min:0,max:10000,step:1}));
+      form.append(memberField('Åtkomst till','date',dateValue,'accessUntil'));
       form.append(memberField('Nytt lösenord (valfritt)','password','','newPassword',{minLength:10,maxLength:128,autocomplete:'new-password'}));
       const enabledLabel=document.createElement('label');enabledLabel.className='member-enabled';const enabled=document.createElement('input');enabled.type='checkbox';enabled.name='enabled';enabled.checked=user.enabled;enabledLabel.append(enabled,document.createTextNode(' Konto aktivt'));form.append(enabledLabel);
       const actions=document.createElement('div');actions.className='member-actions';
@@ -330,11 +309,17 @@
         try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id)+'/reset-devices',{method:'POST',body:'{}'});$('members-state').textContent='Enhetsinloggningarna återställdes för '+user.firstName+' '+user.lastName+'.';await refreshMembership();}
         catch(error){$('members-state').textContent=error.message;reset.disabled=false;reset.textContent='Försök igen';}
       });
-      actions.append(save,reset);form.append(actions);
+      const remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='Ta bort konto';remove.addEventListener('click',async()=>{
+        if(!window.confirm('Ta bort kontot för '+user.firstName+' '+user.lastName+'? Kunden kan inte logga in efteråt och kontots betalningshistorik tas bort.'))return;
+        remove.disabled=true;remove.textContent='Tar bort…';
+        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'DELETE'});$('members-state').textContent='Kontot för '+user.firstName+' '+user.lastName+' togs bort.';await refreshMembership();}
+        catch(error){$('members-state').textContent=error.message;remove.disabled=false;remove.textContent='Försök igen';}
+      });
+      actions.append(save,reset,remove);form.append(actions);
       form.addEventListener('submit',async event=>{
         event.preventDefault();save.disabled=true;save.textContent='Sparar…';
-        const date=form.elements.paidUntil.value;
-        const changes={firstName:form.elements.firstName.value,lastName:form.elements.lastName.value,planId:form.elements.planId.value,paidUntilMs:date?Date.parse(date+'T23:59:59.999'):0,paidMonths:Number(form.elements.paidMonths.value),enabled:form.elements.enabled.checked};
+        const date=form.elements.accessUntil.value;
+        const changes={firstName:form.elements.firstName.value,lastName:form.elements.lastName.value,paidUntilMs:date?Date.parse(date+'T23:59:59.999'):0,enabled:form.elements.enabled.checked};
         if(form.elements.newPassword.value)changes.password=form.elements.newPassword.value;
         try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'PATCH',body:JSON.stringify(changes)});$('members-state').textContent='Medlemsuppgifterna sparades.';await refreshMembership();}
         catch(error){$('members-state').textContent=error.message;save.disabled=false;save.textContent='Försök igen';}
@@ -354,12 +339,15 @@
     const generation=authGeneration;
     try{
       const data=await memberRequest('/api/admin/members');if(generation!==authGeneration||!authorization)return;
-      memberUsers=Array.isArray(data.users)?data.users:[];memberPayments=Array.isArray(data.payments)?data.payments:[];memberPlans=Array.isArray(data.plans)?data.plans:[];
+      memberUsers=Array.isArray(data.users)?data.users:[];memberPayments=Array.isArray(data.payments)?data.payments:[];
+      const currentMemberIds=new Set(memberUsers.map(user=>user.id));
+      if(knownMemberIds)for(const user of memberUsers)if(!knownMemberIds.has(user.id))notifyAdmin('Nytt kundkonto',user.firstName+' '+user.lastName+' · '+user.email+' · tilldela åtkomsttid.');
+      knownMemberIds=currentMemberIds;
       const current=new Set(memberPayments.filter(payment=>payment.status==='pending'&&payment.paidRequested).map(payment=>payment.id));
       if(reportedPaymentIds)for(const id of current)if(!reportedPaymentIds.has(id)){const payment=memberPayments.find(item=>item.id===id);if(payment)notifyAdmin('Swishbetalning att godkänna','Betalare: '+[payment.reportedFirstName,payment.reportedLastName].filter(Boolean).join(' ')+' · Konto: '+payment.firstName+' '+payment.lastName+' · '+payment.amount+' kr för '+payment.durationDays+' dagar · ref '+payment.reference);}
       reportedPaymentIds=current;
-      renderMemberStats();renderPlans();renderPayments();renderMembers();
-      $('members-state').textContent=memberUsers.length+' konton · Swish '+data.swishNumber+' · betalningar godkänns manuellt.';
+      renderMemberStats();renderPayments();renderMembers();
+      $('members-state').textContent=memberUsers.length+' kundkonton · du styr åtkomsttiden direkt.';
     }catch(error){if(generation===authGeneration&&authorization)$('members-state').textContent=error.message;}
   }
   $('member-refresh').addEventListener('click',refreshMembership);
@@ -374,21 +362,10 @@
   });
   $('add-member-form').addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;button.textContent='Skapar…';
-    try{const data=Object.fromEntries(new FormData(form));await memberRequest('/api/admin/members',{method:'POST',body:JSON.stringify(data)});form.reset();$('members-state').textContent='Medlemskontot skapades med 3 dagars provperiod.';await refreshMembership();}
+    const accessDays=Number(form.elements.accessDays.value);
+    try{const data=Object.fromEntries(new FormData(form));const result=await memberRequest('/api/admin/members',{method:'POST',body:JSON.stringify(data)});if(knownMemberIds)knownMemberIds.add(result.user.id);form.reset();$('members-state').textContent='Kundkontot skapades med '+accessDays+' dagars åtkomst.';await refreshMembership();}
     catch(error){$('members-state').textContent=error.message;}
-    finally{button.disabled=false;button.textContent='Skapa konto med 3 dagars provperiod';}
-  });
-  $('add-plan-form').addEventListener('submit',event=>{
-    event.preventDefault();const form=event.currentTarget,data=Object.fromEntries(new FormData(form));
-    let base=data.name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);if(base.length<2)base='plan';
-    let id=base,n=2;while(memberPlans.some(plan=>plan.id===id))id=base+'-'+n++;
-    memberPlans.push({id,name:data.name.trim(),prices:[Number(data.price1),Number(data.price2),Number(data.price3)],durationDays:30});form.reset();renderPlans();
-  });
-  $('save-plans').addEventListener('click',async event=>{
-    const button=event.currentTarget;button.disabled=true;button.textContent='Sparar…';
-    try{const data=await memberRequest('/api/admin/members/plans',{method:'PUT',body:JSON.stringify({plans:memberPlans})});memberPlans=data.plans;renderPlans();$('members-state').textContent='Abonnemangen sparades.';await refreshMembership();}
-    catch(error){$('members-state').textContent=error.message;}
-    finally{button.disabled=false;button.textContent='Spara abonnemang';}
+    finally{button.disabled=false;button.textContent='Skapa kund med vald åtkomst';}
   });
   async function refresh() {
     if (pending) return;

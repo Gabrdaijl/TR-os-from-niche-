@@ -4,13 +4,10 @@ const crypto = require('node:crypto');
 
 const SESSION_COOKIE = 'tros-session';
 const PREFIX = 'tros:membership:v1:';
-const PLANS_KEY = PREFIX + 'plans';
 const USERS_KEY = PREFIX + 'users';
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TRIAL_DAYS = 3;
 const SESSION_SECONDS = 365 * 24 * 60 * 60;
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{32,64}$/;
-const DEFAULT_PLANS = [{ id: 'standard', name: 'Månadsmedlem', prices: [40, 35, 30], durationDays: 30 }];
 
 function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 function hash(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
@@ -43,7 +40,7 @@ function requestedDeviceId(value) {
 function deviceType(req) {
   return /android|iphone|ipad|ipod|mobile/i.test(String(req.headers['user-agent'] || '')) ? 'mobile' : 'computer';
 }
-function accessUntil(user) { return Math.max(Number(user?.paidUntilMs) || 0, Number(user?.trialUntilMs) || 0); }
+function accessUntil(user) { return Number(user?.paidUntilMs) || 0; }
 function hasAccess(user, now = Date.now()) { return !!user && user.enabled !== false && accessUntil(user) > now; }
 function grantDuration(daysValue, hoursValue) {
   const days = Number(daysValue);
@@ -53,19 +50,12 @@ function grantDuration(daysValue, hoursValue) {
   }
   return { days, hours, durationMs: (days * 24 + hours) * 60 * 60 * 1000 };
 }
-function planRecord(plan) {
-  return plan && typeof plan.id === 'string' && typeof plan.name === 'string'
-    ? { id: plan.id, name: plan.name, prices: Array.isArray(plan.prices) ? plan.prices : [40, 35, 30], durationDays: Number(plan.durationDays) || 30 }
-    : null;
-}
-function publicUser(user, plans, now = Date.now()) {
-  const plan = plans.find(item => item.id === user.planId) || plans[0] || DEFAULT_PLANS[0];
+function publicUser(user, now = Date.now()) {
   const until = accessUntil(user);
   return {
     id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName,
-    planId: plan.id, planName: plan.name, trialUntilMs: Number(user.trialUntilMs) || 0,
     paidUntilMs: Number(user.paidUntilMs) || 0, accessUntilMs: until,
-    paidMonths: Number(user.paidMonths) || 0, active: hasAccess(user, now),
+    active: hasAccess(user, now),
     daysLeft: Math.max(0, Math.ceil((until - now) / DAY_MS)),
     enabled: user.enabled !== false,
     devices: { computer: !!user.devices?.computer, mobile: !!user.devices?.mobile },
@@ -79,7 +69,6 @@ function publicPayment(payment) {
 }
 
 function createMemberships(env = process.env, request = fetch) {
-  const swishNumber = String(env.SWISH_NUMBER || '0739579244').replace(/\s+/g, '');
   const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   let endpoint = null;
@@ -119,17 +108,7 @@ function createMemberships(env = process.env, request = fetch) {
     const value = await command(['GET', keyUser(id)]);
     return safeJson(value);
   }
-  async function getPlans() {
-    let value = await command(['GET', PLANS_KEY]);
-    if (!value) {
-      await command(['SET', PLANS_KEY, JSON.stringify(DEFAULT_PLANS), 'NX']);
-      value = await command(['GET', PLANS_KEY]);
-    }
-    const parsed = safeJson(value);
-    if (!Array.isArray(parsed) || !parsed.length) fail(503, 'Abonnemangen kunde inte läsas från databasen.');
-    return parsed.map(planRecord).filter(Boolean);
-  }
-  async function createUser(data) {
+  async function createUser(data, accessDays = 0) {
     const email = normalizeEmail(data.email);
     const firstName = typeof data.firstName === 'string' ? data.firstName.trim() : '';
     const lastName = typeof data.lastName === 'string' ? data.lastName.trim() : '';
@@ -137,15 +116,14 @@ function createMemberships(env = process.env, request = fetch) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) fail(400, 'Skriv en giltig e-postadress.');
     if (!firstName || firstName.length > 80 || !lastName || lastName.length > 80) fail(400, 'För- och efternamn krävs.');
     if (password.length < 10 || password.length > 128) fail(400, 'Lösenordet ska vara mellan 10 och 128 tecken.');
-    const plans = await getPlans();
-    const plan = plans.find(item => item.id === data.planId) || plans[0];
+    if (!Number.isInteger(accessDays) || accessDays < 0 || accessDays > 3650) fail(400, 'Åtkomsttiden ska vara mellan 0 och 3650 dagar.');
     const now = Date.now();
     const salt = crypto.randomBytes(16).toString('hex');
     const user = {
       id: crypto.randomUUID(), email, firstName, lastName,
       passwordSalt: salt, passwordHash: crypto.scryptSync(password, salt, 64).toString('hex'),
-      planId: plan.id, createdAt: new Date(now).toISOString(), trialUntilMs: now + TRIAL_DAYS * DAY_MS,
-      paidUntilMs: 0, paidMonths: 0, enabled: true, devices: { computer: null, mobile: null }
+      createdAt: new Date(now).toISOString(),
+      paidUntilMs: accessDays ? now + accessDays * DAY_MS : 0, enabled: true, devices: { computer: null, mobile: null }
     };
     const script = `if redis.call('EXISTS',KEYS[1])==1 then return 0 end
 redis.call('SET',KEYS[1],ARGV[1])
@@ -164,7 +142,7 @@ return 1`;
     const supplied = crypto.scryptSync(password, user.passwordSalt, 64);
     if (!crypto.timingSafeEqual(supplied, Buffer.from(user.passwordHash, 'hex'))) fail(401, 'Fel e-postadress eller lösenord.');
     if (!hasAccess(user)) {
-      // Expired members may still sign in to request the next Swish payment.
+      // Customers without assigned time may still sign in to view their account status.
       if (user.enabled === false) fail(403, 'Kontot är pausat. Be administratören om hjälp.');
     }
     return user;
@@ -232,90 +210,10 @@ return 1`;
   }
   async function summary(req) {
     const account = await getSession(req);
-    if (!account) return { user: null, active: false, swishNumber, plans: await getPlans() };
-    const plans = await getPlans();
-    const user = publicUser(account.user, plans);
-    const plan = plans.find(item => item.id === user.planId) || plans[0];
-    const amount = plan.prices[Math.min(user.paidMonths, 2)];
-    const pendingId = await command(['GET', keyPending(account.user.id)]);
-    const latestId = pendingId || await command(['GET', keyLatestPayment(account.user.id)]);
-    const payment = latestId ? safeJson(await command(['GET', keyPayment(latestId)])) : null;
-    return {
-      user, active: user.active, nextPrice: amount, durationDays: plan.durationDays,
-      swishNumber, plans,
-      pendingPayment: payment && payment.status === 'pending' ? publicPayment(payment) : null,
-      latestPayment: payment?.status === 'paid' ? publicPayment(payment) : null
-    };
+    if (!account) return { user: null, active: false };
+    const user = publicUser(account.user);
+    return { user, active: user.active };
   }
-  async function createManualPayment(req) {
-    const account = await getSession(req);
-    if (!account) fail(401, 'Logga in för att beställa en betalning.');
-    const user = account.user;
-    if (user.enabled === false) fail(403, 'Kontot är pausat.');
-    const plans = await getPlans();
-    const plan = plans.find(item => item.id === user.planId) || plans[0];
-    const id = crypto.randomUUID();
-    const payment = {
-      id, userId: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email,
-      planId: plan.id, planName: plan.name, amount: plan.prices[Math.min(user.paidMonths, 2)],
-      durationDays: plan.durationDays, cycle: (Number(user.paidMonths) || 0) + 1,
-      reference: 'TR' + crypto.randomBytes(4).toString('hex').toUpperCase(),
-      status: 'pending', paidRequested: false, createdAt: new Date().toISOString()
-    };
-    const script = `local existing=redis.call('GET',KEYS[3])
-if existing then
- local current=redis.call('GET',ARGV[2]..existing)
- if current then
-  local payment=cjson.decode(current)
-  if payment.status=='pending' then return 'existing:'..existing end
- end
- redis.call('DEL',KEYS[3])
-end
-redis.call('SET',KEYS[1],ARGV[1])
-redis.call('SADD',KEYS[2],ARGV[3])
-redis.call('SET',KEYS[3],ARGV[3])
-redis.call('SET',KEYS[4],ARGV[3])
-return 'new:'..ARGV[3]`;
-    const result = String(await command(['EVAL', script, 4, keyPayment(id), PREFIX + 'payments', keyPending(user.id), keyLatestPayment(user.id), JSON.stringify(payment), PREFIX + 'payment:', id]) || '');
-    if (result.startsWith('existing:')) {
-      const existing = safeJson(await command(['GET', keyPayment(result.slice('existing:'.length))]));
-      if (existing?.status === 'pending') return publicPayment(existing);
-    }
-    if (result !== 'new:' + id) fail(503, 'Betalningsuppgifterna kunde inte sparas. Försök igen.');
-    return publicPayment(payment);
-  }
-
-  async function markPaid(req, id, data) {
-    const account = await getSession(req);
-    if (!account) fail(401, 'Logga in för att anmäla betalningen.');
-    const firstName = typeof data.firstName === 'string' ? data.firstName.trim() : '';
-    const lastName = typeof data.lastName === 'string' ? data.lastName.trim() : '';
-    const reference = typeof data.reference === 'string' ? data.reference.trim().toUpperCase() : '';
-    if (!firstName || firstName.length > 80 || !lastName || lastName.length > 80) fail(400, 'Skriv både ditt förnamn och efternamn.');
-    if (!/^[A-Z0-9]{4,20}$/.test(reference)) fail(400, 'Betalningsreferensen är ogiltig.');
-    const payment = safeJson(await command(['GET', keyPayment(id)]));
-    if (!payment || payment.userId !== account.user.id) fail(404, 'Betalningen hittades inte.');
-    const script = `local raw=redis.call('GET',KEYS[1])
-if not raw then return 'missing' end
-local payment=cjson.decode(raw)
-if payment.userId~=ARGV[1] or payment.reference~=ARGV[2] then return 'mismatch' end
-if payment.status~='pending' then return 'closed' end
-if payment.paidRequested==true then return cjson.encode({payment=payment,notified=false}) end
-payment.paidRequested=true
-payment.reportedFirstName=ARGV[3]
-payment.reportedLastName=ARGV[4]
-payment.customerReportedPaidAt=ARGV[5]
-redis.call('SET',KEYS[1],cjson.encode(payment))
-return cjson.encode({payment=payment,notified=true})`;
-    const raw = await command(['EVAL', script, 1, keyPayment(id), account.user.id, reference, firstName, lastName, new Date().toISOString()]);
-    const result = typeof raw === 'string' && raw.startsWith('{') ? safeJson(raw) : null;
-    if (!result) {
-      const messages = { missing: 'Betalningen hittades inte.', mismatch: 'Referensen stämmer inte med betalningen.', closed: 'Betalningen är redan avslutad.' };
-      fail(raw === 'missing' ? 404 : 409, messages[raw] || 'Betalningen kunde inte anmälas.');
-    }
-    return result;
-  }
-
   async function confirmPayment(id) {
     const storedPayment = safeJson(await command(['GET', keyPayment(id)]));
     if (!storedPayment) fail(404, 'Betalningen hittades inte.');
@@ -330,10 +228,9 @@ if not rawu then return 'missinguser' end
 local user=cjson.decode(rawu)
 if user.enabled==false then return 'disabled' end
 local now=tonumber(ARGV[1])
-local base=math.max(now,tonumber(user.paidUntilMs) or 0,tonumber(user.trialUntilMs) or 0)
+local base=math.max(now,tonumber(user.paidUntilMs) or 0)
 local days=tonumber(payment.durationDays) or 30
 user.paidUntilMs=base+days*86400000
-user.paidMonths=(tonumber(user.paidMonths) or 0)+1
 payment.status='paid'
 payment.confirmedAt=ARGV[2]
 payment.confirmedManually=true
@@ -356,14 +253,14 @@ return cjson.encode({payment=payment,user=user})`;
     const script = `local raw=redis.call('GET',KEYS[1])
 if not raw then return 'missing' end
 local user=cjson.decode(raw)
-local base=math.max(tonumber(ARGV[1]),tonumber(user.paidUntilMs) or 0,tonumber(user.trialUntilMs) or 0)
+local base=math.max(tonumber(ARGV[1]),tonumber(user.paidUntilMs) or 0)
 user.paidUntilMs=base+tonumber(ARGV[2])
 redis.call('SET',KEYS[1],cjson.encode(user))
 return cjson.encode(user)`;
     const raw = await command(['EVAL', script, 1, keyUser(id), now, durationMs]);
     const user = typeof raw === 'string' ? safeJson(raw) : null;
     if (!user) fail(raw === 'missing' ? 404 : 503, raw === 'missing' ? 'Medlemmen hittades inte.' : 'Tiden kunde inte läggas till.');
-    return { user: publicUser(user, await getPlans()), days, hours };
+    return { user: publicUser(user), days, hours };
   }
 
   async function addTimeToExpiredUsers(daysValue, hoursValue) {
@@ -377,8 +274,7 @@ for _,id in ipairs(ids) do
  if raw then
   local user=cjson.decode(raw)
   local paid=tonumber(user.paidUntilMs) or 0
-  local trial=tonumber(user.trialUntilMs) or 0
-  if user.enabled~=false and math.max(paid,trial)<=tonumber(ARGV[2]) then
+  if user.enabled~=false and paid<=tonumber(ARGV[2]) then
    user.paidUntilMs=tonumber(ARGV[2])+tonumber(ARGV[3])
    redis.call('SET',key,cjson.encode(user))
    updated=updated+1
@@ -406,8 +302,35 @@ for _,id in ipairs(ids) do local v=redis.call('GET',ARGV[1]..id); if v then tabl
 return out`;
     const values = await command(['EVAL', script, 1, USERS_KEY, PREFIX + 'user:']);
     if (!Array.isArray(values)) fail(503, 'Medlemslistan kunde inte läsas.');
-    const plans = await getPlans();
-    return values.map(safeJson).filter(Boolean).map(user => publicUser(user, plans));
+    return values.map(safeJson).filter(Boolean).map(user => publicUser(user));
+  }
+  async function deleteUser(id) {
+    const user = await getUser(id);
+    if (!user) fail(404, 'Kundkontot hittades inte.');
+    const script = `local raw=redis.call('GET',KEYS[1])
+if not raw then return 0 end
+local user=cjson.decode(raw)
+for _,kind in ipairs({'computer','mobile'}) do
+ local slot=user.devices and user.devices[kind]
+ if slot and slot~=cjson.null and slot.sessionHash then redis.call('DEL',ARGV[1]..slot.sessionHash) end
+end
+local paymentIds=redis.call('SMEMBERS',KEYS[4])
+for _,paymentId in ipairs(paymentIds) do
+ local paymentKey=ARGV[2]..paymentId
+ local paymentRaw=redis.call('GET',paymentKey)
+ if paymentRaw then
+  local payment=cjson.decode(paymentRaw)
+  if payment.userId==ARGV[3] then redis.call('DEL',paymentKey); redis.call('SREM',KEYS[4],paymentId) end
+ end
+end
+redis.call('DEL',KEYS[1],KEYS[3],KEYS[5],KEYS[6])
+redis.call('SREM',KEYS[2],ARGV[3])
+return 1`;
+    const removed = await command(['EVAL', script, 6,
+      keyUser(id), USERS_KEY, keyEmail(user.email), PREFIX + 'payments', keyPending(id), keyLatestPayment(id),
+      PREFIX + 'session:', PREFIX + 'payment:', id]);
+    if (Number(removed) !== 1) fail(404, 'Kundkontot hittades inte.');
+    return true;
   }
   async function updateUser(id, changes) {
     const user = await getUser(id);
@@ -418,14 +341,8 @@ return out`;
     if (typeof changes.lastName === 'string') {
       const value = changes.lastName.trim(); if (!value || value.length > 80) fail(400, 'Ogiltigt efternamn.'); user.lastName = value;
     }
-    if (changes.planId !== undefined) {
-      const plan = (await getPlans()).find(item => item.id === changes.planId); if (!plan) fail(400, 'Välj ett abonnemang som finns.'); user.planId = plan.id;
-    }
     if (changes.paidUntilMs !== undefined) {
       const value = Number(changes.paidUntilMs); if (!Number.isFinite(value) || value < 0 || value > 4102444800000) fail(400, 'Ogiltigt slutdatum.'); user.paidUntilMs = value;
-    }
-    if (changes.paidMonths !== undefined) {
-      const value = Number(changes.paidMonths); if (!Number.isInteger(value) || value < 0 || value > 10000) fail(400, 'Ogiltigt antal betalda månader.'); user.paidMonths = value;
     }
     if (changes.enabled !== undefined) user.enabled = changes.enabled === true;
     let resetSessions = false;
@@ -437,7 +354,7 @@ return out`;
     }
     await command(['SET', keyUser(id), JSON.stringify(user)]);
     if (resetSessions) await resetDevices(id);
-    return publicUser(user, await getPlans());
+    return publicUser(user);
   }
   async function resetDevices(id) {
     // Delete sessions before clearing their hashes from the user's device slots.
@@ -454,43 +371,27 @@ return 1`;
     await command(['EVAL', cleanScript, 1, keyUser(id)]);
     return true;
   }
-  async function updatePlans(value) {
-    if (!Array.isArray(value) || !value.length || value.length > 20) fail(400, 'Det måste finnas mellan 1 och 20 abonnemang.');
-    const ids = new Set();
-    const plans = value.map(item => {
-      const id = typeof item?.id === 'string' ? item.id.trim().toLowerCase() : '';
-      const name = typeof item?.name === 'string' ? item.name.trim() : '';
-      const prices = Array.isArray(item?.prices) ? item.prices.map(Number) : [];
-      const durationDays = Number(item?.durationDays);
-      if (!/^[a-z0-9_-]{2,40}$/.test(id) || ids.has(id)) fail(400, 'Abonnemangen måste ha unika ID:n med bokstäver eller siffror.');
-      if (!name || name.length > 80 || prices.length !== 3 || prices.some(price => !Number.isInteger(price) || price < 0 || price > 100000)) fail(400, 'Ange namn och tre giltiga månadspriser för varje abonnemang.');
-      if (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 365) fail(400, 'Månadsperioden ska vara mellan 1 och 365 dagar.');
-      ids.add(id); return { id, name, prices, durationDays };
-    });
-    await command(['SET', PLANS_KEY, JSON.stringify(plans)]);
-    return plans;
+  async function adminCreateUser(data) {
+    const days = Number(data.accessDays);
+    if (!Number.isInteger(days) || days < 0 || days > 3650) fail(400, 'Ange åtkomst mellan 0 och 3650 dagar.');
+    return createUser(data, days);
   }
-  async function adminCreateUser(data) { return createUser(data); }
 
   return Object.freeze({
     configured: !!endpoint,
-    swishNumber,
     authenticate: getSession,
     register,
     login,
     logout,
     summary,
-    createPayment: createManualPayment,
-    markPaid,
     confirmPayment,
     addTime,
     addTimeToExpiredUsers,
     listPayments,
     listUsers,
+    deleteUser,
     updateUser,
     resetDevices,
-    updatePlans,
-    getPlans,
     adminCreateUser,
     hasAccess,
     accessUntil,
@@ -501,4 +402,4 @@ return 1`;
   });
 }
 
-module.exports = { createMemberships, SESSION_COOKIE, TRIAL_DAYS, DEFAULT_PLANS };
+module.exports = { createMemberships, SESSION_COOKIE };

@@ -66,15 +66,13 @@ Tryck **Aktivera push** i adminpanelen på varje enhet som ska få notiser. På 
 
 En extern GitHub Actions-kontroll kör var femte minut. Vid driftstopp öppnar den ett issue i GitHub och stänger det när TR-os svarar igen. Det kräver att GitHub Actions är aktiverat. Mobilaviseringar för detta driftlarm styrs av GitHubs egna repo- och appnotisinställningar; en server som ligger nere kan inte skicka sina egna pushnotiser.
 
-## Medlemskap och Swish
+## Konton och åtkomst
 
-TR-os kräver ett konto för hemsidans sidor och API. Nya konton får tre dagars provperiod. Standardabonnemanget kostar 40 kr den första betalda månaden, 35 kr den andra och 30 kr per månad från den tredje månaden. Varje betalning ger 30 dagars åtkomst. Kontot kan vara inloggat på en dator och en mobil. `/account.html` används för att skapa konto, logga in och förnya.
+TR-os kräver ett konto för hemsidans sidor och API. Kunden kan skapa ett konto eller få ett av administratören. Nya konton får ingen automatisk provperiod. Administratören bestämmer åtkomsttiden i dagar och kan lägga till fler dagar eller timmar när som helst. Ingen månadsprenumeration startas. På `/account.html` ser kunden återstående dagar, slutdatum och vilka enheter som används.
 
-Medlemmen får ett belopp och en unik referens att skriva som Swishmeddelande. När betalningen har skickats fyller medlemmen i betalarens för- och efternamn och anmäler den. Admin jämför anmälan med Swish och godkänner den manuellt; först då förlängs medlemskapet. Admin får en notis när en betalning anmäls och kan se betalaren, kontonamnet, beloppet, referensen och betalningshistoriken.
+I adminpanelen kan du skapa ett kundkonto med valfritt antal åtkomstdagar, ändra namn och slutdatum, återställa enhetsinloggningar, pausa eller ta bort kontot samt lägga till tid till en eller flera kunder. När du tar bort ett konto raderas kundens inloggning och betalningshistorik. Äldre betalningsanmälningar finns kvar i adminhistoriken; nya månadsbetalningar är avstängda. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
 
-I adminpanelen kan du ändra abonnemangsnamn och priser, skapa medlemskonton, ändra namn och slutdatum, pausa konton, byta lösenord och återställa enhetsinloggningar. Du kan lägga till dagar och timmar på en medlem eller ge extra tid till alla aktiva konton vars åtkomst gått ut. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
-
-`SWISH_NUMBER` är numret som visas för betalningen och kan ändras i värdens miljövariabler. Det är förifyllt med numret som administratören har angett. Medlemskonton och betalningar sparas i den konfigurerade Upstash Redis-databasen. Lägg in `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` bland värdens hemliga miljövariabler. Lösenord lagras som scrypt-hashar; sessionscookies är HttpOnly.
+Konton kan vara inloggade på en dator och en mobil. Medlemsdata sparas i Upstash Redis. Ange `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` som miljövariabler på servern. Utan dessa är medlems-API:t avstängt. Lösenord lagras som scrypt-hashar och sessionscookies är HttpOnly.
 
 ## Gemensam besöksräkning
 
