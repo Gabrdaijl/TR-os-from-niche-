@@ -137,7 +137,7 @@ async function initScramjet() {
   const client = new ScramjetController({
     files: {
       wasm: window.TR_OS.assetUrl("scram/scramjet.wasm.wasm"),
-      all: window.TR_OS.assetUrl("scram/scramjet.all.js?v=20261021.4"),
+      all: window.TR_OS.assetUrl("scram/scramjet.all.js?v=20261021.5"),
       sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
     },
   });

@@ -2,9 +2,9 @@
 
 (() => {
   const apps = {
-    home: { title: 'Home', src: '/n1browser27d.html?v=20261020.5' },
+    home: { title: 'Home', src: '/n1browser27d.html?v=20261021.5' },
     games: { title: 'Games', src: '/n1chetesting2.html' },
-    movies: { title: 'Movies', src: '/nm.html' },
+    movies: { title: 'Movies', src: '/nm.html?v=20261021.5' },
     ai: { title: 'AI', src: '/nai.html' },
     snapchat: { title: 'Snapchat', src: '/snapchat.html?v=20261020.1' },
     cheats: { title: 'Cheats', src: '/join' },

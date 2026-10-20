@@ -189,7 +189,7 @@
           return bounded;
         };
         await loadScript(window.TR_OS.assetUrl('baremux/index.js'));
-        await loadScript(window.TR_OS.assetUrl('scram/scramjet.all.js?v=20261021.4'));
+        await loadScript(window.TR_OS.assetUrl('scram/scramjet.all.js?v=20261021.5'));
         await withTimeout(import(window.TR_OS.assetUrl('epoxy/index.mjs')), 20000, 'Webbproxyns anslutning kunde inte laddas.');
         await withTimeout(window.TR_OS.ensureServiceWorker(), 20000, 'Webbproxyns service worker kunde inte starta.');
 
@@ -200,7 +200,7 @@
             const client = new ScramjetController({
               files: {
                 wasm: window.TR_OS.assetUrl('scram/scramjet.wasm.wasm'),
-                all: window.TR_OS.assetUrl('scram/scramjet.all.js?v=20261021.4'),
+                all: window.TR_OS.assetUrl('scram/scramjet.all.js?v=20261021.5'),
                 sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
               },
             });

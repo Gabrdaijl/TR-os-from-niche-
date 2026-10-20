@@ -26,16 +26,18 @@ test('phone-sized desktop visits route to mobile view with a desktop escape hatc
 test('mobile shell keeps core apps and omits Snapchat from mobile navigation', () => {
   const page = read('mobile.html');
   const controller = read('mobile.js');
-  assert.match(page, /id="mobile-frame"[^>]+src="\/n1browser27d\.html"/);
+  assert.match(page, /id="mobile-frame"[^>]+src="\/n1browser27d\.html(?:\?v=[^"]+)?"/);
   for (const app of ['home', 'games', 'movies', 'ai']) {
     assert.match(page, new RegExp(`data-page="${app}"`));
     assert.match(controller, new RegExp(`${app}: \\{ title:`));
   }
   assert.match(controller, /src: '\/n1chetesting2\.html'/);
-  assert.match(controller, /src: '\/nm\.html'/);
+  assert.match(controller, /src: '\/nm\.html(?:\?v=[^']+)?'/);
   assert.match(controller, /src: '\/nai\.html'/);
-  assert.doesNotMatch(page, /Snapchat|snapchat/i);
-  assert.doesNotMatch(controller, /snapchat/i);
+  const bottomNav = page.match(/<nav class="bottom-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.doesNotMatch(bottomNav, /Snapchat|snapchat/i);
+  assert.match(page, /data-page="snapchat"/i);
+  assert.match(controller, /snapchat: \{ title: 'Snapchat'/i);
   assert.doesNotMatch(page, /href="https?:\/\/(?:www\.)?snapchat\.com/);
 });
 
@@ -49,7 +51,7 @@ test('mobile shell follows the saved app theme and expands Movies player to full
   assert.match(controller, /trosThemeName/);
   assert.match(shell, /--bar-active/);
   assert.match(shell, /movie-player-open/);
-  assert.match(read('nm.html'), /src="nm\.js\?v=20261019\.3"/);
+  assert.match(read('nm.html'), /src="nm\.js\?v=20261021\.5"/);
   assert.match(movies, /trosMobilePlayer: open \? 'open' : 'close'/);
   assert.match(movies, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(themeEngine, /#tros-player-bar \{ background: linear-gradient\(180deg,\$\{CARD_BG\}/);

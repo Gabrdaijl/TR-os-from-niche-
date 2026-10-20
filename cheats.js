@@ -12,7 +12,7 @@
     if (!proxy) proxy = (async () => {
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({ files: {
-        wasm: TR_OS.assetUrl('scram/scramjet.wasm.wasm'), all: TR_OS.assetUrl('scram/scramjet.all.js?v=20261021.4'), sync: TR_OS.assetUrl('scram/scramjet.sync.js')
+        wasm: TR_OS.assetUrl('scram/scramjet.wasm.wasm'), all: TR_OS.assetUrl('scram/scramjet.all.js?v=20261021.5'), sync: TR_OS.assetUrl('scram/scramjet.sync.js')
       } });
       await client.init();
       await TR_OS.ensureServiceWorker();
