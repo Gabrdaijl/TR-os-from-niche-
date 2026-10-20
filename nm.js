@@ -38,74 +38,110 @@
   }
   const ANIME_PX = '&with_original_language=ja&with_genres=16';
 
-  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null, __barePlayWorker = null;
-  function createMovieMuxConnection() {
-    const workerUrl = window.TR_OS.assetUrl("baremux/worker.js");
+  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null, __barePlayWorker = null, __scramjetLoadPromise = null;
+
+  function movieHostWindow() {
+    try {
+      if (window.parent !== window && window.parent.location.origin === window.location.origin && window.parent.TR_OS) return window.parent;
+    } catch (_) {}
+    return window;
+  }
+
+  function loadMovieScramjet(host, runtime) {
+    if (typeof host.$scramjetLoadController === 'function') {
+      return Promise.resolve().then(() => host.$scramjetLoadController());
+    }
+    if (!__scramjetLoadPromise) {
+      __scramjetLoadPromise = new Promise((resolve, reject) => {
+        const script = host.document.createElement('script');
+        script.src = runtime.assetUrl('scram/scramjet.all.js');
+        script.async = true;
+        script.onload = () => {
+          if (typeof host.$scramjetLoadController !== 'function') {
+            reject(new Error('Scramjet controller did not load.'));
+            return;
+          }
+          try { resolve(host.$scramjetLoadController()); } catch (error) { reject(error); }
+        };
+        script.onerror = () => reject(new Error('Scramjet script could not be loaded.'));
+        host.document.head.appendChild(script);
+      }).catch(error => { __scramjetLoadPromise = null; throw error; });
+    }
+    return __scramjetLoadPromise;
+  }
+
+  function createMovieMuxConnection(preferDedicated = false) {
+    const workerUrl = window.TR_OS.assetUrl('baremux/worker.js');
+    if (!preferDedicated && typeof SharedWorker === 'function') {
+      try { return new BareMux.BareMuxConnection(workerUrl); }
+      catch (error) { console.warn('TR-os shared movie worker unavailable:', error); }
+    }
     if (typeof Worker === 'function' && typeof MessageChannel === 'function') {
       let worker;
       try {
-        worker = new Worker(window.TR_OS.assetUrl("baremux/compat-worker.js"));
+        worker = new Worker(window.TR_OS.assetUrl('baremux/compat-worker.js'));
         const channel = new MessageChannel();
         worker.postMessage({ type: 'tros-connect' }, [channel.port2]);
         __barePlayWorker = worker;
         return new BareMux.BareMuxConnection(channel.port1);
       } catch (error) {
         try { worker?.terminate(); } catch (_) {}
-        console.warn('TR-os movie dedicated worker unavailable; trying SharedWorker:', error);
+        console.warn('TR-os dedicated movie worker unavailable:', error);
       }
     }
-    if (typeof SharedWorker === 'function') return new BareMux.BareMuxConnection(workerUrl);
+    if (!preferDedicated && typeof SharedWorker === 'function') return new BareMux.BareMuxConnection(workerUrl);
     throw new Error('movie-worker-unavailable');
   }
 
-  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null;
+  async function setMovieTransport(conn) {
+    const transport = [{ wisp: window.TR_OS.wispUrl('/wisp-movies/') }];
+    let lastError;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await window.TR_OS.withTimeout(conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), transport),
+          12000, 'Filmtransporten kunde inte ansluta i tid.');
+        return null;
+      } catch (error) {
+        lastError = error;
+        if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
+      }
+    }
+    return lastError;
+  }
+
   async function ensurePlayerProxy() {
     if (__sjPlayReady) return true;
     if (__sjPlayPromise) return __sjPlayPromise;
     __sjPlayPromise = (async () => {
       __sjPlayStage = 'service-worker';
-      // On mobile the movie app is inside mobile.html's same-origin iframe.
-      // Start the worker from the top-level shell first so Safari does not
-      // have to create the site worker from a nested browsing context.
-      let shellRuntime = window.TR_OS;
-      try {
-        if (window.parent !== window && window.parent.TR_OS?.ensureServiceWorker) shellRuntime = window.parent.TR_OS;
-      } catch (_) {}
-      await shellRuntime.ensureServiceWorker();
+      const host = movieHostWindow();
+      const hostRuntime = host.TR_OS || window.TR_OS;
+      if (hostRuntime !== window.TR_OS) await hostRuntime.ensureServiceWorker();
       await window.TR_OS.ensureServiceWorker();
 
       __sjPlayStage = 'scramjet';
-      const { ScramjetController } = $scramjetLoadController();
+      const { ScramjetController } = await loadMovieScramjet(host, hostRuntime);
+      if (typeof ScramjetController !== 'function') throw new Error('Scramjet controller is unavailable.');
       const client = new ScramjetController({
         files: {
-          wasm: window.TR_OS.assetUrl("scram/scramjet.wasm.wasm"),
-          all: window.TR_OS.assetUrl("scram/scramjet.all.js"),
-          sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
+          wasm: window.TR_OS.assetUrl('scram/scramjet.wasm.wasm'),
+          all: window.TR_OS.assetUrl('scram/scramjet.all.js'),
+          sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
         },
       });
-      await window.TR_OS.withTimeout(client.init(), 45000, 'Filmens proxy kunde inte starta i tid.');
+      await hostRuntime.withTimeout(client.init(), 45000, 'Filmens proxy kunde inte starta i tid.');
 
       __sjPlayStage = 'movie-worker';
-      const conn = createMovieMuxConnection();
-
+      let conn = createMovieMuxConnection();
       __sjPlayStage = 'transport';
-      const transport = [{ wisp: window.TR_OS.wispUrl("/wisp-movies/") }];
-      let transportError;
-      for (let attempt = 0; attempt < 2; attempt++) {
+      let transportError = await setMovieTransport(conn);
+      if (transportError && !__barePlayWorker && typeof Worker === 'function' && typeof MessageChannel === 'function') {
         try {
-          await window.TR_OS.withTimeout(conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), transport),
-            12000, 'Filmtransporten kunde inte ansluta i tid.');
-          transportError = null;
-          break;
-        } catch (error) {
-          transportError = error;
-          if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
-        }
+          conn = createMovieMuxConnection(true);
+          transportError = await setMovieTransport(conn);
+        } catch (error) { transportError = error; }
       }
       if (transportError) throw transportError;
-      // Keep the movie shell open to Scramjet during initialization. The
-      // embedded player is already sandboxed; lock the shell after its hooks
-      // and transport are ready.
       window.__TR_OS_POPUP_GUARD__?.installPopups();
       __barePlay = conn;
       __sjPlay = client;
@@ -122,6 +158,7 @@
     }).finally(() => { __sjPlayPromise = null; });
     return __sjPlayPromise;
   }
+
   async function proxyPlayerUrl(url) {
     // Route movie sources through TR-os so the popup guard runs before the
     // provider code and the iframe can remain sandboxed on every browser.
