@@ -25,6 +25,29 @@ test('popup guard also blocks open calls from same-origin parent windows', () =>
   assert.equal(top.open('https://ads.example'), null);
 });
 
+test('movie shell can initialize Scramjet before the popup guard locks window.open', () => {
+  const top = makeWindow(null);
+  top.parent = top;
+  const child = makeWindow(top);
+  child.document.currentScript = { dataset: { trosDeferPopupGuard: '1' } };
+  const context = {
+    window: child,
+    document: child.document,
+    XMLHttpRequest: class { open() {} },
+    MutationObserver: class { observe() {} },
+    URL,
+    Response
+  };
+
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(require.resolve('../frame-controls.js'), 'utf8'), context);
+
+  assert.throws(() => child.open('https://example.test'), /popup escaped/);
+  child.__TR_OS_POPUP_GUARD__.installPopups();
+  assert.equal(child.open('https://example.test'), null);
+  assert.equal(top.open('https://example.test'), null);
+});
+
 test('a proxied player cannot see or remove the sandbox that blocks popups', () => {
   const top = makeWindow(null);
   top.parent = top;

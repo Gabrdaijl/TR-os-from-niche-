@@ -164,7 +164,7 @@ class LumiSDK {
             try { if (adHost.test(new URL(el.getAttribute('src') || el.getAttribute('href'), baseUrl).hostname)) el.remove(); } catch {}
         }
         const blocker = parsed.createElement('script');
-        blocker.src = window.TR_OS.assetUrl('frame-controls.js?v=20261020.6');
+        blocker.src = window.TR_OS.assetUrl('frame-controls.js?v=20261020.7');
         parsed.head.prepend(blocker);
         return '<!doctype html>\n' + parsed.documentElement.outerHTML;
     }

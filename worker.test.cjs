@@ -46,8 +46,8 @@ test('proxy requests initialize the shared configuration even after an early con
 test('proxied pages load the popup guard before provider scripts', async () => {
  const app = worker({ proxyHtml: '<html><head><script src="provider.js"></script></head><body></body></html>' });
  const html = await (await app.request('/scramjet/test')).text();
- assert.ok(html.indexOf('/frame-controls.js?v=20261020.6') >= 0);
- assert.ok(html.indexOf('/frame-controls.js?v=20261020.6') < html.indexOf('provider.js'));
+ assert.ok(html.indexOf('/frame-controls.js?v=20261020.7') >= 0);
+ assert.ok(html.indexOf('/frame-controls.js?v=20261020.7') < html.indexOf('provider.js'));
 });
 test('unresolved proxy configuration produces a bounded error instead of a blank page', async () => {
   const app = worker({ neverReady: true });

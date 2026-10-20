@@ -121,7 +121,7 @@ const CONFIG = {
 		"*/partnerads/*",
 	],
 	inject: {
-		html: "\x3c!-- pr0x1ed by vapor's static sj --\x3e\x3cscript data-tros-proxy-early=\"1\" src=\"/frame-controls.js?v=20261020.6\"\x3e\x3c/script\x3e",
+		html: "\x3c!-- pr0x1ed by vapor's static sj --\x3e\x3cscript data-tros-proxy-early=\"1\" src=\"/frame-controls.js?v=20261020.7\"\x3e\x3c/script\x3e",
 	},
 };
 

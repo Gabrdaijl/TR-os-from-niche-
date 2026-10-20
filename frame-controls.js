@@ -81,10 +81,13 @@
 
   hideParentSandboxMarker();
   const earlyProxyScript = document.currentScript?.dataset?.trosProxyEarly === '1';
+  // Let the on-demand Scramjet runtime install its hooks before window.open
+  // becomes non-configurable. The actual movie iframe remains sandboxed.
+  const deferPopupGuard = document.currentScript?.dataset?.trosDeferPopupGuard === '1';
   const guardKey = '__TR_OS_POPUP_GUARD__';
   const existingGuard = window[guardKey];
   if (existingGuard) {
-    if (!earlyProxyScript) existingGuard.installPopups();
+    if (!earlyProxyScript && !deferPopupGuard) existingGuard.installPopups();
     return;
   }
   const hosts = ['doubleclick.net', 'googlesyndication.com', 'googleadservices.com', 'adnxs.com', 'adsterra.com', 'profitablecpmrate.com', 'profitableratecpm.com', 'highperformanceformat.com', 'effectivegatecpm.com', 'popads.net', 'popcash.net', 'onclicka.com', 'exoclick.com', 'adskeeper.com', 'mgid.com', 'amazon-adsystem.com'];
@@ -129,7 +132,7 @@
   }
   try { Object.defineProperty(window, guardKey, { configurable: false, enumerable: false, value: { installPopups } }); } catch (_) {}
   if (earlyProxyScript) document.addEventListener('DOMContentLoaded', installPopups, { once: true });
-  else installPopups();
+  else if (!deferPopupGuard) installPopups();
   function popupTarget(value) {
     const target = String(value || '').trim().toLowerCase();
     return !!target && !['_self', '_parent', '_top'].includes(target);

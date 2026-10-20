@@ -49,9 +49,11 @@ test('mobile shell follows the saved app theme and expands Movies player to full
   assert.match(controller, /trosThemeName/);
   assert.match(shell, /--bar-active/);
   assert.match(shell, /movie-player-open/);
-  assert.match(read('nm.html'), /src="nm\.js\?v=20261020\.7"/);
+  assert.match(read('nm.html'), /src="nm\.js\?v=20261020\.8"/);
   assert.match(movies, /Route movie sources through TR-os so the popup guard runs before the/);
   assert.match(movies, /if \(!ok \|\| !__sjPlayReady\) return null;/);
+  assert.match(movies, /\{ name: 'VidLink JW', url: path => 'https:\/\/vidlink\.pro' \+ path \+ '\?player=jw' \}/);
+  assert.match(read('nm.html'), /data-tros-defer-popup-guard="1"/);
   const movieFrame = movies.match(/<iframe id="tros-frame"([\s\S]*?)<\/iframe>/);
   assert.ok(movieFrame);
   assert.match(movieFrame[1], /sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"/);

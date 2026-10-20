@@ -38,10 +38,12 @@
   }
   const ANIME_PX = '&with_original_language=ja&with_genres=16';
 
-  let __sjPlay = null, __sjPlayReady = false, __barePlay = null;
+  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __barePlay = null;
   async function ensurePlayerProxy() {
     if (__sjPlayReady) return true;
-    try {
+    if (__sjPlayPromise) return __sjPlayPromise;
+    __sjPlayPromise = (async () => {
+      const epoxyWarm = import('epoxy/index.mjs').catch(() => null);
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({
         files: {
@@ -53,12 +55,35 @@
       await client.init();
       await window.TR_OS.ensureServiceWorker();
       const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
-      await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), [{ wisp: window.TR_OS.wispUrl("/wisp-movies/") }]);
+      await epoxyWarm;
+      const transport = [{ wisp: window.TR_OS.wispUrl("/wisp-movies/") }];
+      let transportError;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), transport);
+          transportError = null;
+          break;
+        } catch (error) {
+          transportError = error;
+          if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 250));
+        }
+      }
+      if (transportError) throw transportError;
+      // Keep the movie shell open to Scramjet during initialization. The
+      // embedded player is already sandboxed; lock the shell after its hooks
+      // and transport are ready.
+      window.__TR_OS_POPUP_GUARD__?.installPopups();
       __barePlay = conn;
       __sjPlay = client;
+      __sjPlayError = null;
       __sjPlayReady = true;
       return true;
-    } catch (e) { return false; }
+    })().catch(error => {
+      __sjPlayError = error;
+      console.warn('TR-os movie connection could not start:', error);
+      return false;
+    }).finally(() => { __sjPlayPromise = null; });
+    return __sjPlayPromise;
   }
   async function proxyPlayerUrl(url) {
     // Route movie sources through TR-os so the popup guard runs before the
@@ -349,7 +374,7 @@
           <div id="tros-player-title"></div>
           <div id="tros-player-sub"></div>
         </div>
-        <select id="tros-player-source" class="tros-sel" aria-label="Videokälla"><option>VidFast</option><option>VidLink</option></select>
+        <select id="tros-player-source" class="tros-sel" aria-label="Videokälla"><option>VidFast</option><option>VidLink</option><option>VidLink JW</option></select>
         <button id="tros-player-next" class="tros-sel" type="button">Byt källa</button>
         <button id="tros-player-fullscreen" class="tros-sel" type="button" aria-pressed="false">⛶ Fullskärm</button>
       </div>
@@ -384,7 +409,7 @@
     });
     document.addEventListener('webkitfullscreenchange', () => document.dispatchEvent(new Event('fullscreenchange')));
     document.getElementById('tros-player-source').addEventListener('change', e => changePlayerSource(e.target.selectedIndex));
-    document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 2));
+    document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 3));
     document.getElementById('tros-frame').addEventListener('load', () => {
       if (playerFrameGeneration !== playerGeneration) return;
       playerFrameLoaded = true;
@@ -417,7 +442,7 @@
       if (!doc?.documentElement || doc.documentElement.dataset.trosMovieAdBlock === '1') return;
       doc.documentElement.dataset.trosMovieAdBlock = '1';
       const script = doc.createElement('script');
-      script.src = new URL('/frame-controls.js?v=20261020.6', location.origin).href;
+      script.src = new URL('/frame-controls.js?v=20261020.7', location.origin).href;
       script.async = false;
       (doc.head || doc.documentElement).appendChild(script);
     } catch (_) {
@@ -561,18 +586,23 @@
     document.getElementById('tros-frame').style.visibility = 'hidden';
     playerSource = index;
     const generation = ++playerGeneration;
-    const hosts = ['https://vidfast.vc', 'https://vidlink.pro'];
-    const names = ['VidFast', 'VidLink'];
-    document.getElementById('tros-player-source').selectedIndex = index;
-    document.getElementById('tros-player-sub').textContent = names[index] + ' · Popupskydd på';
-    const src = await proxyPlayerUrl(hosts[index] + playerPath);
+    const sources = [
+      { name: 'VidFast', url: path => 'https://vidfast.vc' + path },
+      { name: 'VidLink', url: path => 'https://vidlink.pro' + path },
+      { name: 'VidLink JW', url: path => 'https://vidlink.pro' + path + '?player=jw' },
+    ];
+    const selected = sources[index] || sources[0];
+    playerSource = sources.indexOf(selected);
+    document.getElementById('tros-player-source').selectedIndex = playerSource;
+    document.getElementById('tros-player-sub').textContent = selected.name + ' · Popupskydd på';
+    const src = await proxyPlayerUrl(selected.url(playerPath));
     if (generation !== playerGeneration) return;
     const frame = document.getElementById('tros-frame');
     if (!src) {
       frame.src = 'about:blank';
       document.getElementById('tros-player-sub').textContent = 'Den skyddade filmanslutningen kunde inte starta';
       const status = document.getElementById('tros-player-status');
-      status.textContent = 'Filmspelaren kunde inte starta popupskyddet. Ladda om sidan och försök igen.';
+      status.textContent = 'Den skyddade anslutningen kunde inte starta. Tryck på Byt källa för att försöka igen.';
       status.style.display = 'flex';
       return;
     }
