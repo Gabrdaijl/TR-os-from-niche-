@@ -110,7 +110,7 @@ function createPushNotifications(env = process.env, request = fetch, webPush = w
     const title = String(payload.title || 'TR-os').slice(0, 80);
     const body = String(payload.body || '').slice(0, 180);
     const target = typeof payload.url === 'string' && payload.url.startsWith('/') && !payload.url.startsWith('//') ? payload.url.slice(0, 200) : '/';
-    const data = JSON.stringify({ title, body, url: target, tag: String(payload.tag || 'tr-os').slice(0, 100) });
+    const data = JSON.stringify({ title, body, url: target, tag: String(payload.tag || 'tr-os').slice(0, 100), timestamp: Date.now(), requireInteraction: payload.requireInteraction === true });
     let sent = 0;
     await Promise.all(entries.reduce((tasks, value, index) => {
       if (index % 2) return tasks;
@@ -129,7 +129,8 @@ function createPushNotifications(env = process.env, request = fetch, webPush = w
   }
 
   function notifyAdmins(title, body, url = '/admin.html', tag = 'admin') {
-    return deliver(ADMIN_KEY, { title, body, url, tag });
+    const requireInteraction = /swish|kundkonto|supportmeddelande|felrapport|ny spärr|verkar vara nere/i.test(String(title));
+    return deliver(ADMIN_KEY, { title, body, url, tag, requireInteraction });
   }
 
   function notifyBrowser(deviceId, title, body, url = '/support.html', tag = 'support') {

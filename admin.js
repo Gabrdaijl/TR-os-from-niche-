@@ -2,22 +2,42 @@
   const $ = id => document.getElementById(id);
   let authorization = '', timer, expires = 0, pending = false, pushReady = false, pushRegistration = null;
   const imageUrls = new Set();
-  let traffic, period = 'today';
+  let traffic, period = 'today', databaseConnected = null;
   let reportIds = null, banIds = null, conversationData = [], selectedConversation = '', conversationSignature = '', healthDown = null;
+  let memberUsers = [], memberPayments = [], memberPlans = [], reportedPaymentIds = null, knownMemberIds = null;
+  let memberSearch = '', priorityReports = [], priorityBans = [];
+  const priorityStatus = { members: 'loading', reports: 'loading', bans: 'loading', support: 'loading' };
   function notifyAdmin(title, body) {
     const notice=$('notice');
-    const icon=document.createElement('span');icon.className='notice-icon';icon.setAttribute('aria-hidden','true');icon.textContent=title.includes('Swish')?'!':'•';
+    const lower=title.toLocaleLowerCase('sv-SE');
+    let kind='update',symbol='•',href='#overview',actionText='Visa';
+    if(lower.includes('swish')){kind='critical';symbol='!';href='#payments-list';actionText='Godkänn';}
+    else if(lower.includes('kundkonto')){kind='important';symbol='+';href='#members';actionText='Öppna kund';}
+    else if(lower.includes('support')){kind='urgent';symbol='↗';href='#support';actionText='Öppna chatten';}
+    else if(lower.includes('felrapport')){kind='urgent';symbol='!';href='#reports';actionText='Granska';}
+    else if(lower.includes('spärr')){kind='warning';symbol='!';href='#bans';actionText='Granska';}
+    else if(lower.includes('verkar vara nere')){kind='critical';symbol='!';href='#system';actionText='Systemstatus';}
+    else if(lower.includes('svarar igen')){kind='success';symbol='✓';href='#system';actionText='Systemstatus';}
+    const item=document.createElement('article');item.className='notice-item notice-'+kind;
+    const icon=document.createElement('span');icon.className='notice-icon';icon.setAttribute('aria-hidden','true');icon.textContent=symbol;
     const copy=document.createElement('span');copy.className='notice-copy';
     const heading=document.createElement('strong');heading.textContent=title;
     const detail=document.createElement('span');detail.textContent=body;copy.append(heading,detail);
-    const children=[icon,copy];
-    if(title.includes('Swish')||title.includes('kundkonto')){const action=document.createElement('a');action.className='notice-action';action.href=title.includes('Swish')?'#payments-list':'#members';action.textContent='Granska';children.push(action);}
+    const action=document.createElement('a');action.className='notice-action';action.href=href;action.textContent=actionText;
+    if(href==='#system')action.addEventListener('click',()=>$('system').open=true);
+    const time=document.createElement('time');const now=new Date();time.dateTime=now.toISOString();time.textContent=now.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'});
     const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='notice-dismiss';dismiss.setAttribute('aria-label','Stäng notis');dismiss.textContent='×';
-    dismiss.addEventListener('click',()=>notice.replaceChildren());children.push(dismiss);
-    notice.classList.add('has-notice');notice.replaceChildren(...children);
+    dismiss.addEventListener('click',()=>{item.remove();if(!notice.children.length)notice.classList.remove('has-notice');});
+    item.dataset.priority=String(({critical:0,urgent:1,important:2,warning:3,update:4,success:5})[kind]);item.dataset.when=String(now.getTime());
+    item.append(icon,copy,action,time,dismiss);
+    const items=[...notice.children,item].sort((a,b)=>Number(a.dataset.priority)-Number(b.dataset.priority)||Number(b.dataset.when)-Number(a.dataset.when));
+    notice.classList.add('has-notice');notice.replaceChildren(...items.slice(0,4));
     if (!pushReady && 'Notification' in window && Notification.permission === 'granted') {
-      try { new Notification(title, { body, tag: 'tr-os-admin-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-') }); } catch {}
+      try { new Notification(title, { body, icon:'/logo.png', tag: 'tr-os-admin-' + lower.replace(/[^a-z0-9]+/g, '-') }); } catch {}
     }
+  }
+  function setNoticeMessage(message) {
+    const notice=$('notice');notice.classList.remove('has-notice');notice.textContent=message;
   }
   function applicationServerKey(value) {
     const base64=value.replace(/-/g,'+').replace(/_/g,'/');
@@ -29,7 +49,7 @@
     if(!response.ok)throw Error(data.error||'Pushprenumerationen kunde inte sparas.');
     pushReady=true;pushRegistration=await navigator.serviceWorker.getRegistration('/push/');
     $('notifications').textContent='Push aktivt på denna enhet';
-    $('notice').textContent='Enheten får notiser även när TR-os är stängt. Aktivera push på varje enhet du vill nå.';
+    setNoticeMessage('Enheten får notiser även när TR-os är stängt. Aktivera push på varje enhet du vill nå.');
   }
   async function syncAdminSubscription() {
     if(!authorization||!('Notification' in window)||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
@@ -46,6 +66,44 @@
     healthDown = !ok;
   }
   const format = value => typeof value === 'number' ? value.toLocaleString('sv-SE') : '—';
+  function renderPriorityQueue() {
+    if(Object.values(priorityStatus).some(status=>status==='loading')||!authorization)return;
+    const panel=$('priority-panel'),list=$('priority-list'),items=[];
+    if(databaseConnected===false)items.push({label:'Databasen är inte ansluten',detail:'Närvaro och sparad information kan vara begränsad.',count:1,href:'#system',kind:'critical'});
+    if(Object.values(priorityStatus).some(status=>status==='error'))items.push({label:'Några ärenden kunde inte hämtas',detail:'Tryck på Uppdatera för att försöka igen.',count:1,href:'#overview',kind:'critical'});
+    const approvals=memberPayments.filter(payment=>payment.status==='pending'&&payment.paidRequested).length;
+    if(approvals)items.push({label:'Swishbetalningar att godkänna',detail:'Kontrollera betalningen innan åtkomst läggs till.',count:approvals,href:'#payments-list',kind:'critical'});
+    const withoutAccess=memberUsers.filter(user=>user.enabled&&!user.active).length;
+    if(withoutAccess)items.push({label:'Kunder utan aktiv åtkomst',detail:'Konton som kan behöva få eller förlänga sin tid.',count:withoutAccess,href:'#members',kind:'important'});
+    const soon=memberUsers.filter(user=>user.enabled&&user.active&&Number(user.accessUntilMs)>Date.now()&&Number(user.accessUntilMs)<=Date.now()+3*24*60*60*1000).length;
+    if(soon)items.push({label:'Åtkomst går ut inom tre dagar',detail:'Se vilka kunder som snart behöver mer tid.',count:soon,href:'#members',kind:'warning'});
+    const unread=conversationData.filter(item=>item.messages?.at(-1)?.role==='browser').length;
+    if(unread)items.push({label:'Nya supportmeddelanden',detail:'Besökare väntar på svar i supportchatten.',count:unread,href:'#support',kind:'urgent'});
+    if(priorityReports.length)items.push({label:'Felrapporter att granska',detail:'Öppna rapporten och arkivera den när du är klar.',count:priorityReports.length,href:'#reports',kind:'urgent'});
+    if(priorityBans.length)items.push({label:'Aktiva spärrar',detail:'Granska blockerade webbläsare och häv spärrar vid behov.',count:priorityBans.length,href:'#bans',kind:'warning'});
+    const total=items.reduce((sum,item)=>sum+item.count,0);
+    $('priority-count').textContent=format(total);
+    $('priority-count').classList.toggle('is-clear',total===0);
+    if(!items.length){
+      const empty=document.createElement('div');empty.className='priority-clear';
+      const mark=document.createElement('span');mark.className='priority-clear-mark';mark.setAttribute('aria-hidden','true');mark.textContent='✓';
+      const copy=document.createElement('span');copy.textContent='Allt är uppdaterat. Nya betalningar, konton och meddelanden visas här först.';
+      empty.append(mark,copy);list.replaceChildren(empty);
+    }else{
+      list.replaceChildren(...items.map(item=>{
+        const link=document.createElement('a');link.className='priority-item priority-'+item.kind;link.href=item.href;
+        if(item.href==='#system')link.addEventListener('click',()=>$('system').open=true);
+        const marker=document.createElement('span');marker.className='priority-marker';marker.setAttribute('aria-hidden','true');marker.textContent='•';
+        const copy=document.createElement('span');copy.className='priority-copy';
+        const title=document.createElement('strong');title.textContent=item.label;
+        const detail=document.createElement('span');detail.textContent=item.detail;copy.append(title,detail);
+        const count=document.createElement('span');count.className='priority-item-count';count.textContent=format(item.count);count.setAttribute('aria-label',item.count+' ärenden');
+        const arrow=document.createElement('span');arrow.className='priority-arrow';arrow.setAttribute('aria-hidden','true');arrow.textContent='→';
+        link.append(marker,copy,count,arrow);return link;
+      }));
+    }
+    panel.hidden=false;
+  }
   function renderTraffic() {
     const values = traffic?.[period];
     const allTime = period === 'allTime';
@@ -76,7 +134,7 @@
   let reportSignature = '', banSignature = '', authGeneration = 0;
   function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
   function clearAdminView() {
-    authGeneration++;pending=false;pushReady=false;pushRegistration=null;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];selectedConversation='';conversationSignature='';healthDown=null;$('notice').textContent='';$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
+    authGeneration++;pending=false;pushReady=false;pushRegistration=null;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];priorityReports=[];priorityBans=[];priorityStatus.members='loading';priorityStatus.reports='loading';priorityStatus.bans='loading';priorityStatus.support='loading';databaseConnected=null;selectedConversation='';conversationSignature='';healthDown=null;setNoticeMessage('');$('priority-panel').hidden=true;$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
     authorization = ''; clearInterval(timer); $('password').value = ''; $('message').textContent = '';
     expires = 0; $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
     $('login').hidden = false; $('logout').hidden = true;
@@ -92,13 +150,14 @@
       const data=await response.json();
       if(generation!==authGeneration || !authorization)return;
       if(!response.ok)throw Error(data.error || 'Rapporterna kunde inte hämtas.');
-      $('reports-state').textContent=data.reports.length?'':'Inga felrapporter ännu.';
-      const currentIds=new Set(data.reports.map(report=>report.id));
+      priorityReports=Array.isArray(data.reports)?data.reports:[];priorityStatus.reports='ready';renderPriorityQueue();
+      $('reports-state').textContent=priorityReports.length?'':'Inga felrapporter ännu.';
+      const currentIds=new Set(priorityReports.map(report=>report.id));
       if(reportIds)for(const id of currentIds)if(!reportIds.has(id))notifyAdmin('Ny felrapport', 'En besökare har rapporterat ett fel.');
       reportIds=currentIds;
-      const signature=JSON.stringify(data.reports);if(signature===reportSignature)return;reportSignature=signature;clearImages();
+      const signature=JSON.stringify(priorityReports);if(signature===reportSignature)return;reportSignature=signature;clearImages();
       const labels={home:'Startsidan',games:'Games',movies:'Movies',ai:'AI',browser:'Webbläsaren',snapchat:'Snapchat',cloud:'Cloud',other:'Annat'};
-      $('reports-list').replaceChildren(...data.reports.map(report=>{
+      $('reports-list').replaceChildren(...priorityReports.map(report=>{
         const card=document.createElement('article');card.className='report-card';
         const top=document.createElement('div');top.className='report-card-top';
         const title=document.createElement('strong');title.textContent=labels[report.category] || 'Annat';
@@ -128,7 +187,7 @@
         });card.append(seen);
         return card;
       }));
-    }catch(error){if(generation===authGeneration && authorization)$('reports-state').textContent=error.message;}
+    }catch(error){if(generation===authGeneration && authorization){priorityStatus.reports='error';renderPriorityQueue();$('reports-state').textContent=error.message;}}
   }
   async function refreshBans() {
     const generation = authGeneration;
@@ -138,13 +197,13 @@
       if (generation !== authGeneration || !authorization) return;
       if (!response.ok) throw Error(data.error || 'Spärrlistan kunde inte hämtas.');
       const bans = Array.isArray(data.bans) ? data.bans : [];
+      priorityBans=bans;priorityStatus.bans='ready';renderPriorityQueue();
       $('ban-count').textContent = format(bans.length);
       $('bans-state').textContent = data.source === 'redis'
         ? 'Spärrarna sparas.'
         : 'Tillfällig lagring. Spärrar kan försvinna vid omstart.';
       const signature = JSON.stringify({ source: data.source, bans });
       const currentIds=new Set(bans.map(ban=>ban.id));
-      banIds=currentIds;
       const previousIds=banIds;
       if(previousIds)for(const id of currentIds)if(!previousIds.has(id))notifyAdmin('Ny spärr', 'En webbläsare har blockerats automatiskt.');
       banIds=currentIds;
@@ -179,7 +238,7 @@
         card.append(details, remove); return card;
       }));
     } catch (error) {
-      if (generation === authGeneration && authorization) $('bans-state').textContent = error.message;
+      if (generation === authGeneration && authorization) { priorityStatus.bans='error';renderPriorityQueue();$('bans-state').textContent = error.message; }
     }
   }
   function renderConversations() {
@@ -226,10 +285,17 @@
         const previous=new Map(conversationData.map(item=>[item.id,item.messages?.at(-1)?.id]));
         for(const item of entries){const latest=item.messages?.at(-1)?.id;if(latest&&previous.has(item.id)&&previous.get(item.id)!==latest&&item.messages?.at(-1)?.role==='browser')notifyAdmin('Nytt supportmeddelande','En spärrad webbläsare har skrivit till dig.');}
       }
-      conversationData=entries;$('conversation-count').textContent=format(entries.filter(item=>item.messages?.at(-1)?.role==='browser').length);
+      entries.sort((a,b)=>{
+        const unreadA=a.messages?.at(-1)?.role==='browser',unreadB=b.messages?.at(-1)?.role==='browser';
+        if(unreadA!==unreadB)return unreadB-unreadA;
+        const timeA=Date.parse(a.messages?.at(-1)?.createdAt||'')||Number(a.updatedAt)||0;
+        const timeB=Date.parse(b.messages?.at(-1)?.createdAt||'')||Number(b.updatedAt)||0;
+        return timeB-timeA;
+      });
+      conversationData=entries;priorityStatus.support='ready';renderPriorityQueue();$('conversation-count').textContent=format(entries.filter(item=>item.messages?.at(-1)?.role==='browser').length);
       if(!entries.some(item=>item.id===selectedConversation))selectedConversation=entries[0]?.id||'';
       renderConversations();
-    }catch(error){if(generation===authGeneration&&authorization)$('conversation-state').textContent=error.message;}
+    }catch(error){if(generation===authGeneration&&authorization){priorityStatus.support='error';renderPriorityQueue();$('conversation-state').textContent=error.message;}}
   }
   $('conversation-form').addEventListener('submit',async event=>{
     event.preventDefault();if(!selectedConversation)return;
@@ -251,8 +317,6 @@
     }catch(error){$('conversation-state').textContent=error.message;}
     finally{button.disabled=false;button.textContent='Ta bort chatten';}
   });
-  let memberUsers=[],memberPayments=[],reportedPaymentIds=null,knownMemberIds=null;
-  let memberSearch='';
   async function memberRequest(path,options={}){
     const response=await fetch(path,{cache:'no-store',...options,headers:{authorization,...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})},signal:AbortSignal.timeout(10000)});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Medlemsuppgifterna kunde inte sparas.');return data;
@@ -262,7 +326,11 @@
     const input=document.createElement('input');input.type=type;input.name=name;if(value!==undefined&&value!==null)input.value=String(value);Object.assign(input,extra);wrapper.append(input);return wrapper;
   }
   function renderPayments(){
-    const payments=memberPayments.slice(0,100);
+    const payments=memberPayments.slice().sort((a,b)=>{
+      const waitingA=a.status==='pending'&&a.paidRequested,waitingB=b.status==='pending'&&b.paidRequested;
+      if(waitingA!==waitingB)return waitingB-waitingA;
+      return (Number(b.customerReportedPaidAt||b.createdAt)||0)-(Number(a.customerReportedPaidAt||a.createdAt)||0);
+    }).slice(0,100);
     $('payments-list').replaceChildren(...(payments.length?payments.map(payment=>{
       const card=document.createElement('article');card.className='member-card payment-card';
       const detail=document.createElement('div');detail.className='member-card-details';
@@ -302,7 +370,11 @@
     $('member-count').textContent=format(memberUsers.length);
     const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('sv-SE');
     const query=normalize(memberSearch);
-    const visibleUsers=query?memberUsers.filter(user=>normalize(user.firstName+' '+user.lastName+' '+user.email).includes(query)):memberUsers;
+    const visibleUsers=(query?memberUsers.filter(user=>normalize(user.firstName+' '+user.lastName+' '+user.email).includes(query)):memberUsers).slice().sort((a,b)=>{
+      const urgency=user=>!user.enabled?3:!user.active?0:Number(user.accessUntilMs)<=Date.now()+3*24*60*60*1000?1:2;
+      const difference=urgency(a)-urgency(b);if(difference)return difference;
+      return (Number(a.accessUntilMs)||0)-(Number(b.accessUntilMs)||0);
+    });
     $('member-search-count').textContent=query?visibleUsers.length+' av '+memberUsers.length+' kunder':'Visar '+memberUsers.length+' kunder';
     if(!memberUsers.length){$('members-list').replaceChildren(Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga medlemskonton ännu.'}));return;}
     if(!visibleUsers.length){$('members-list').replaceChildren(Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga kunder matchar din sökning.'}));return;}
@@ -360,6 +432,7 @@
     try{
       const data=await memberRequest('/api/admin/members');if(generation!==authGeneration||!authorization)return;
       memberUsers=Array.isArray(data.users)?data.users:[];memberPayments=Array.isArray(data.payments)?data.payments:[];
+      priorityStatus.members='ready';renderPriorityQueue();
       const currentMemberIds=new Set(memberUsers.map(user=>user.id));
       if(knownMemberIds)for(const user of memberUsers)if(!knownMemberIds.has(user.id))notifyAdmin('Nytt kundkonto',user.firstName+' '+user.lastName+' · '+user.email+' · tilldela åtkomsttid.');
       knownMemberIds=currentMemberIds;
@@ -369,7 +442,7 @@
       renderMemberStats();renderPayments();renderMembers();
       $('members-state').textContent=memberUsers.length+' kundkonton · du styr åtkomsttiden direkt.';
       return true;
-    }catch(error){if(generation===authGeneration&&authorization)$('members-state').textContent=error.message;return false;}
+    }catch(error){if(generation===authGeneration&&authorization){priorityStatus.members='error';renderPriorityQueue();$('members-state').textContent=error.message;}return false;}
   }
   $('member-refresh').addEventListener('click',refreshMembership);
   $('member-search').addEventListener('input',event=>{memberSearch=event.currentTarget.value;renderMembers();});
@@ -408,6 +481,7 @@
       $('active-count').textContent = typeof data.activeSessions === 'number' ? data.activeSessions : '—';
       $('recent-count').textContent = typeof data.recentVisitors === 'number' ? data.recentVisitors : '—';
       const connected = data.presence?.source === 'redis';
+      databaseConnected=connected;
       $('traffic-state').textContent = connected ? '● LIVE' : 'VÄNTAR';
       $('db-state').textContent = connected ? '● Live · Redis' : 'Databasen inte tillgänglig';
       $('db-state').className = connected ? 'state' : 'state warning';
@@ -435,7 +509,8 @@
       await refreshBans();
       await refreshReports();
       await refreshConversations();
-    } catch (error) { if(healthCheckFailed&&authorization)reportHealth(false,error.message);$('message').textContent = error.message; }
+      renderPriorityQueue();
+    } catch (error) { databaseConnected=false;if(healthCheckFailed&&authorization)reportHealth(false,error.message);$('message').textContent = error.message;renderPriorityQueue(); }
     finally { if(generation===authGeneration)pending = false; }
   }
   $('login').addEventListener('submit', async event => {
@@ -454,18 +529,18 @@
   $('logout').addEventListener('click', logoutAdmin);
   $('refresh').addEventListener('click', refresh);
   $('notifications').addEventListener('click',async()=>{
-    if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){ $('notice').textContent='Den här webbläsaren stöder inte pushnotiser.';return; }
-    if(/iPhone|iPad|iPod/i.test(navigator.userAgent)&&!navigator.standalone&&!matchMedia('(display-mode: standalone)').matches){$('notice').textContent='På iPhone: lägg först TR-os på hemskärmen och öppna admin därifrån.';return;}
+    if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){ setNoticeMessage('Den här webbläsaren stöder inte pushnotiser.');return; }
+    if(/iPhone|iPad|iPod/i.test(navigator.userAgent)&&!navigator.standalone&&!matchMedia('(display-mode: standalone)').matches){setNoticeMessage('På iPhone: lägg först TR-os på hemskärmen och öppna admin därifrån.');return;}
     try{
       const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;
-      if(permission!=='granted'){ $('notifications').textContent=permission==='denied'?'Notiser blockerade':'Aktivera push';$('notice').textContent='Tillåt notiser i enhetens webbplatsinställningar för att få pushnotiser.';return; }
-      $('notifications').disabled=true;$('notice').textContent='Ansluter den här enheten…';
+      if(permission!=='granted'){ $('notifications').textContent=permission==='denied'?'Notiser blockerade':'Aktivera push';setNoticeMessage('Tillåt notiser i enhetens webbplatsinställningar för att få pushnotiser.');return; }
+      $('notifications').disabled=true;setNoticeMessage('Ansluter den här enheten…');
       const keyResponse=await fetch('/api/push/vapid-public',{cache:'no-store',signal:AbortSignal.timeout(10000)}),keyData=await keyResponse.json();
       if(!keyResponse.ok||!keyData.publicKey)throw Error(keyData.error||'Pushnotiser är inte tillgängliga just nu.');
-      const registration=await navigator.serviceWorker.register('/push-sw.js?v=20261020.1',{scope:'/push/'});
+      const registration=await navigator.serviceWorker.register('/push-sw.js?v=20261020.2',{scope:'/push/'});
       const subscription=await registration.pushManager.getSubscription()||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:applicationServerKey(keyData.publicKey)});
       await saveAdminSubscription(subscription);
-    }catch(error){$('notice').textContent=error.message||'Notiser kunde inte aktiveras på den här enheten.';}
+    }catch(error){setNoticeMessage(error.message||'Notiser kunde inte aktiveras på den här enheten.');}
     finally{$('notifications').disabled=false;}
   });
   window.addEventListener('pagehide', clearAdminView);
