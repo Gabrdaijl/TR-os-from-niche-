@@ -15,10 +15,11 @@ button{font:inherit}
 .install-mini svg,.more-button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .app-stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--stage)}
 #mobile-frame{display:block;width:100%;height:100%;border:0;background:var(--stage)}
-.bottom-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;padding:4px 5px var(--safe-bottom);border-top:1px solid var(--bar-border);background:var(--bar);z-index:3}
-.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:56px;padding:3px 1px;border:0;border-radius:12px;background:transparent;color:var(--bar-ink);font-size:10px;font-weight:700;line-height:1.1}
+.bottom-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch;padding:4px 5px var(--safe-bottom);border-top:1px solid var(--bar-border);background:var(--bar);z-index:3}
+.nav-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:56px;padding:3px 1px;border:0;border-radius:12px;background:transparent;color:var(--bar-ink);font-size:10px;font-weight:700;line-height:1.1;text-decoration:none}
 .nav-item svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nav-item.is-active{background:var(--bar-active);color:var(--bar-active-ink);box-shadow:inset 0 0 0 1px var(--bar-border)}
+.account-nav .membership-time-badge{position:absolute;top:5px;right:calc(50% - 25px);min-width:23px;padding:2px 4px;border:1px solid var(--bar-ink);border-radius:999px;background:#075e54;color:#fff;font:700 9px/1.1 system-ui,sans-serif;text-align:center;box-shadow:0 1px 5px #0006}.account-nav .membership-time-badge:empty{display:none}
 .nav-item:active,.install-mini:active,.more-button:active{transform:scale(.96)}
 .nav-item:focus-visible,.brand:focus-visible,.install-mini:focus-visible,.more-button:focus-visible,.mobile-dialog button:focus-visible{outline:3px solid var(--bar-active);outline-offset:2px}
 .mobile-dialog{width:min(calc(100% - 28px),420px);padding:18px;border:1px solid var(--dialog-line);border-radius:20px;background:var(--dialog-bg);color:var(--dialog-ink);box-shadow:0 24px 80px #0009}

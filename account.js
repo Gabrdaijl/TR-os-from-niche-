@@ -1,6 +1,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   let current = null, busy = false, timer = null, countdownTimer = null, expiryRefresh = false;
+  let renewalBusy = false;
 
   function deviceId() {
     try {
@@ -56,6 +57,26 @@
     } else if (remaining > 0) expiryRefresh = false;
   }
 
+  function renderRenewal(data) {
+    const payment = data?.pendingPayment?.status === 'pending' ? data.pendingPayment : null;
+    $('renewal-start').hidden = !!payment;
+    $('renewal-instructions').hidden = !payment;
+    $('renewal-number').textContent = data?.swishNumber || 'Kontakta administratören';
+    $('renewal-amount').textContent = String(payment?.amount ?? 30);
+    $('renewal-days').textContent = String(payment?.durationDays ?? 30);
+    $('renewal-reference').textContent = payment?.reference || '—';
+    $('renewal-form').hidden = !!payment?.paidRequested;
+    $('renewal-state').textContent = payment?.paidRequested
+      ? 'Din Swishbetalning är anmäld. Admin kontrollerar den innan 30 dagar läggs till.'
+      : payment
+        ? 'Swisha först och anmäl sedan betalningen i formuläret.'
+        : '';
+    if (payment && current?.user) {
+      if (!$('payer-first-name').value) $('payer-first-name').value = current.user.firstName || '';
+      if (!$('payer-last-name').value) $('payer-last-name').value = current.user.lastName || '';
+    }
+  }
+
   function selectTab(register) {
     $('tab-login').setAttribute('aria-selected', String(!register));
     $('tab-register').setAttribute('aria-selected', String(register));
@@ -82,6 +103,7 @@
     }
 
     $('member-title').textContent = 'Hej, ' + user.firstName + '!';
+    renderRenewal(data);
     updateCountdown();
     $('access-until').textContent = formatDate(user.accessUntilMs);
     $('member-state').classList.toggle('expired', !user.active);
@@ -100,6 +122,67 @@
     try { render(await api('/api/membership/me')); }
     catch (error) { $('notice').textContent = error.message; }
   }
+
+  $('renewal-start').addEventListener('click', async () => {
+    if (renewalBusy) return;
+    renewalBusy = true;
+    const button = $('renewal-start');
+    button.disabled = true;
+    button.firstElementChild.textContent = 'Hämtar uppgifter…';
+    try {
+      const data = await api('/api/membership/payments', { method: 'POST', body: '{}' });
+      current.pendingPayment = data.payment;
+      current.swishNumber = data.swishNumber;
+      renderRenewal(current);
+      $('renewal-instructions').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+      $('renewal-state').textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.firstElementChild.textContent = 'Visa Swishuppgifter';
+      renewalBusy = false;
+    }
+  });
+
+  $('renewal-copy').addEventListener('click', async () => {
+    const number = $('renewal-number').textContent;
+    const reference = $('renewal-reference').textContent;
+    try {
+      await navigator.clipboard.writeText('Swish: ' + number + '\nMeddelande: ' + reference);
+      $('renewal-state').textContent = 'Swishnummer och referens kopierades.';
+    } catch {
+      $('renewal-state').textContent = 'Kunde inte kopiera automatiskt. Skriv av numret och referensen ovan.';
+    }
+  });
+
+  $('renewal-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const payment = current?.pendingPayment;
+    if (!payment || renewalBusy) return;
+    renewalBusy = true;
+    const button = event.currentTarget.querySelector('button[type=submit]');
+    button.disabled = true;
+    button.firstElementChild.textContent = 'Skickar…';
+    $('renewal-state').textContent = 'Skickar betalningsanmälan…';
+    try {
+      const data = await api('/api/membership/payments/' + encodeURIComponent(payment.id) + '/report', {
+        method: 'POST',
+        body: JSON.stringify({
+          firstName: $('payer-first-name').value.trim(),
+          lastName: $('payer-last-name').value.trim(),
+          reference: payment.reference
+        })
+      });
+      current.pendingPayment = data.payment;
+      renderRenewal(current);
+    } catch (error) {
+      $('renewal-state').textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.firstElementChild.textContent = 'Jag har Swishat';
+      renewalBusy = false;
+    }
+  });
 
   async function authenticate(event, mode) {
     event.preventDefault();

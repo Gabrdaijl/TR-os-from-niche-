@@ -105,6 +105,26 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .devices { margin: 15px 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
 .link-button { margin-top: 19px; }
 .member-help { margin: 13px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.renewal-card { margin-top: 19px; padding: 17px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); border-radius: 13px; background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 7%, var(--panel)), var(--field)); }
+.renewal-heading { display: flex; align-items: center; gap: 11px; }
+.renewal-heading .eyebrow { margin: 0 0 4px; font-size: 9px; }
+.renewal-heading h3 { margin: 0; font: 600 17px 'Space Grotesk', sans-serif; }
+.renewal-icon { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line)); border-radius: 11px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); font-size: 23px; }
+.renewal-copy, .renewal-note { margin: 12px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.renewal-start { min-height: 44px; }
+.renewal-instructions { display: grid; gap: 9px; margin-top: 12px; }
+.renewal-info { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 9px; background: #080c1470; }
+.renewal-info > span { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .8px; }
+.renewal-info strong, .renewal-info code { overflow-wrap: anywhere; color: var(--text); font: 600 12px 'Space Grotesk', sans-serif; text-align: right; }
+.renewal-info strong span { color: var(--accent); }
+.renewal-copy { justify-self: start; min-height: 35px; margin: 0; }
+.renewal-note { margin: 1px 0 0; }
+.renewal-form { margin-top: 4px; }
+.renewal-form .name-fields { gap: 9px; }
+.renewal-form .form input { height: 42px; margin: 7px 0 11px; }
+.renewal-form .primary { min-height: 44px; }
+.renewal-state { margin: 10px 0 0; color: var(--accent); font-size: 11px; line-height: 1.55; }
+.renewal-state:empty { display: none; }
 .account-shell > footer { display: flex; justify-content: space-between; gap: 16px; padding: 17px 3px 0; border-top: 1px solid #ffffff0a; color: #65758c; font-size: 10px; }
 
 @media (max-width: 850px) {

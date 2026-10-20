@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#080c14">
   <meta name="robots" content="noindex,nofollow">
   <title>Konto · TR-os</title>
-  <link rel="stylesheet" href="account.css?v=20261020.5">
+  <link rel="stylesheet" href="account.css?v=20261020.6">
   <script src="/tr-os.config.js" defer></script>
   <script src="theme.js" defer></script>
-  <script src="account.js?v=20261020.4" defer></script>
+  <script src="account.js?v=20261020.5" defer></script>
 </head>
 <body>
   <main class="account-shell">
@@ -65,6 +65,26 @@
           <div class="fact-card"><span>ÅTKOMST TILL</span><strong id="access-until">—</strong></div>
         </div>
         <p id="devices" class="devices"></p>
+        <section class="renewal-card" aria-labelledby="renewal-title">
+          <div class="renewal-heading"><span class="renewal-icon tros-sys" aria-hidden="true">↻</span><div><p class="eyebrow">ÅTKOMST</p><h3 id="renewal-title">Förläng med Swish</h3></div></div>
+          <p class="renewal-copy">Förläng åtkomsten med 30 dagar för 30 kr. Administratören kontrollerar betalningen innan tiden läggs till.</p>
+          <button id="renewal-start" class="primary renewal-start" type="button"><span>Visa Swishuppgifter</span><span class="tros-sys" aria-hidden="true">→</span></button>
+          <div id="renewal-instructions" class="renewal-instructions" hidden>
+            <div class="renewal-info"><span>SWISHA TILL</span><strong id="renewal-number">—</strong></div>
+            <div class="renewal-info"><span>BELOPP · TID</span><strong><span id="renewal-amount">30</span> kr · <span id="renewal-days">30</span> dagar</strong></div>
+            <div class="renewal-info"><span>MEDDELANDE</span><code id="renewal-reference">—</code></div>
+            <button id="renewal-copy" class="quiet renewal-copy" type="button">Kopiera nummer och referens</button>
+            <p class="renewal-note">Skriv referensen som Swishmeddelande. När du har betalat anmäler du det här så kontrollerar admin betalningen.</p>
+            <form id="renewal-form" class="form renewal-form">
+              <div class="name-fields">
+                <div><label for="payer-first-name">Betalarens förnamn</label><input id="payer-first-name" name="firstName" autocomplete="given-name" maxlength="80" required></div>
+                <div><label for="payer-last-name">Betalarens efternamn</label><input id="payer-last-name" name="lastName" autocomplete="family-name" maxlength="80" required></div>
+              </div>
+              <button class="primary" type="submit"><span>Jag har Swishat</span><span class="tros-sys" aria-hidden="true">→</span></button>
+            </form>
+          </div>
+          <p id="renewal-state" class="renewal-state" role="status" aria-live="polite"></p>
+        </section>
         <a id="open-site" class="primary link-button" href="/">Öppna TR-os <span class="tros-sys" aria-hidden="true">→</span></a>
         <p id="member-help" class="member-help">Behöver du mer åtkomsttid? Kontakta administratören.</p>
       </section>

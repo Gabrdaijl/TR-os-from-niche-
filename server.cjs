@@ -233,8 +233,24 @@ function createApp(options = {}) {
         appendCookie(res, memberships.clearSessionCookie(req, env));
         return json(res, 200, { ok: true });
       }
-      if (route === '/api/membership/payments' || /^\/api\/membership\/payments\/[^/]+\/report$/.test(route)) {
-        return json(res, 410, { error: 'Månadsbetalningar har tagits bort. Kontakta administratören för att få åtkomsttid.' });
+      if (route === '/api/membership/payments') {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        if (!allowed(req, 'member-payment', 4)) return json(res, 429, { error: 'Vänta lite innan du försöker igen.' });
+        const payment = await memberships.createPayment(req);
+        return json(res, 200, { payment, swishNumber: memberships.swishNumber });
+      }
+      const reportPaymentMatch = route.match(/^\/api\/membership\/payments\/([a-f0-9-]{36})\/report$/i);
+      if (reportPaymentMatch) {
+        if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+        if (!allowed(req, 'member-payment-report', 4)) return json(res, 429, { error: 'Vänta lite innan du försöker igen.' });
+        const result = await memberships.markPaid(req, reportPaymentMatch[1], await body(req, 4000));
+        if (result.notified) {
+          const payment = result.payment;
+          const payer = [payment.reportedFirstName, payment.reportedLastName].filter(Boolean).join(' ');
+          const customer = [payment.firstName, payment.lastName].filter(Boolean).join(' ');
+          notify(push.notifyAdmins('Swishbetalning att godkänna', payer + ' · konto ' + customer + ' · ' + payment.amount + ' kr för ' + payment.durationDays + ' dagar · ref ' + payment.reference, '/admin.html#members', 'member-payment-report-' + payment.id));
+        }
+        return json(res, 200, { payment: result.payment });
       }
       return json(res, 404, { error: 'Not found' });
     }

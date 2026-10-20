@@ -10,7 +10,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/logo.png">
-  <link rel="stylesheet" href="/mobile.css?v=20261019.3">
+  <link rel="stylesheet" href="/mobile.css?v=20261020.1">
+  <script src="/membership-badge.js?v=20261020.1" defer></script>
   <title>TR-os</title>
 </head>
 <body>
@@ -48,6 +49,10 @@
       <button class="nav-item" type="button" data-page="ai" aria-label="AI">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 14 9l7 3-7 2-2 8-2-8-7-2 7-3z"/><path d="M19 2v4m2-2h-4M5 17v4m2-2H3"/></svg><span>AI</span>
       </button>
+      <a id="account-nav" class="nav-item account-nav" href="/account.html" aria-label="Konto och återstående åtkomsttid">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg><span>Konto</span>
+        <span id="membership-time-badge" class="membership-time-badge" aria-hidden="true"></span>
+      </a>
     </nav>
   </main>
 

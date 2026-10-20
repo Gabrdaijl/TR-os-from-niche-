@@ -356,7 +356,6 @@
       </div>
       <div id="tros-player-status" role="status" aria-live="polite"></div>
       <iframe id="tros-frame"
-        
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
         referrerpolicy="no-referrer">
@@ -404,11 +403,11 @@
       if (!doc?.documentElement || doc.documentElement.dataset.trosMovieAdBlock === '1') return;
       doc.documentElement.dataset.trosMovieAdBlock = '1';
       const script = doc.createElement('script');
-      script.src = new URL('/game-adblock.js?v=20261020.1', location.origin).href;
+      script.src = new URL('/game-adblock.js?v=20261020.3', location.origin).href;
       script.async = false;
       (doc.head || doc.documentElement).appendChild(script);
     } catch (_) {
-      // Cross-origin player pages still get popup protection from the iframe sandbox.
+      // Cross-origin player pages cannot be modified by this same-origin blocker.
     }
   }
 
