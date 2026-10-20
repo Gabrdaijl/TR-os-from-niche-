@@ -60,7 +60,7 @@
   const input = document.getElementById('browser-input');
   const tabStrip = document.getElementById('tab-strip');
   const HOME = 'n1chtesting1.html';
-  const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-modals';
+  const SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals';
 
   var RESI_ALIAS = { paloalto: 'mullvad-us', boston: 'mullvad-us', milan: 'mullvad-eu' };
   var MV_LOCS = ['mullvad-us', 'mullvad-eu', 'mullvad-se'];

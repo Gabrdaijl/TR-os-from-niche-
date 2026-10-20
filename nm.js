@@ -350,7 +350,7 @@
           <div id="tros-player-title"></div>
           <div id="tros-player-sub"></div>
         </div>
-        <select id="tros-player-source" class="tros-sel" aria-label="Videokälla"><option>VidFast</option><option>VidLink</option><option>VidSrc</option></select>
+        <select id="tros-player-source" class="tros-sel" aria-label="Videokälla"><option>VidFast</option><option>VidLink</option></select>
         <button id="tros-player-next" class="tros-sel" type="button">Byt källa</button>
         <button id="tros-player-fullscreen" class="tros-sel" type="button" aria-pressed="false">⛶ Fullskärm</button>
       </div>
@@ -376,7 +376,7 @@
       button.setAttribute('aria-pressed', String(!!document.fullscreenElement));
     });
     document.getElementById('tros-player-source').addEventListener('change', e => changePlayerSource(e.target.selectedIndex));
-    document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 3));
+    document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 2));
     document.getElementById('tros-frame').addEventListener('load', () => {
       installMovieAdBlock(document.getElementById('tros-frame'));
       try {
@@ -546,13 +546,11 @@
     document.getElementById('tros-frame').style.visibility = 'hidden';
     playerSource = index;
     const generation = ++playerGeneration;
-    const hosts = ['https://vidfast.vc', 'https://vidlink.pro', 'https://vidsrc.sh/embed'];
-    const names = ['VidFast', 'VidLink', 'VidSrc'];
+    const hosts = ['https://vidfast.vc', 'https://vidlink.pro'];
+    const names = ['VidFast', 'VidLink'];
     document.getElementById('tros-player-source').selectedIndex = index;
     document.getElementById('tros-player-sub').textContent = names[index] + ' · Byt källa om uppspelningen inte fungerar';
-    // VidSrc's embedded player breaks when its scripts are rewritten by
-    // Scramjet. Its public embed supports normal cross-origin iframes.
-    const src = index === 2 ? hosts[index] + playerPath : await proxyPlayerUrl(hosts[index] + playerPath);
+    const src = await proxyPlayerUrl(hosts[index] + playerPath);
     if (generation !== playerGeneration) return;
     const frame = document.getElementById('tros-frame');
     frame.src = src;

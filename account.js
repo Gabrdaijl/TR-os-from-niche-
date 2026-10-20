@@ -62,7 +62,7 @@
     $('renewal-start').hidden = !!payment;
     $('renewal-instructions').hidden = !payment;
     $('renewal-number').textContent = data?.swishNumber || 'Kontakta administratören';
-    $('renewal-amount').textContent = String(payment?.amount ?? 30);
+    $('renewal-amount').textContent = String(payment?.amount ?? 40);
     $('renewal-days').textContent = String(payment?.durationDays ?? 30);
     $('renewal-reference').textContent = payment?.reference || '—';
     $('renewal-form').hidden = !!payment?.paidRequested;

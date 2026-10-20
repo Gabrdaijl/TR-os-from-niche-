@@ -334,8 +334,6 @@ class LumiSDK {
             .lumi-back-btn:hover { background: ${c.backBtnHover}; }
             .lumi-download-btn { background: ${c.downloadBtnBg}; color: ${c.downloadBtnText}; }
             .lumi-download-btn:hover { background: ${c.downloadBtnHover}; }
-            .lumi-aboutblank-btn { background: ${c.blankBtnBg}; color: ${c.blankBtnText}; }
-            .lumi-aboutblank-btn:hover { background: ${c.blankBtnHover}; }
             .lumi-fullscreen-btn { background: ${c.fullscreenBtnBg}; color: ${c.fullscreenBtnText}; }
             .lumi-fullscreen-btn:hover { background: ${c.fullscreenBtnHover}; }
         `;
@@ -366,7 +364,6 @@ class LumiSDK {
                 <div class="lumi-game-view">
                     <div class="lumi-toolbar">
                         <button class="lumi-action-btn lumi-back-btn">Back</button>
-                        <button class="lumi-action-btn lumi-aboutblank-btn">Open in about:blank</button>
                         <button class="lumi-action-btn lumi-fullscreen-btn">Fullscreen</button>
                     </div>
                     <iframe class="lumi-iframe" src="" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms" allowfullscreen></iframe>
@@ -385,7 +382,6 @@ class LumiSDK {
         this.gameView = this.container.querySelector('.lumi-game-view');
         this.iframe = this.container.querySelector('.lumi-iframe');
         this.backBtn = this.container.querySelector('.lumi-back-btn');
-        this.aboutBlankBtn = this.container.querySelector('.lumi-aboutblank-btn');
         this.fullscreenBtn = this.container.querySelector('.lumi-fullscreen-btn');
 
         this.searchInput.addEventListener('input', (e) => {
@@ -400,29 +396,6 @@ class LumiSDK {
 
         this.backBtn.addEventListener('click', () => this.closeGame());
 
-
-        this.aboutBlankBtn.addEventListener('click', () => {
-            const win = window.open('about:blank', '_blank');
-            if (win) {
-                win.document.write(`<!DOCTYPE html><html><head><title>${this.currentGameTitle}</title><style>body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:${this.colors.gameBackground}; }</style></head><body></body></html>`);
-                win.document.close();
-
-                const iframe = win.document.createElement('iframe');
-                iframe.style.cssText = "width:100%; height:100%; border:none; background:transparent;";
-                iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-pointer-lock allow-forms");
-                iframe.setAttribute("allowfullscreen", "true");
-
-                if (this.currentGameHtml) {
-                    win.document.body.appendChild(iframe);
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(this.currentGameHtml);
-                    iframe.contentDocument.close();
-                } else {
-                    iframe.src = this.currentGameUrl;
-                    win.document.body.appendChild(iframe);
-                }
-            }
-        });
 
         this.fullscreenBtn.addEventListener('click', () => {
             if (this.gameView.requestFullscreen) {

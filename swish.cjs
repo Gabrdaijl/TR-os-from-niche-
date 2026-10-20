@@ -3,7 +3,7 @@
 const crypto = require('node:crypto');
 
 const DEFAULT_SWISH_NUMBER = '0739579244';
-const RENEWAL_AMOUNT_KR = 30;
+const RENEWAL_AMOUNT_KR = 40;
 const RENEWAL_DAYS = 30;
 
 function createSwish(env = process.env) {

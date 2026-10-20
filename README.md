@@ -39,7 +39,7 @@ Den speglade Scramjet-filen är korrigerad på två ställen: service workerns I
 
 Sätt miljövariabeln `TR_OS_NETWORK_TEST=1` vid testkörning för det extra testet av en riktig utgående Wisp-ström. Övriga tester kräver ingen extern AI- eller molnspelsleverantör.
 
-Spelens HTML filtreras före start och får ett annonsfilter för kända annonsdomäner och popupfönster. Korsdomänsramar kan begränsa filtret. Filmspelaren erbjuder VidFast, VidLink och VidSrc; upptäckta proxyfelsidor växlar till nästa källa. Tredjepartskällors innehåll/tillgänglighet kan inte garanteras.
+Spelens HTML filtreras före start och får ett annonsfilter för kända annonsdomäner och popupfönster. Proxade webbsidor körs i en sandbox utan tillstånd att öppna popupfönster eller nya flikar. Filmspelaren erbjuder VidFast och VidLink genom proxyn; upptäckta proxyfelsidor växlar till nästa källa. Tredjepartskällors innehåll/tillgänglighet kan inte garanteras.
 
 ## Cloud launcher
 
@@ -70,7 +70,7 @@ En extern GitHub Actions-kontroll kör var femte minut. Vid driftstopp öppnar d
 
 TR-os kräver ett konto för hemsidans sidor och API. Kunden kan skapa ett konto eller få ett av administratören. Nya konton får ingen automatisk provperiod. Administratören bestämmer åtkomsttiden i dagar och kan lägga till fler dagar eller timmar när som helst. Ingen månadsprenumeration startas. På `/account.html` ser kunden återstående dagar, slutdatum och vilka enheter som används.
 
-I adminpanelen kan du skapa ett kundkonto med valfritt antal åtkomstdagar, söka kunder på namn eller e-post, ändra namn och slutdatum, återställa enhetsinloggningar, pausa eller ta bort kontot samt lägga till tid till en eller flera kunder. Admininloggningen kan sparas på enheten i 30 dagar, eller i 12 timmar om rutan avmarkeras. När du tar bort ett konto raderas kundens inloggning och betalningshistorik. Kunden kan anmäla en Swishbetalning på 30 kr för 30 dagars åtkomst från kontosidan. Admin kontrollerar och godkänner betalningen innan åtkomst läggs till; nya anmälningar visas överst i adminens kundöversikt. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
+I adminpanelen kan du skapa ett kundkonto med valfritt antal åtkomstdagar, söka kunder på namn eller e-post, ändra namn och slutdatum, återställa enhetsinloggningar, pausa eller ta bort kontot samt lägga till tid till en eller flera kunder. Admininloggningen kan sparas på enheten i 30 dagar, eller i 12 timmar om rutan avmarkeras. När du tar bort ett konto raderas kundens inloggning och betalningshistorik. Kunden kan anmäla en Swishbetalning på 40 kr för 30 dagars åtkomst från kontosidan. Admin kontrollerar och godkänner betalningen innan åtkomst läggs till; nya anmälningar visas överst i adminens kundöversikt. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
 
 Konton kan vara inloggade på en dator och en mobil. Medlemsdata sparas i Upstash Redis. Ange `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` som miljövariabler på servern. Utan dessa är medlems-API:t avstängt. Lösenord lagras som scrypt-hashar och sessionscookies är HttpOnly.
 
