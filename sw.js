@@ -47,7 +47,7 @@ if (navigator.userAgent.includes("Firefox")) {
 	} catch (e) {}
 }
 
-importScripts("scram/scramjet.all.js?v=20261021.3");
+importScripts("scram/scramjet.all.js?v=20261021.4");
 importScripts("snap-controller.sw.js");
 
 const { ScramjetServiceWorker } = $scramjetLoadWorker();
