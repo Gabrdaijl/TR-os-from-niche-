@@ -458,7 +458,6 @@ return 1`;
     login,
     logout,
     summary,
-    swishNumber,
     createPayment: createManualPayment,
     markPaid,
     confirmPayment,
