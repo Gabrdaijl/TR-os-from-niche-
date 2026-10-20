@@ -111,7 +111,15 @@
         if (value.type === 'request') {
           const response = await transport.request(new URL(value.url), value.method,
             value.body, value.headers, value.cache);
-          send(state, { type: 'response', id, value: response }, bodyTransfer(response.body));
+          // Responses are class instances and cannot be reliably structured-
+          // cloned across MessagePorts. Send only cloneable fields and rebuild
+          // the Scramjet response in the worker that issued the request.
+          send(state, { type: 'response', id, url: value.url, value: {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.rawHeaders || Array.from(response.headers || []),
+            body: response.body
+          } }, bodyTransfer(response.body));
         } else if (value.type === 'cookies') {
           const entries = value.entries;
           if (!Array.isArray(entries) || entries.some(entry => typeof entry?.url !== 'string' || typeof entry.cookie !== 'string')) {
@@ -245,7 +253,15 @@
         const request = pending.get(value.id);
         if (!request) return;
         pending.delete(value.id);
-        value.error ? request.reject(new Error(value.error)) : request.resolve(value.value);
+        if (value.error) {
+          request.reject(new Error(value.error));
+          return;
+        }
+        const response = value.value;
+        request.resolve(response && typeof response.status === 'number' &&
+          typeof core.BareResponse?.fromTransferrableResponse === 'function'
+          ? core.BareResponse.fromTransferrableResponse(response, value.url)
+          : response);
       } else if (value.type === 'cookie-sync') {
         applyCookies(value.entries, value.clear);
       } else {
