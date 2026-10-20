@@ -520,6 +520,21 @@
           else return;
         } catch (e2) { return; }
       }
+      // Proxied pages are same-origin documents, so install the popup blocker
+      // after navigation and before the user can interact with the page.
+      // Local TR-os pages are left alone; some provide their own in-app flows.
+      try {
+        if (new URL(decoded).origin !== location.origin) {
+          const doc = tab.frame.contentWindow.document;
+          if (doc?.documentElement && doc.documentElement.dataset.trOsPopupGuard !== '1') {
+            doc.documentElement.dataset.trOsPopupGuard = '1';
+            const blocker = doc.createElement('script');
+            blocker.src = new URL('/game-adblock.js?v=20261020.4', location.origin).href;
+            blocker.async = false;
+            (doc.head || doc.documentElement).appendChild(blocker);
+          }
+        }
+      } catch {}
       const previousUrl = tab.lastUrl;
       const previousIcon = tab.favicon;
       tab.lastUrl = decoded;
