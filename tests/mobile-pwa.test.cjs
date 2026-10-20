@@ -27,6 +27,7 @@ test('mobile shell keeps core apps and omits Snapchat from mobile navigation', (
   const page = read('mobile.html');
   const controller = read('mobile.js');
   assert.match(page, /id="mobile-frame"[^>]+src="\/n1browser27d\.html(?:\?v=[^"]+)?"/);
+  assert.match(page, /mobile\.js\?v=20261021\.5/);
   for (const app of ['home', 'games', 'movies', 'ai']) {
     assert.match(page, new RegExp(`data-page="${app}"`));
     assert.match(controller, new RegExp(`${app}: \\{ title:`));
