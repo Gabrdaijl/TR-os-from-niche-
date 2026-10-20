@@ -38,12 +38,23 @@
   }
   const ANIME_PX = '&with_original_language=ja&with_genres=16';
 
-  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __barePlay = null;
+  let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null;
   async function ensurePlayerProxy() {
     if (__sjPlayReady) return true;
     if (__sjPlayPromise) return __sjPlayPromise;
     __sjPlayPromise = (async () => {
-      const epoxyWarm = import('epoxy/index.mjs').catch(() => null);
+      __sjPlayStage = 'service-worker';
+      // On mobile the movie app is inside mobile.html's same-origin iframe.
+      // Start the worker from the top-level shell first so Safari does not
+      // have to create the site worker from a nested browsing context.
+      let shellRuntime = window.TR_OS;
+      try {
+        if (window.parent !== window && window.parent.TR_OS?.ensureServiceWorker) shellRuntime = window.parent.TR_OS;
+      } catch (_) {}
+      await shellRuntime.ensureServiceWorker();
+      await window.TR_OS.ensureServiceWorker();
+
+      __sjPlayStage = 'scramjet';
       const { ScramjetController } = $scramjetLoadController();
       const client = new ScramjetController({
         files: {
@@ -53,9 +64,12 @@
         },
       });
       await client.init();
-      await window.TR_OS.ensureServiceWorker();
+
+      __sjPlayStage = 'shared-worker';
+      if (typeof SharedWorker !== 'function') throw new Error('shared-worker-unavailable');
       const conn = new BareMux.BareMuxConnection(window.TR_OS.assetUrl("baremux/worker.js"));
-      await epoxyWarm;
+
+      __sjPlayStage = 'transport';
       const transport = [{ wisp: window.TR_OS.wispUrl("/wisp-movies/") }];
       let transportError;
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -76,11 +90,12 @@
       __barePlay = conn;
       __sjPlay = client;
       __sjPlayError = null;
+      __sjPlayStage = '';
       __sjPlayReady = true;
       return true;
     })().catch(error => {
       __sjPlayError = error;
-      console.warn('TR-os movie connection could not start:', error);
+      console.warn('TR-os movie connection could not start at ' + (__sjPlayStage || 'unknown stage') + ':', error);
       return false;
     }).finally(() => { __sjPlayPromise = null; });
     return __sjPlayPromise;
@@ -602,7 +617,12 @@
       frame.src = 'about:blank';
       document.getElementById('tros-player-sub').textContent = 'Den skyddade filmanslutningen kunde inte starta';
       const status = document.getElementById('tros-player-status');
-      status.textContent = 'Den skyddade anslutningen kunde inte starta. Tryck på Byt källa för att försöka igen.';
+      const reason = __sjPlayStage === 'shared-worker'
+        ? 'Den här webbläsaren saknar stöd för den delade worker som filmanslutningen behöver. Öppna sidan direkt i Safari och ladda om.'
+        : __sjPlayStage === 'service-worker'
+          ? 'Safari kunde inte starta webbproxyn. Stäng sidan, öppna den direkt i Safari och ladda om.'
+          : 'Filmanslutningen kunde inte starta (' + (__sjPlayStage || 'okänt steg') + '). Ladda om sidan och försök igen.';
+      status.textContent = reason;
       status.style.display = 'flex';
       return;
     }
