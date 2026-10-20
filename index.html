@@ -87,6 +87,11 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
       <span id="membership-time-badge" class="membership-time-badge" aria-hidden="true"></span>
     </a>
+
+    <div class="site-tools" aria-label="Sidverktyg">
+    <button type="button" id="site-fullscreen" class="site-tool" aria-controls="mainFrame" aria-label="Fullskärm" aria-pressed="false" title="Fullskärm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+    <button type="button" id="site-report" class="site-tool" aria-label="Rapportera fel" title="Rapportera fel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11a9 9 0 0 1-9 9H4l-2 2V11a10 10 0 0 1 19 0Z"/><path d="M12 6v6m0 3v1"/></svg></button>
+  </div>
   </nav>
 
 
@@ -99,10 +104,7 @@
   </div>
 
 
-  <div class="site-tools" aria-label="Sidverktyg">
-    <button type="button" id="site-fullscreen" class="site-tool" aria-controls="mainFrame" aria-label="Fullskärm" aria-pressed="false" title="Fullskärm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
-    <button type="button" id="site-report" class="site-tool" aria-label="Rapportera fel" title="Rapportera fel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11a9 9 0 0 1-9 9H4l-2 2V11a10 10 0 0 1 19 0Z"/><path d="M12 6v6m0 3v1"/></svg></button>
-  </div><p id="site-tools-status" class="site-tools-status" role="status"></p>
+  <p id="site-tools-status" class="site-tools-status" role="status"></p>
   <dialog id="report-dialog" aria-labelledby="report-title"><button type="button" id="report-close" aria-label="Stäng felrapport">Stäng</button><h2 id="report-title">Rapportera ett fel</h2><p>Beskriv vad som inte fungerar. Rapporten och en eventuell bild skickas till TR-os admin. Ta inte med lösenord eller privata samtal.</p>
     <form id="report-form"><label for="report-category">Vilken del gäller det?</label><select id="report-category"><option value="home">Startsidan</option><option value="games">Games</option><option value="movies">Movies</option><option value="ai">AI</option><option value="browser">Webbläsaren</option><option value="snapchat">Snapchat</option><option value="cloud">Cloud</option><option value="other">Annat</option></select><label for="report-message">Vad händer?</label><textarea autofocus id="report-message" minlength="5" maxlength="2000" required placeholder="Vad försökte du göra och vilket fel visas?"></textarea><label for="report-image">Bild (valfritt)</label><input type="file" id="report-image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif"><img id="report-preview" alt="Bilden som bifogas rapporten" hidden><div class="report-actions"><button type="button" id="report-remove-image">Ta bort bilden</button><button type="submit" id="report-submit">Skicka rapport</button></div><p id="report-result" role="status"></p><p><small>De senaste 50 rapporterna sparas i högst 7 dagar. Bilden minskas innan den skickas.</small></p></form>
   </dialog>
