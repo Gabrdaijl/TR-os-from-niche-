@@ -56,7 +56,7 @@
     if (!pending) {
       pending = new Promise((resolve, reject) => {
         const script = host.document.createElement('script');
-        script.src = runtime.assetUrl('scram/scramjet.all.js?v=20261021.1');
+        script.src = runtime.assetUrl('scram/scramjet.all.js?v=20261021.2');
         script.async = true;
         script.onload = () => {
           if (typeof host.$scramjetLoadController !== 'function') return reject(new Error('Scramjet controller did not load.'));
@@ -79,7 +79,7 @@
         if (typeof ScramjetController !== 'function') throw new Error('Scramjet controller is unavailable.');
         const client = new ScramjetController({ files: {
           wasm: runtime.assetUrl('scram/scramjet.wasm.wasm'),
-          all: runtime.assetUrl('scram/scramjet.all.js?v=20261021.1'),
+          all: runtime.assetUrl('scram/scramjet.all.js?v=20261021.2'),
           sync: runtime.assetUrl('scram/scramjet.sync.js'),
         }});
         __sjPlayStage = stagePrefix + '-init';
