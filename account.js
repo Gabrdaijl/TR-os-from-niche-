@@ -1,6 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
-  let current = null, busy = false, timer = null;
+  let current = null, busy = false, timer = null, countdownTimer = null, expiryRefresh = false;
 
   function deviceId() {
     try {
@@ -31,6 +31,31 @@
     return new Date(timestamp).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
+  function formatRemaining(timestamp) {
+    const totalMinutes = Math.max(0, Math.floor((Number(timestamp) - Date.now()) / 60000));
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    const dayLabel = days === 1 ? 'dag' : 'dagar';
+    const hourLabel = hours === 1 ? 'timme' : 'timmar';
+    const minuteLabel = minutes === 1 ? 'minut' : 'minuter';
+    return `${days} ${dayLabel} · ${hours} ${hourLabel} · ${minutes} ${minuteLabel}`;
+  }
+
+  function updateCountdown() {
+    const user = current?.user;
+    if (!user) return;
+    const expiry = Number(user.accessUntilMs) || 0;
+    const remaining = user.active && expiry ? Math.max(0, expiry - Date.now()) : 0;
+    const display = user.active && expiry ? formatRemaining(expiry) : '0 dagar · 0 timmar · 0 minuter';
+    $('days-left').textContent = display;
+    $('days-left').setAttribute('aria-label', 'Återstående åtkomsttid: ' + display.replaceAll(' · ', ', '));
+    if (user.active && expiry && remaining === 0 && !expiryRefresh) {
+      expiryRefresh = true;
+      refresh();
+    } else if (remaining > 0) expiryRefresh = false;
+  }
+
   function selectTab(register) {
     $('tab-login').setAttribute('aria-selected', String(!register));
     $('tab-register').setAttribute('aria-selected', String(register));
@@ -57,7 +82,7 @@
     }
 
     $('member-title').textContent = 'Hej, ' + user.firstName + '!';
-    $('days-left').textContent = user.active ? user.daysLeft + (user.daysLeft === 1 ? ' dag' : ' dagar') : '0 dagar';
+    updateCountdown();
     $('access-until').textContent = formatDate(user.accessUntilMs);
     $('member-state').classList.toggle('expired', !user.active);
     $('member-state').classList.toggle('waiting', !user.active && !user.accessUntilMs);
@@ -101,6 +126,7 @@
       history.replaceState(null, '', '/account.html');
       await refresh();
       if (!timer) timer = setInterval(refresh, 20000);
+      if (!countdownTimer) countdownTimer = setInterval(updateCountdown, 1000);
     } catch (error) {
       $('auth-state').textContent = error.message;
     } finally {
@@ -129,7 +155,11 @@
     current = null;
     await refresh();
     if (timer) { clearInterval(timer); timer = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
   });
 
-  refresh().then(() => { if (current?.user && !timer) timer = setInterval(refresh, 20000); });
+  refresh().then(() => {
+    if (current?.user && !timer) timer = setInterval(refresh, 20000);
+    if (current?.user && !countdownTimer) countdownTimer = setInterval(updateCountdown, 1000);
+  });
 })();

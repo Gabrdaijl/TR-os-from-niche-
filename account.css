@@ -95,12 +95,13 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .member-state { padding: 14px 15px; border: 1px solid #284a41; border-radius: 11px; color: #a9e8d1; background: #12241f; font-size: 12px; line-height: 1.6; }
 .member-state.expired { border-color: #665033; color: #f1cb91; background: #2e2315; }
 .member-state.waiting { border-color: #35445d; color: #c2cce0; background: #151e2e; }
-.member-facts { display: grid; grid-template-columns: .8fr 1.2fr; gap: 11px; margin: 15px 0; }
-.fact-card { min-width: 0; min-height: 100px; padding: 15px; border: 1px solid var(--line); border-radius: 11px; background: color-mix(in srgb, var(--field) 85%, var(--panel)); }
+.member-facts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 11px; margin: 15px 0; }
+.fact-card { min-width: 0; min-height: 76px; padding: 15px; border: 1px solid var(--line); border-radius: 11px; background: color-mix(in srgb, var(--field) 85%, var(--panel)); }
 .fact-card span, .fact-card strong { display: block; }
-.fact-card span { margin-bottom: 14px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: 1.1px; }
+.fact-card span { margin-bottom: 10px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: 1.1px; }
 .fact-card strong { overflow-wrap: anywhere; font: 600 17px 'Space Grotesk', sans-serif; }
-.days-card strong { color: var(--accent); font-size: 24px; }
+.days-card { min-height: 94px; border-color: color-mix(in srgb, var(--accent) 32%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+.days-card strong { color: var(--accent); font-size: clamp(16px, 3.4vw, 21px); line-height: 1.4; }
 .devices { margin: 15px 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
 .link-button { margin-top: 19px; }
 .member-help { margin: 13px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
@@ -126,7 +127,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .account-shell { width: min(100% - 22px, 500px); }
   .panel { padding: 17px; }
   .name-fields { grid-template-columns: 1fr; gap: 0; }
-  .member-facts { grid-template-columns: 1fr 1fr; }
+  .member-facts { grid-template-columns: minmax(0, 1fr); }
   .top-link { padding: 9px 10px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
