@@ -1,6 +1,4 @@
- tab: 62, Title: "raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/nm.js", URL: "https://raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/nm.js".
-1 AXWebArea raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/nm.js
-	2 text  (() => {
+(() => {
   'use strict';
 
   const KEY  = '3a73619bbb8fc6d47742d1b5b2b707b5';
@@ -44,6 +42,7 @@
   let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null, __barePlayWorker = null;
   const __scramjetLoadPromises = new WeakMap();
   const __scramjetClientPromises = new WeakMap();
+  let __movieBareMuxPromise = null;
 
   function movieHostWindow() {
     // The Movies page defers its popup guard until the proxy has initialized.
@@ -92,6 +91,30 @@
     }
     __sjPlayStage = stagePrefix + '-init';
     return runtime.withTimeout(pending, 20000, 'Filmens proxy kunde inte starta i tid.');
+  }
+
+  function loadMovieBareMux(runtime) {
+    if (window.BareMux && typeof window.BareMux.BareMuxConnection === 'function') return Promise.resolve();
+    if (!__movieBareMuxPromise) {
+      __movieBareMuxPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = runtime.assetUrl('baremux/index.js');
+        script.async = true;
+        script.onload = () => {
+          if (!window.BareMux || typeof window.BareMux.BareMuxConnection !== 'function') {
+            reject(new Error('BareMux connection is unavailable.'));
+            return;
+          }
+          resolve();
+        };
+        script.onerror = () => reject(new Error('BareMux script could not be loaded.'));
+        document.head.appendChild(script);
+      }).catch(error => {
+        __movieBareMuxPromise = null;
+        throw error;
+      });
+    }
+    return __movieBareMuxPromise;
   }
 
   function createMovieMuxConnection(preferDedicated = false) {
@@ -163,6 +186,7 @@
       const warmError = await serverReady;
       if (warmError) throw warmError;
 
+      await loadMovieBareMux(hostRuntime);
       __sjPlayStage = 'movie-worker';
       let conn = createMovieMuxConnection();
       __sjPlayStage = 'transport';
