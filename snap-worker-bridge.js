@@ -7,10 +7,12 @@
     btoa(Array.from(new TextEncoder().encode(text), byte => String.fromCharCode(byte)).join(''));
 
   // Snapchat's own capture scripts may encode a JPEG before the document's
-  // load event. Install this before page scripts so a failed high-quality
-  // export can retry at lower quality instead of aborting capture.
+  // load event. Install this before page scripts so a failed or oversized
+  // high-quality export can retry at lower quality before upload.
   function installSnapImageEncodingFallback(scope) {
     const marker = '__trosSnapJpegQualityFallback';
+    const maxSnapBytes = 8 * 1024 * 1024;
+    const needsRetry = blob => !blob || blob.size === 0 || blob.size > maxSnapBytes;
     const isHighQualityJpeg = (type, quality) => typeof type === 'string' &&
       type.split(';', 1)[0].trim().toLowerCase() === 'image/jpeg' &&
       typeof quality === 'number' && quality >= 0.9;
@@ -32,7 +34,7 @@
             const level = levels[index++];
             original.call(this, blob => {
               if (finished) return;
-              if (blob || index >= levels.length) {
+              if (!needsRetry(blob) || index >= levels.length) {
                 finished = true;
                 callback(blob);
               } else attempt();
@@ -52,8 +54,15 @@
         function convertToBlob(options = {}) {
           if (!isHighQualityJpeg(options?.type, options?.quality)) return original.apply(this, arguments);
           const levels = retries(options.quality);
-          const attempt = index => Promise.resolve(original.call(this, { ...options, quality: levels[index] }))
-            .catch(error => index + 1 < levels.length ? attempt(index + 1) : Promise.reject(error));
+          const attempt = async index => {
+            try {
+              const blob = await original.call(this, { ...options, quality: levels[index] });
+              return needsRetry(blob) && index + 1 < levels.length ? attempt(index + 1) : blob;
+            } catch (error) {
+              if (index + 1 < levels.length) return attempt(index + 1);
+              throw error;
+            }
+          };
           return attempt(0);
         }
         Object.defineProperty(convertToBlob, marker, { value: true });

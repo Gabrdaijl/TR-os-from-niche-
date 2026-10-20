@@ -1,5 +1,5 @@
 (async () => {
-  const release = '20261019.4';
+  const release = '20261020.1';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -41,7 +41,7 @@
       const lazy=window.TR_OS_SNAP_CURL.create(async()=>{
       await TR_OS.withTimeout(new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = '/snap-curl-transport.js?v=' + release + '-ordered-send-20261019.4';
+        script.src = '/snap-curl-transport.js?v=' + release + '-snap-image-budget';
         script.onload = resolve;
         script.onerror = () => reject(new Error('Snapchat-transporten kunde inte laddas.'));
         document.head.append(script);

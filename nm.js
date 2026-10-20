@@ -356,6 +356,7 @@
       </div>
       <div id="tros-player-status" role="status" aria-live="polite"></div>
       <iframe id="tros-frame"
+        sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
         referrerpolicy="no-referrer">
@@ -378,6 +379,7 @@
     document.getElementById('tros-player-source').addEventListener('change', e => changePlayerSource(e.target.selectedIndex));
     document.getElementById('tros-player-next').addEventListener('click', () => changePlayerSource((playerSource + 1) % 3));
     document.getElementById('tros-frame').addEventListener('load', () => {
+      installMovieAdBlock(document.getElementById('tros-frame'));
       try {
         const doc = document.getElementById('tros-frame').contentDocument;
         const text = doc && doc.body && doc.body.innerText || '';
@@ -394,6 +396,20 @@
         else closeModal();
       }
     });
+  }
+
+  function installMovieAdBlock(frame) {
+    try {
+      const doc = frame.contentDocument;
+      if (!doc?.documentElement || doc.documentElement.dataset.trosMovieAdBlock === '1') return;
+      doc.documentElement.dataset.trosMovieAdBlock = '1';
+      const script = doc.createElement('script');
+      script.src = new URL('/game-adblock.js?v=20261020.1', location.origin).href;
+      script.async = false;
+      (doc.head || doc.documentElement).appendChild(script);
+    } catch (_) {
+      // Cross-origin player pages still get popup protection from the iframe sandbox.
+    }
   }
 
   // ── modal open ───────────────────────────────────────────────────
