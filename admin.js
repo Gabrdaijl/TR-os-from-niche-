@@ -3,7 +3,7 @@
   let authorization = '', timer, expires = 0, pending = false, pushReady = false, pushRegistration = null;
   const imageUrls = new Set();
   let traffic, period = 'today', databaseConnected = null;
-  let reportIds = null, banIds = null, conversationData = [], selectedConversation = '', conversationSignature = '', healthDown = null;
+  let reportIds = null, banIds = null, conversationData = [], conversationsLoaded = false, selectedConversation = '', conversationSignature = '', healthDown = null;
   let memberUsers = [], memberPayments = [], memberPlans = [], reportedPaymentIds = null, knownMemberIds = null;
   let memberSearch = '', priorityReports = [], priorityBans = [];
   const priorityStatus = { members: 'loading', reports: 'loading', bans: 'loading', support: 'loading' };
@@ -134,7 +134,7 @@
   let reportSignature = '', banSignature = '', authGeneration = 0;
   function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
   function clearAdminView() {
-    authGeneration++;pending=false;pushReady=false;pushRegistration=null;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];priorityReports=[];priorityBans=[];priorityStatus.members='loading';priorityStatus.reports='loading';priorityStatus.bans='loading';priorityStatus.support='loading';databaseConnected=null;selectedConversation='';conversationSignature='';healthDown=null;setNoticeMessage('');$('priority-panel').hidden=true;$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
+    authGeneration++;pending=false;pushReady=false;pushRegistration=null;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];conversationsLoaded=false;priorityReports=[];priorityBans=[];priorityStatus.members='loading';priorityStatus.reports='loading';priorityStatus.bans='loading';priorityStatus.support='loading';databaseConnected=null;selectedConversation='';conversationSignature='';healthDown=null;setNoticeMessage('');$('priority-panel').hidden=true;$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
     authorization = ''; clearInterval(timer); $('password').value = ''; $('message').textContent = '';
     expires = 0; $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
     $('login').hidden = false; $('logout').hidden = true;
@@ -281,9 +281,9 @@
       const data=await response.json();if(generation!==authGeneration||!authorization)return;
       if(!response.ok)throw Error(data.error||'Supportmeddelanden kunde inte hämtas.');
       const entries=Array.isArray(data.conversations)?data.conversations:[];
-      if(conversationData.length){
+      if(conversationsLoaded){
         const previous=new Map(conversationData.map(item=>[item.id,item.messages?.at(-1)?.id]));
-        for(const item of entries){const latest=item.messages?.at(-1)?.id;if(latest&&previous.has(item.id)&&previous.get(item.id)!==latest&&item.messages?.at(-1)?.role==='browser')notifyAdmin('Nytt supportmeddelande','En spärrad webbläsare har skrivit till dig.');}
+        for(const item of entries){const latest=item.messages?.at(-1)?.id;if(latest&&item.messages?.at(-1)?.role==='browser'&&(!previous.has(item.id)||previous.get(item.id)!==latest))notifyAdmin('Nytt supportmeddelande','En besökare väntar på svar i supportchatten.');}
       }
       entries.sort((a,b)=>{
         const unreadA=a.messages?.at(-1)?.role==='browser',unreadB=b.messages?.at(-1)?.role==='browser';
@@ -292,7 +292,7 @@
         const timeB=Date.parse(b.messages?.at(-1)?.createdAt||'')||Number(b.updatedAt)||0;
         return timeB-timeA;
       });
-      conversationData=entries;priorityStatus.support='ready';renderPriorityQueue();$('conversation-count').textContent=format(entries.filter(item=>item.messages?.at(-1)?.role==='browser').length);
+      conversationData=entries;conversationsLoaded=true;priorityStatus.support='ready';renderPriorityQueue();$('conversation-count').textContent=format(entries.filter(item=>item.messages?.at(-1)?.role==='browser').length);
       if(!entries.some(item=>item.id===selectedConversation))selectedConversation=entries[0]?.id||'';
       renderConversations();
     }catch(error){if(generation===authGeneration&&authorization){priorityStatus.support='error';renderPriorityQueue();$('conversation-state').textContent=error.message;}}
