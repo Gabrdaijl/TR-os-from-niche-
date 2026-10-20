@@ -356,7 +356,7 @@
       </div>
       <div id="tros-player-status" role="status" aria-live="polite"></div>
       <iframe id="tros-frame"
-        sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+        
         allowfullscreen
         allow="autoplay;fullscreen;picture-in-picture;encrypted-media"
         referrerpolicy="no-referrer">
