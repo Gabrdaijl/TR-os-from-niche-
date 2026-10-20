@@ -6,7 +6,7 @@
     "mullvad-se": "/wisp-mullvad-se/",
     mullvad: "/wisp-mullvad/"
   };
-  let __sj = null, __sjReady = false, __sjInitPromise = null;
+  let __sj = null, __sjReady = false, __sjInitPromise = null, __sjClient = null, __sjClientPromise = null;
   const __proxyScripts = new Map();
   var MV_BUILD = 'r5';
   function mvLog(m) {
@@ -130,8 +130,12 @@
   }
 
   let __bareProxyWorker = null;
-  async function createBrowserMuxConnection() {
+  async function createBrowserMuxConnection(preferDedicated = false) {
     const sharedWorkerUrl = window.TR_OS.assetUrl('baremux/worker.js');
+    if (!preferDedicated && typeof SharedWorker === 'function') {
+      try { return new BareMux.BareMuxConnection(sharedWorkerUrl); }
+      catch (error) { console.warn('TR-os browser SharedWorker unavailable; trying a dedicated worker:', error); }
+    }
     if (typeof Worker === 'function' && typeof MessageChannel === 'function') {
       let worker;
       try {
@@ -142,10 +146,10 @@
         return new BareMux.BareMuxConnection(channel.port1);
       } catch (error) {
         try { worker?.terminate(); } catch (_) {}
-        console.warn('TR-os browser dedicated worker unavailable; trying SharedWorker:', error);
+        console.warn('TR-os browser dedicated worker unavailable:', error);
       }
     }
-    if (typeof SharedWorker === 'function') return new BareMux.BareMuxConnection(sharedWorkerUrl);
+    if (!preferDedicated && typeof SharedWorker === 'function') return new BareMux.BareMuxConnection(sharedWorkerUrl);
     throw new Error('browser-worker-unavailable');
   }
 
@@ -164,6 +168,9 @@
     __sjInitPromise = (async () => {
       try {
         const withTimeout = window.TR_OS.withTimeout;
+        const serverReady = Promise.resolve().then(() => {
+          return typeof window.TR_OS.warmProxyServer === 'function' ? window.TR_OS.warmProxyServer() : true;
+        }).then(() => null, error => error);
         const loadScript = src => {
           if (__proxyScripts.has(src)) return __proxyScripts.get(src);
           const script = document.createElement('script');
@@ -184,40 +191,53 @@
         await loadScript(window.TR_OS.assetUrl('baremux/index.js'));
         await loadScript(window.TR_OS.assetUrl('scram/scramjet.all.js'));
         await withTimeout(import(window.TR_OS.assetUrl('epoxy/index.mjs')), 20000, 'Webbproxyns anslutning kunde inte laddas.');
-        const { ScramjetController } = $scramjetLoadController();
-        const client = new ScramjetController({
-          files: {
-            wasm: window.TR_OS.assetUrl('scram/scramjet.wasm.wasm'),
-            all: window.TR_OS.assetUrl('scram/scramjet.all.js'),
-            sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
-          },
-        });
-        await withTimeout(window.TR_OS.ensureServiceWorker(), 20000, 'Webbproxyns service worker kunde inte starta.'); await withTimeout(client.init(), 45000, 'Webbproxyn tog för lång tid att starta.');
+        await withTimeout(window.TR_OS.ensureServiceWorker(), 20000, 'Webbproxyns service worker kunde inte starta.');
 
-        let shellRuntime = window.TR_OS;
-        try {
-          if (window.parent !== window && window.parent.TR_OS?.ensureServiceWorker) shellRuntime = window.parent.TR_OS;
-        } catch (_) {}
-        await withTimeout(shellRuntime.ensureServiceWorker(), 20000, 'Webbproxyns service worker kunde inte starta.');
-        if (shellRuntime !== window.TR_OS) {
-          await withTimeout(window.TR_OS.ensureServiceWorker(), 20000, 'Webbproxyn kunde inte koppla den här fliken.');
+        if (!__sjClientPromise) {
+          const initPromise = (async () => {
+            const { ScramjetController } = $scramjetLoadController();
+            if (typeof ScramjetController !== 'function') throw new Error('Scramjet controller is unavailable.');
+            const client = new ScramjetController({
+              files: {
+                wasm: window.TR_OS.assetUrl('scram/scramjet.wasm.wasm'),
+                all: window.TR_OS.assetUrl('scram/scramjet.all.js'),
+                sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
+              },
+            });
+            await client.init();
+            return client;
+          })();
+          __sjClientPromise = initPromise;
+          initPromise.catch(() => { if (__sjClientPromise === initPromise) __sjClientPromise = null; });
         }
+        const client = __sjClient || await withTimeout(__sjClientPromise, 20000, 'Webbproxyns lokala initiering tog för lång tid.');
+        __sjClient = client;
+        const warmError = await serverReady;
+        if (warmError) throw warmError;
 
-        const conn = await createBrowserMuxConnection();
-        __bareConn = conn;
-        const transport = [{ wisp: window.TR_OS.wispUrl(wispRoute()) }];
-        let transportError;
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            await withTimeout(conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), transport), 20000, 'Webbproxyns server svarade inte.');
-            transportError = null;
-            break;
-          } catch (error) {
-            transportError = error;
-            if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 300));
+        const configureTransport = async conn => {
+          let lastError;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              await withTimeout(conn.setTransport(window.TR_OS.assetUrl('epoxy/index.mjs'), [{ wisp: window.TR_OS.wispUrl(wispRoute()) }]), 12000, 'Webbproxyns server svarade inte.');
+              return null;
+            } catch (error) {
+              lastError = error;
+              if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 300));
+            }
           }
+          return lastError;
+        };
+        let conn = await createBrowserMuxConnection();
+        let transportError = await configureTransport(conn);
+        if (transportError && !__bareProxyWorker && typeof Worker === 'function' && typeof MessageChannel === 'function') {
+          try {
+            conn = await createBrowserMuxConnection(true);
+            transportError = await configureTransport(conn);
+          } catch (error) { transportError = error; }
         }
         if (transportError) throw transportError;
+        __bareConn = conn;
         __sj = client;
         __sjReady = true;
         const status = document.getElementById('browser-status');
