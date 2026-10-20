@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080c14">
   <meta name="robots" content="noindex,nofollow">
   <title>Konto · TR-os</title>
-  <link rel="stylesheet" href="account.css?v=20261020.3">
+  <link rel="stylesheet" href="account.css?v=20261020.4">
   <script src="/tr-os.config.js" defer></script>
   <script src="theme.js" defer></script>
   <script src="account.js?v=20261020.3" defer></script>
@@ -14,16 +14,16 @@
 <body>
   <main class="account-shell">
     <header class="account-topbar">
-      <a class="brand" href="/" aria-label="Till TR-os hemsida"><span class="mark" aria-hidden="true">T</span><span class="brand-copy">TR-os<small>KONTO</small></span></a>
-      <a class="top-link" href="/">Till hemsidan <span aria-hidden="true">↗</span></a>
+      <a class="brand" href="/" aria-label="Till TR-os hemsida"><span class="mark tros-sys" aria-hidden="true">T</span><span class="brand-copy">TR-os<small>KONTO</small></span></a>
+      <a class="top-link" href="/">Till hemsidan <span class="tros-sys" aria-hidden="true">↗</span></a>
     </header>
 
     <div class="account-grid">
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow"><span class="status-dot"></span> SÄKER INLOGGNING</p>
-        <h1 id="page-title">Ditt konto.<br><span>Din åtkomst.</span></h1>
+        <h1 id="page-title">Ditt konto.<br><span class="tros-sys">Din åtkomst.</span></h1>
         <p>Logga in för att öppna TR-os och se hur länge din åtkomst gäller. Du kan använda en dator och en mobil.</p>
-        <div class="trust-note"><span class="trust-icon" aria-hidden="true">✓</span><span><strong>Håll koll på din åtkomst</strong><small>Slutdatum och återstående dagar visas direkt på kontosidan.</small></span></div>
+        <div class="trust-note"><span class="trust-icon tros-sys" aria-hidden="true">✓</span><span><strong>Håll koll på din åtkomst</strong><small>Slutdatum och återstående dagar visas direkt på kontosidan.</small></span></div>
       </section>
 
       <section id="auth-panel" class="panel auth-panel" aria-labelledby="auth-title">
@@ -39,7 +39,7 @@
           <input id="login-email" type="email" autocomplete="username" maxlength="254" placeholder="namn@exempel.se" required>
           <label for="login-password">Lösenord</label>
           <div class="password-wrap"><input id="login-password" type="password" autocomplete="current-password" minlength="10" maxlength="128" placeholder="Ditt lösenord" required><button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Visa lösenord" aria-pressed="false">Visa</button></div>
-          <button class="primary" type="submit"><span>Logga in</span><span aria-hidden="true">→</span></button>
+          <button class="primary" type="submit"><span class="tros-sys">Logga in</span><span class="tros-sys" aria-hidden="true">→</span></button>
         </form>
         <form id="register-form" class="form" hidden autocomplete="on">
           <div class="name-fields">
@@ -51,10 +51,10 @@
           <label for="register-password">Välj lösenord</label>
           <div class="password-wrap"><input id="register-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" placeholder="Minst 10 tecken" required><button class="password-toggle" type="button" data-password-toggle="register-password" aria-label="Visa lösenord" aria-pressed="false">Visa</button></div>
           <p class="hint">När kontot är skapat tilldelar administratören åtkomsttid. Ingen automatisk provperiod eller månadsprenumeration startas.</p>
-          <button class="primary" type="submit"><span>Skapa konto</span><span aria-hidden="true">→</span></button>
+          <button class="primary" type="submit"><span class="tros-sys">Skapa konto</span><span class="tros-sys" aria-hidden="true">→</span></button>
         </form>
         <p id="auth-state" class="state" role="status" aria-live="polite"></p>
-        <div class="panel-foot"><span class="shield" aria-hidden="true">◆</span> Dina inloggningsuppgifter skyddas.</div>
+        <div class="panel-foot"><span class="shield tros-sys" aria-hidden="true">◆</span> Dina inloggningsuppgifter skyddas.</div>
       </section>
 
       <section id="member-panel" class="panel member-panel" hidden aria-labelledby="member-title">
@@ -65,7 +65,7 @@
           <div class="fact-card"><span>ÅTKOMST TILL</span><strong id="access-until">—</strong></div>
         </div>
         <p id="devices" class="devices"></p>
-        <a id="open-site" class="primary link-button" href="/">Öppna TR-os <span aria-hidden="true">→</span></a>
+        <a id="open-site" class="primary link-button" href="/">Öppna TR-os <span class="tros-sys" aria-hidden="true">→</span></a>
         <p id="member-help" class="member-help">Behöver du mer åtkomsttid? Kontakta administratören.</p>
       </section>
     </div>

@@ -75,6 +75,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .password-toggle { position: absolute; top: 15px; right: 8px; padding: 6px 7px; border: 0; border-radius: 6px; color: var(--accent); background: transparent; font-size: 10px; font-weight: 700; }
 .password-toggle:hover { background: #ffffff0b; }
 .primary { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; margin-top: 4px; padding: 0 16px; border: 0; border-radius: 10px; color: #09241c; background: var(--accent); font-size: 13px; font-weight: 700; text-decoration: none; transition: transform .18s, filter .18s; }
+.auth-panel .primary, .member-panel .primary { color: var(--tros-onacc, #09241c) !important; }
+.auth-panel .primary span, .member-panel .primary span { color: var(--tros-onacc, #09241c) !important; }
 .primary:hover { filter: brightness(1.07); transform: translateY(-1px); }
 .primary:disabled { cursor: wait; opacity: .7; transform: none; }
 .hint { margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.65; }
