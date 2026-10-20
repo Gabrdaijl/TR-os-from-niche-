@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080c14">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Medlemskap · TR-os</title>
+  <link rel="stylesheet" href="account.css">
+  <script src="/tr-os.config.js" defer></script>
+  <script src="account.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <a class="brand" href="/account.html" aria-label="TR-os medlemskap"><span class="mark">T</span><span>TR-os<small>MEDLEMSKAP</small></span></a>
+    <section class="intro">
+      <p class="eyebrow">DIN ÅTKOMST</p>
+      <h1>Fortsätt till <span>TR-os.</span></h1>
+      <p>Skapa ett konto för att starta din provperiod eller logga in för att hantera ditt medlemskap.</p>
+    </section>
+
+    <section id="auth-panel" class="panel" aria-labelledby="auth-title">
+      <div class="tabs" role="tablist" aria-label="Kontoinställningar">
+        <button id="tab-login" type="button" role="tab" aria-selected="true">Logga in</button>
+        <button id="tab-register" type="button" role="tab" aria-selected="false">Skapa konto</button>
+      </div>
+      <p id="notice" class="notice" role="status" aria-live="polite"></p>
+      <h2 id="auth-title">Logga in</h2>
+      <form id="login-form" class="form">
+        <label for="login-email">E-postadress</label>
+        <input id="login-email" type="email" autocomplete="email" maxlength="254" required>
+        <label for="login-password">Lösenord</label>
+        <input id="login-password" type="password" autocomplete="current-password" minlength="10" maxlength="128" required>
+        <button class="primary" type="submit">Logga in</button>
+      </form>
+      <form id="register-form" class="form" hidden>
+        <div class="name-fields">
+          <div><label for="first-name">Förnamn</label><input id="first-name" autocomplete="given-name" maxlength="80" required></div>
+          <div><label for="last-name">Efternamn</label><input id="last-name" autocomplete="family-name" maxlength="80" required></div>
+        </div>
+        <label for="register-email">E-postadress</label>
+        <input id="register-email" type="email" autocomplete="email" maxlength="254" required>
+        <label for="register-password">Lösenord</label>
+        <input id="register-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+        <p class="hint">Nya konton får 3 dagars provperiod. Därefter behöver du betala med Swish.</p>
+        <button class="primary" type="submit">Skapa konto</button>
+      </form>
+      <p id="auth-state" class="state" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="member-panel" class="panel" hidden aria-labelledby="member-title">
+      <div class="member-head"><div><p class="eyebrow">MEDLEMSKAP</p><h2 id="member-title">Hej!</h2></div><button id="logout" class="quiet" type="button">Logga ut</button></div>
+      <p id="member-state" class="member-state" role="status" aria-live="polite"></p>
+      <div class="member-facts">
+        <div><span>Abonnemang</span><strong id="plan-name">—</strong></div>
+        <div><span>Tid kvar</span><strong id="days-left">—</strong></div>
+        <div><span>Åtkomst till</span><strong id="access-until">—</strong></div>
+      </div>
+      <p id="devices" class="devices"></p>
+      <a id="open-site" class="primary link-button" href="/">Öppna TR-os</a>
+      <section class="payment-box" aria-labelledby="payment-title">
+        <p class="eyebrow">SWISH</p>
+        <h3 id="payment-title">Förnya medlemskapet</h3>
+        <p id="payment-copy">Priset för nästa månad visas här.</p>
+        <button id="create-payment" class="primary" type="button">Visa betalningsuppgifter</button>
+        <div id="payment-instructions" class="instructions" hidden>
+          <div class="amount-row"><span>Att betala</span><strong id="payment-amount"></strong></div>
+          <p>Swishmottagare: <strong id="swish-number"></strong>.</p>
+          <p>Betala beloppet i Swish till numret ovan och skriv referensen som meddelande.</p>
+          <p>Betalningsreferens:</p>
+          <code id="payment-reference"></code>
+          <button id="copy-payment" class="quiet" type="button">Kopiera Swishuppgifter</button>
+          <p class="hint">När du har swishat fyller du i namnet på den som betalade. Admin kontrollerar betalningen och godkänner den manuellt.</p>
+          <form id="report-payment-form" class="form report-payment-form">
+            <div class="name-fields">
+              <label for="payer-first-name">Förnamn<input id="payer-first-name" name="firstName" autocomplete="given-name" maxlength="80" required></label>
+              <label for="payer-last-name">Efternamn<input id="payer-last-name" name="lastName" autocomplete="family-name" maxlength="80" required></label>
+            </div>
+            <button class="primary" type="submit">Jag har swishat</button>
+          </form>
+        </div>
+        <p id="payment-state" class="state" role="status" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <footer>En dator och en mobil per konto.</footer>
+  </main>
+</body>
+</html>
