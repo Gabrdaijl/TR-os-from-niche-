@@ -57,7 +57,27 @@
     })().catch(error => { identityPromise = null; throw error; });
     return identityPromise;
   }
+  function proxyRootWindow() {
+    let root = window;
+    while (root.parent !== root) {
+      try {
+        const parent = root.parent;
+        if (parent.location.origin !== window.location.origin) break;
+        root = parent;
+      } catch (_) { break; }
+    }
+    return root;
+  }
   function ensureServiceWorker() {
+    const root = proxyRootWindow();
+    if (root !== window) {
+      try {
+        const rootRuntime = root.TR_OS;
+        if (rootRuntime && typeof rootRuntime.ensureServiceWorker === 'function') {
+          return rootRuntime.ensureServiceWorker();
+        }
+      } catch (_) {}
+    }
     if (!('serviceWorker' in navigator)) return Promise.reject(new Error('This browser does not support the web proxy.'));
     if (!workerReady) {
       workerReady = withTimeout((async function () {
