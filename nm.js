@@ -63,7 +63,7 @@
           sync: window.TR_OS.assetUrl("scram/scramjet.sync.js"),
         },
       });
-      await client.init();
+      await window.TR_OS.withTimeout(client.init(), 15000, 'Filmens proxy kunde inte starta i tid.');
 
       __sjPlayStage = 'shared-worker';
       if (typeof SharedWorker !== 'function') throw new Error('shared-worker-unavailable');
@@ -74,7 +74,8 @@
       let transportError;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          await conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), transport);
+          await window.TR_OS.withTimeout(conn.setTransport(window.TR_OS.assetUrl("epoxy/index.mjs"), transport),
+            12000, 'Filmtransporten kunde inte ansluta i tid.');
           transportError = null;
           break;
         } catch (error) {
@@ -442,6 +443,7 @@
         }
       } catch (_) {}
       document.getElementById('tros-frame').style.visibility = 'visible';
+      document.getElementById('tros-player-status').style.display = 'none';
     });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
@@ -597,7 +599,9 @@
     }
   }
   async function changePlayerSource(index) {
-    document.getElementById('tros-player-status').style.display = 'none';
+    const status = document.getElementById('tros-player-status');
+    status.textContent = 'Startar filmanslutningen…';
+    status.style.display = 'flex';
     document.getElementById('tros-frame').style.visibility = 'hidden';
     playerSource = index;
     const generation = ++playerGeneration;
@@ -616,7 +620,6 @@
     if (!src) {
       frame.src = 'about:blank';
       document.getElementById('tros-player-sub').textContent = 'Den skyddade filmanslutningen kunde inte starta';
-      const status = document.getElementById('tros-player-status');
       const reason = __sjPlayStage === 'shared-worker'
         ? 'Den här webbläsaren saknar stöd för den delade worker som filmanslutningen behöver. Öppna sidan direkt i Safari och ladda om.'
         : __sjPlayStage === 'service-worker'
@@ -642,11 +645,22 @@
     document.getElementById('tros-player-title').textContent = title;
     document.getElementById('tros-player-sub').textContent   = sub;
     playerPath = new URL(src).pathname;
-    await changePlayerSource(0);
-    document.getElementById('tros-player').classList.add('open');
+    const player = document.getElementById('tros-player');
+    const status = document.getElementById('tros-player-status');
+    status.textContent = 'Startar filmanslutningen…';
+    status.style.display = 'flex';
+    player.classList.add('open');
     notifyMobilePlayer(true);
     closeModal();
     document.body.style.overflow = 'hidden';
+    try {
+      await changePlayerSource(0);
+    } catch (_) {
+      if (player.classList.contains('open')) {
+        status.textContent = 'Filmspelaren kunde inte starta. Tryck på Byt källa eller försök igen.';
+        status.style.display = 'flex';
+      }
+    }
   }
 
   function closeFullscreen() {

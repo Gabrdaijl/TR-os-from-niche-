@@ -15,9 +15,9 @@
     const needsRetry = blob => !blob || blob.size === 0 || blob.size > maxSnapBytes;
     const isHighQualityJpeg = (type, quality) => typeof type === 'string' &&
       type.split(';', 1)[0].trim().toLowerCase() === 'image/jpeg' &&
-      typeof quality === 'number' && quality >= 0.9;
-    const retries = quality => [quality, 0.85, 0.7, 0.55].filter((value, index, values) =>
-      value <= quality && values.indexOf(value) === index);
+      (quality === undefined || (typeof quality === 'number' && quality >= 0.9));
+    const retryQualities = quality => [0.85, 0.7, 0.55, 0.4, 0.25].filter(value =>
+      typeof quality !== 'number' || value < quality);
 
     try {
       const prototype = scope.HTMLCanvasElement?.prototype;
@@ -27,20 +27,23 @@
           if (typeof callback !== 'function' || !isHighQualityJpeg(type, quality)) {
             return original.apply(this, arguments);
           }
-          const levels = retries(quality);
+          const levels = retryQualities(quality);
           let index = 0;
           let finished = false;
+          const finishOrRetry = blob => {
+            if (finished) return;
+            if (!needsRetry(blob) || index >= levels.length) {
+              finished = true;
+              callback(blob);
+            } else attempt();
+          };
           const attempt = () => {
             const level = levels[index++];
-            original.call(this, blob => {
-              if (finished) return;
-              if (!needsRetry(blob) || index >= levels.length) {
-                finished = true;
-                callback(blob);
-              } else attempt();
-            }, type, level);
+            original.call(this, finishOrRetry, type, level);
           };
-          attempt();
+          const initialArgs = Array.from(arguments);
+          initialArgs[0] = finishOrRetry;
+          original.apply(this, initialArgs);
         }
         Object.defineProperty(toBlob, marker, { value: true });
         Object.defineProperty(prototype, 'toBlob', { configurable: true, writable: true, value: toBlob });
@@ -53,13 +56,14 @@
       if (typeof original === 'function' && !original[marker]) {
         function convertToBlob(options = {}) {
           if (!isHighQualityJpeg(options?.type, options?.quality)) return original.apply(this, arguments);
-          const levels = retries(options.quality);
+          const levels = retryQualities(options.quality);
           const attempt = async index => {
             try {
-              const blob = await original.call(this, { ...options, quality: levels[index] });
-              return needsRetry(blob) && index + 1 < levels.length ? attempt(index + 1) : blob;
+              const attemptOptions = index === 0 ? options : { ...options, quality: levels[index - 1] };
+              const blob = await original.call(this, attemptOptions);
+              return needsRetry(blob) && index < levels.length ? attempt(index + 1) : blob;
             } catch (error) {
-              if (index + 1 < levels.length) return attempt(index + 1);
+              if (index < levels.length) return attempt(index + 1);
               throw error;
             }
           };

@@ -6,6 +6,7 @@
     games: { title: 'Games', src: '/n1chetesting2.html' },
     movies: { title: 'Movies', src: '/nm.html' },
     ai: { title: 'AI', src: '/nai.html' },
+    snapchat: { title: 'Snapchat', src: '/snapchat.html?v=20261020.1' },
     cheats: { title: 'Cheats', src: '/join' },
     cloud: { title: 'Cloud', src: '/launcher.html' },
     settings: { title: 'Settings', src: '/settings.html' }

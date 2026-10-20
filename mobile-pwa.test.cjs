@@ -23,7 +23,7 @@ test('phone-sized desktop visits route to mobile view with a desktop escape hatc
   assert.match(read('mobile.html'), /href="\/?\?desktop=1"/);
 });
 
-test('mobile shell keeps core apps and omits Snapchat from mobile navigation', () => {
+test('mobile shell restores Snapchat in the app picker without replacing core navigation', () => {
   const page = read('mobile.html');
   const controller = read('mobile.js');
   assert.match(page, /id="mobile-frame"[^>]+src="\/n1browser27d\.html"/);
@@ -34,8 +34,8 @@ test('mobile shell keeps core apps and omits Snapchat from mobile navigation', (
   assert.match(controller, /src: '\/n1chetesting2\.html'/);
   assert.match(controller, /src: '\/nm\.html'/);
   assert.match(controller, /src: '\/nai\.html'/);
-  assert.doesNotMatch(page, /Snapchat|snapchat/i);
-  assert.doesNotMatch(controller, /snapchat/i);
+  assert.match(page, /data-page="snapchat"[^>]*>[\s\S]*?Snapchat/);
+  assert.match(controller, /snapchat: \{ title: 'Snapchat', src: '\/snapchat\.html\?v=20261020\.1' \}/);
   assert.doesNotMatch(page, /href="https?:\/\/(?:www\.)?snapchat\.com/);
 });
 
