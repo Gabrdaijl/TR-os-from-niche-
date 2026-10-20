@@ -75,11 +75,15 @@
   document.addEventListener('fullscreenchange',()=>{$('admin-fullscreen').textContent=document.fullscreenElement?'Avsluta fullskärm':'Fullskärm';});
   let reportSignature = '', banSignature = '', authGeneration = 0;
   function clearImages() { for (const url of imageUrls) URL.revokeObjectURL(url); imageUrls.clear(); }
-  function logout() {
+  function clearAdminView() {
     authGeneration++;pending=false;pushReady=false;pushRegistration=null;clearImages();reportSignature='';banSignature='';reportIds=null;banIds=null;conversationData=[];selectedConversation='';conversationSignature='';healthDown=null;$('notice').textContent='';$('reports-list').replaceChildren();$('reports-state').textContent='';$('bans-list').replaceChildren();$('bans-state').textContent='';$('conversations-list').replaceChildren();$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='';
-    authorization = ''; clearInterval(timer); $('password').value = '';
-    $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
+    authorization = ''; clearInterval(timer); $('password').value = ''; $('message').textContent = '';
+    expires = 0; $('dashboard').hidden = true; $('cards').replaceChildren(); $('services').replaceChildren();
     $('login').hidden = false; $('logout').hidden = true;
+  }
+  async function logoutAdmin() {
+    try { await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(5000) }); } catch {}
+    clearAdminView();
   }
   async function refreshReports() {
     const generation=authGeneration;
@@ -182,7 +186,7 @@
     const list=$('conversations-list');
     if(!conversationData.length){
       const empty=document.createElement('p');empty.className='conversation-empty';empty.textContent='Inga supportmeddelanden ännu.';list.replaceChildren(empty);
-      $('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-state').textContent='Inga meddelanden ännu.';return;
+      $('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-delete').hidden=true;$('conversation-state').textContent='Inga meddelanden ännu.';return;
     }
     list.replaceChildren(...conversationData.map(item=>{
       const button=document.createElement('button');button.type='button';button.className='conversation-choice'+(item.id===selectedConversation?' selected':'');
@@ -197,8 +201,8 @@
   }
   function renderConversation() {
     const item=conversationData.find(entry=>entry.id===selectedConversation)||conversationData[0];
-    if(!item){$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;return;}
-    selectedConversation=item.id;$('conversation-form').hidden=false;
+    if(!item){$('conversation-messages').replaceChildren();$('conversation-form').hidden=true;$('conversation-delete').hidden=true;return;}
+    selectedConversation=item.id;$('conversation-form').hidden=false;$('conversation-delete').hidden=false;
     const messages=Array.isArray(item.messages)?item.messages:[];
     const signature=JSON.stringify({id:item.id,messages});if(signature===conversationSignature)return;conversationSignature=signature;
     $('conversation-messages').replaceChildren(...messages.map(message=>{
@@ -237,7 +241,18 @@
     }catch(error){$('conversation-state').textContent=error.message;}
     finally{button.disabled=false;}
   });
+  $('conversation-delete').addEventListener('click',async()=>{
+    if(!selectedConversation||!window.confirm('Ta bort den här supportchatten och alla dess meddelanden permanent?'))return;
+    const id=selectedConversation,button=$('conversation-delete');button.disabled=true;button.textContent='Tar bort…';
+    try{
+      const response=await fetch('/api/admin/moderation/conversations/'+encodeURIComponent(id),{method:'DELETE',headers:{authorization},cache:'no-store',signal:AbortSignal.timeout(10000)});
+      const data=await response.json();if(!response.ok)throw Error(data.error||'Chatten kunde inte tas bort.');if(!data.removed)throw Error('Chatten fanns inte kvar. Uppdatera supportlistan.');
+      conversationData=conversationData.filter(item=>item.id!==id);selectedConversation='';conversationSignature='';await refreshConversations();$('conversation-state').textContent=conversationData.length?'Chatten raderades. Välj ett annat ärende.':'Chatten raderades.';
+    }catch(error){$('conversation-state').textContent=error.message;}
+    finally{button.disabled=false;button.textContent='Ta bort chatten';}
+  });
   let memberUsers=[],memberPayments=[],reportedPaymentIds=null,knownMemberIds=null;
+  let memberSearch='';
   async function memberRequest(path,options={}){
     const response=await fetch(path,{cache:'no-store',...options,headers:{authorization,...(options.body?{'content-type':'application/json'}:{}),...(options.headers||{})},signal:AbortSignal.timeout(10000)});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Medlemsuppgifterna kunde inte sparas.');return data;
@@ -263,7 +278,7 @@
         const confirm=document.createElement('button');confirm.type='button';confirm.className='confirm-payment';confirm.textContent='Bekräfta Swish';
         confirm.addEventListener('click',async()=>{
           confirm.disabled=true;confirm.textContent='Godkänner…';
-          try{await memberRequest('/api/admin/payments/'+encodeURIComponent(payment.id)+'/confirm',{method:'POST',body:'{}'});$('members-state').textContent='Betalningen godkändes och '+payment.durationDays+' dagar lades till för '+payment.firstName+' '+payment.lastName+'.';await refreshMembership();}
+          try{await memberRequest('/api/admin/payments/'+encodeURIComponent(payment.id)+'/confirm',{method:'POST',body:'{}'});await refreshMembership();$('members-state').textContent='Betalningen godkändes och '+payment.durationDays+' dagar lades till för '+payment.firstName+' '+payment.lastName+'.';}
           catch(error){$('members-state').textContent=error.message;confirm.disabled=false;confirm.textContent='Försök igen';}
         });
         card.append(detail,confirm);
@@ -285,8 +300,13 @@
   }
   function renderMembers(){
     $('member-count').textContent=format(memberUsers.length);
+    const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('sv-SE');
+    const query=normalize(memberSearch);
+    const visibleUsers=query?memberUsers.filter(user=>normalize(user.firstName+' '+user.lastName+' '+user.email).includes(query)):memberUsers;
+    $('member-search-count').textContent=query?visibleUsers.length+' av '+memberUsers.length+' kunder':'Visar '+memberUsers.length+' kunder';
     if(!memberUsers.length){$('members-list').replaceChildren(Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga medlemskonton ännu.'}));return;}
-    $('members-list').replaceChildren(...memberUsers.map(user=>{
+    if(!visibleUsers.length){$('members-list').replaceChildren(Object.assign(document.createElement('p'),{className:'member-empty',textContent:'Inga kunder matchar din sökning.'}));return;}
+    $('members-list').replaceChildren(...visibleUsers.map(user=>{
       const card=document.createElement('article');card.className='member-card';
       const heading=document.createElement('div');heading.className='member-card-heading';
       const title=document.createElement('strong');title.textContent=user.firstName+' '+user.lastName;
@@ -306,13 +326,13 @@
       const save=document.createElement('button');save.type='submit';save.className='primary';save.textContent='Spara ändringar';
       const reset=document.createElement('button');reset.type='button';reset.textContent='Återställ enheter';reset.addEventListener('click',async()=>{
         reset.disabled=true;reset.textContent='Återställer…';
-        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id)+'/reset-devices',{method:'POST',body:'{}'});$('members-state').textContent='Enhetsinloggningarna återställdes för '+user.firstName+' '+user.lastName+'.';await refreshMembership();}
+        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id)+'/reset-devices',{method:'POST',body:'{}'});await refreshMembership();$('members-state').textContent='Enhetsinloggningarna återställdes för '+user.firstName+' '+user.lastName+'.';}
         catch(error){$('members-state').textContent=error.message;reset.disabled=false;reset.textContent='Försök igen';}
       });
       const remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='Ta bort konto';remove.addEventListener('click',async()=>{
         if(!window.confirm('Ta bort kontot för '+user.firstName+' '+user.lastName+'? Kunden kan inte logga in efteråt och kontots betalningshistorik tas bort.'))return;
         remove.disabled=true;remove.textContent='Tar bort…';
-        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'DELETE'});$('members-state').textContent='Kontot för '+user.firstName+' '+user.lastName+' togs bort.';await refreshMembership();}
+        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'DELETE'});await refreshMembership();$('members-state').textContent='Kontot för '+user.firstName+' '+user.lastName+' togs bort.';}
         catch(error){$('members-state').textContent=error.message;remove.disabled=false;remove.textContent='Försök igen';}
       });
       actions.append(save,reset,remove);form.append(actions);
@@ -321,7 +341,7 @@
         const date=form.elements.accessUntil.value;
         const changes={firstName:form.elements.firstName.value,lastName:form.elements.lastName.value,paidUntilMs:date?Date.parse(date+'T23:59:59.999'):0,enabled:form.elements.enabled.checked};
         if(form.elements.newPassword.value)changes.password=form.elements.newPassword.value;
-        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'PATCH',body:JSON.stringify(changes)});$('members-state').textContent='Medlemsuppgifterna sparades.';await refreshMembership();}
+        try{await memberRequest('/api/admin/members/'+encodeURIComponent(user.id),{method:'PATCH',body:JSON.stringify(changes)});await refreshMembership();$('members-state').textContent='Medlemsuppgifterna sparades.';}
         catch(error){$('members-state').textContent=error.message;save.disabled=false;save.textContent='Försök igen';}
       });
       const timeForm=document.createElement('form');timeForm.className='member-time-form individual-time-form';
@@ -329,7 +349,7 @@
       const grant=document.createElement('button');grant.type='submit';grant.textContent='Lägg till tid';timeForm.append(grant);
       timeForm.addEventListener('submit',async event=>{
         event.preventDefault();grant.disabled=true;grant.textContent='Lägger till…';
-        try{const result=await memberRequest('/api/admin/members/'+encodeURIComponent(user.id)+'/add-time',{method:'POST',body:JSON.stringify({days:Number(timeForm.elements.days.value),hours:Number(timeForm.elements.hours.value)})});$('members-state').textContent='La till tid för '+user.firstName+' '+user.lastName+'. Ny sluttid: '+new Date(result.user.accessUntilMs).toLocaleString('sv-SE')+'.';await refreshMembership();}
+        try{const result=await memberRequest('/api/admin/members/'+encodeURIComponent(user.id)+'/add-time',{method:'POST',body:JSON.stringify({days:Number(timeForm.elements.days.value),hours:Number(timeForm.elements.hours.value)})});const refreshed=await refreshMembership();$('members-state').textContent=refreshed?'La till tid för '+user.firstName+' '+user.lastName+'. Ny sluttid: '+new Date(result.user.accessUntilMs).toLocaleString('sv-SE')+'.':'Tiden lades till, men listan kunde inte uppdateras. Tryck på Uppdatera.';}
         catch(error){$('members-state').textContent=error.message;grant.disabled=false;grant.textContent='Försök igen';}
       });
       card.append(form,timeForm);return card;
@@ -348,28 +368,30 @@
       reportedPaymentIds=current;
       renderMemberStats();renderPayments();renderMembers();
       $('members-state').textContent=memberUsers.length+' kundkonton · du styr åtkomsttiden direkt.';
-    }catch(error){if(generation===authGeneration&&authorization)$('members-state').textContent=error.message;}
+      return true;
+    }catch(error){if(generation===authGeneration&&authorization)$('members-state').textContent=error.message;return false;}
   }
   $('member-refresh').addEventListener('click',refreshMembership);
+  $('member-search').addEventListener('input',event=>{memberSearch=event.currentTarget.value;renderMembers();});
   $('bulk-grant-time-form').addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type=submit]');
     button.disabled=true;button.textContent='Lägger till tid…';
     try{
       const result=await memberRequest('/api/admin/members/grant-time',{method:'POST',body:JSON.stringify({days:Number(form.elements.days.value),hours:Number(form.elements.hours.value)})});
-      $('members-state').textContent='La till tiden på '+result.updated+' aktiva konton som saknade giltig åtkomst.';await refreshMembership();
+      const refreshed=await refreshMembership();$('members-state').textContent=refreshed?'La till tiden på '+result.updated+' konton utan aktiv åtkomst.':'Tiden lades till, men listan kunde inte uppdateras. Tryck på Uppdatera.';
     }catch(error){$('members-state').textContent=error.message;}
     finally{button.disabled=false;button.textContent='Lägg till tid till alla utan aktiv åtkomst';}
   });
   $('add-member-form').addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');button.disabled=true;button.textContent='Skapar…';
     const accessDays=Number(form.elements.accessDays.value);
-    try{const data=Object.fromEntries(new FormData(form));const result=await memberRequest('/api/admin/members',{method:'POST',body:JSON.stringify(data)});if(knownMemberIds)knownMemberIds.add(result.user.id);form.reset();$('members-state').textContent='Kundkontot skapades med '+accessDays+' dagars åtkomst.';await refreshMembership();}
+      try{const data=Object.fromEntries(new FormData(form));const result=await memberRequest('/api/admin/members',{method:'POST',body:JSON.stringify(data)});if(knownMemberIds)knownMemberIds.add(result.user.id);form.reset();$('member-search').value='';memberSearch='';const refreshed=await refreshMembership();$('members-state').textContent=refreshed?'Kundkontot skapades med '+accessDays+' dagars åtkomst.':'Kundkontot skapades, men listan kunde inte uppdateras. Tryck på Uppdatera.';}
     catch(error){$('members-state').textContent=error.message;}
     finally{button.disabled=false;button.textContent='Skapa kund med vald åtkomst';}
   });
   async function refresh() {
     if (pending) return;
-    if (!authorization || Date.now() >= expires) return logout();
+    if (!authorization || Date.now() >= expires) return clearAdminView();
     pending = true;
     const generation=authGeneration;
     let healthCheckFailed=true;
@@ -378,7 +400,7 @@
       healthCheckFailed=response.status>=500;
       const data = await response.json();
       if(generation!==authGeneration || !authorization)return;
-      if (!response.ok) { if(response.status===401 || response.status===403)logout(); throw Error(data.error || 'Status kunde inte hämtas'); }
+      if (!response.ok) { if(response.status===401 || response.status===403)clearAdminView(); throw Error(data.error || 'Status kunde inte hämtas'); }
       reportHealth(true);
       $('message').textContent = '';
       traffic=data.traffic;renderTraffic();
@@ -418,12 +440,18 @@
   }
   $('login').addEventListener('submit', async event => {
     event.preventDefault();
-    const bytes = new TextEncoder().encode('admin:' + $('password').value);
-    authorization = 'Basic ' + btoa(Array.from(bytes, b => String.fromCharCode(b)).join(''));
-    $('password').value = ''; expires = Date.now() + 30 * 60000;
-    clearInterval(timer); await refresh(); if (authorization && $('login').hidden) { timer = setInterval(refresh, 15000); await syncAdminSubscription(); }
+    const button=$('login').querySelector('button[type="submit"]'),password=$('password').value,rememberDevice=$('remember-admin').checked;
+    button.disabled=true;button.textContent='Kontrollerar…';$('message').textContent='';
+    try{
+      const response=await fetch('/api/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password,rememberDevice}),cache:'no-store',signal:AbortSignal.timeout(10000)});
+      const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Admininloggningen misslyckades.');
+      authorization='Session';expires=Number(data.rememberUntil)||Date.now()+(rememberDevice?30:0.5)*24*60*60*1000;
+      $('password').value='';clearInterval(timer);await refresh();
+      if(authorization&&$('login').hidden){timer=setInterval(refresh,15000);await syncAdminSubscription();}
+    }catch(error){authorization='';expires=0;$('message').textContent=error.message||'Admininloggningen misslyckades.';}
+    finally{button.disabled=false;button.textContent='Öppna admin';}
   });
-  $('logout').addEventListener('click', logout);
+  $('logout').addEventListener('click', logoutAdmin);
   $('refresh').addEventListener('click', refresh);
   $('notifications').addEventListener('click',async()=>{
     if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window)){ $('notice').textContent='Den här webbläsaren stöder inte pushnotiser.';return; }
@@ -440,5 +468,11 @@
     }catch(error){$('notice').textContent=error.message||'Notiser kunde inte aktiveras på den här enheten.';}
     finally{$('notifications').disabled=false;}
   });
-  window.addEventListener('pagehide', logout);
+  window.addEventListener('pagehide', clearAdminView);
+  (async()=>{
+    authorization='Session';expires=Date.now()+30*24*60*60*1000;
+    await refresh();
+    if(authorization&&$('login').hidden){timer=setInterval(refresh,15000);await syncAdminSubscription();}
+    else $('message').textContent='';
+  })();
 })();

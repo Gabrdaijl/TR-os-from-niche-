@@ -160,6 +160,21 @@ function createModeration(env = process.env, request = fetch) {
     return !!id && (await conversation(id)).length > 0;
   }
 
+  async function deleteConversation(id) {
+    if (!ID_PATTERN.test(id)) return { removed: false, source: endpoint ? 'redis' : 'memory' };
+    if (!endpoint) return { removed: conversations.delete(id), source: 'memory' };
+    const script = `local removed=redis.call('HDEL',KEYS[1],ARGV[1])
+redis.call('ZREM',KEYS[2],ARGV[1])
+return removed`;
+    try {
+      const removed = Number(await command(['EVAL', script, 2, CONVERSATIONS_KEY, CONVERSATION_INDEX_KEY, id])) > 0;
+      conversations.delete(id);
+      return { removed, source: 'redis' };
+    } catch {
+      return { removed: false, source: 'unavailable' };
+    }
+  }
+
   async function listConversations() {
     if (!endpoint) return { source: 'memory', conversations: [...conversations.entries()].map(([id, value]) => ({ id, ...value })).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 50) };
     try {
@@ -172,7 +187,7 @@ function createModeration(env = process.env, request = fetch) {
     }
   }
 
-  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, hasConversation, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: !!endpoint, cookieName: COOKIE });
+  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, hasConversation, deleteConversation, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: !!endpoint, cookieName: COOKIE });
 }
 
 module.exports = { COOKIE, REDIS_KEY, CONVERSATIONS_KEY, CONVERSATION_INDEX_KEY, cookieDeviceId, createModeration, hashDeviceId };

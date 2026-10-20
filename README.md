@@ -60,7 +60,7 @@ Lokal AI: TR-os lokal AI kör SmolLM2 360M med WebLLM på besökarens WebGPU. Mo
 
 ## Supportchatt, push och driftlarm
 
-Spärrade webbläsare kan skriva till admin. Samtalet ligger kvar efter att spärren hävts och fortsätter på `/support.html`. Admin svar och nya användarmeddelanden uppdateras i panelen och skickar push om mottagaren har aktiverat det på sin enhet. Nya spärrar och felrapporter skickar också push till adminenheter.
+Spärrade webbläsare kan skriva till admin. Samtalet ligger kvar efter att spärren hävts och fortsätter på `/support.html`. Admin svar och nya användarmeddelanden uppdateras i panelen och skickar push om mottagaren har aktiverat det på sin enhet. Admin kan radera ett valt supportärende och dess meddelanden. Nya spärrar och felrapporter skickar också push till adminenheter.
 
 Tryck **Aktivera push** i adminpanelen på varje enhet som ska få notiser. På iPhone måste TR-os först läggas på hemskärmen och öppnas som app. Användaren kan aktivera avisering för adminsvar i supportchatten. Prenumerationer och en VAPID-nyckel lagras på servern i Redis; den privata nyckeln skickas aldrig till klienten. Notiser kan inte tas emot om användaren nekat systemnotiser, saknar nätanslutning eller om operativsystemet stoppar bakgrundsaviseringar.
 
@@ -70,7 +70,7 @@ En extern GitHub Actions-kontroll kör var femte minut. Vid driftstopp öppnar d
 
 TR-os kräver ett konto för hemsidans sidor och API. Kunden kan skapa ett konto eller få ett av administratören. Nya konton får ingen automatisk provperiod. Administratören bestämmer åtkomsttiden i dagar och kan lägga till fler dagar eller timmar när som helst. Ingen månadsprenumeration startas. På `/account.html` ser kunden återstående dagar, slutdatum och vilka enheter som används.
 
-I adminpanelen kan du skapa ett kundkonto med valfritt antal åtkomstdagar, ändra namn och slutdatum, återställa enhetsinloggningar, pausa eller ta bort kontot samt lägga till tid till en eller flera kunder. När du tar bort ett konto raderas kundens inloggning och betalningshistorik. Äldre betalningsanmälningar finns kvar i adminhistoriken; nya månadsbetalningar är avstängda. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
+I adminpanelen kan du skapa ett kundkonto med valfritt antal åtkomstdagar, söka kunder på namn eller e-post, ändra namn och slutdatum, återställa enhetsinloggningar, pausa eller ta bort kontot samt lägga till tid till en eller flera kunder. Admininloggningen kan sparas på enheten i 30 dagar, eller i 12 timmar om rutan avmarkeras. När du tar bort ett konto raderas kundens inloggning och betalningshistorik. Äldre betalningsanmälningar finns kvar i adminhistoriken; nya månadsbetalningar är avstängda. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
 
 Konton kan vara inloggade på en dator och en mobil. Medlemsdata sparas i Upstash Redis. Ange `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` som miljövariabler på servern. Utan dessa är medlems-API:t avstängt. Lösenord lagras som scrypt-hashar och sessionscookies är HttpOnly.
 

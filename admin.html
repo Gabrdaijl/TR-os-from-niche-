@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
   <title>TR-os &middot; Admin</title>
-  <link rel="stylesheet" href="admin.css?v=20261020.3">
+  <link rel="stylesheet" href="admin.css?v=20261020.4">
   <script src="tr-os.config.js"></script>
   <script src="tr-os.runtime.js"></script>
   <script src="theme.js" defer></script>
@@ -42,6 +42,8 @@
         <h2>Logga in</h2>
         <label for="password">Adminl&ouml;senord</label>
         <input id="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Adminl&ouml;senord">
+        <label class="remember-device"><input id="remember-admin" type="checkbox" checked> Kom ihåg den här enheten i 30 dagar</label>
+        <p class="remember-copy">På en delad enhet kan du avmarkera rutan. Då sparas inloggningen i 12 timmar.</p>
         <button class="primary" type="submit">&Ouml;ppna admin</button>
       </form>
       <section id="dashboard" hidden>
@@ -102,6 +104,11 @@
           <h3 class="members-subtitle">Tidigare betalningar</h3>
           <div id="payments-list" class="members-list"></div>
           <h3 class="members-subtitle">Alla kundkonton</h3>
+          <div class="member-search">
+            <label for="member-search">Sök kund</label>
+            <input id="member-search" type="search" autocomplete="off" placeholder="Sök på förnamn, efternamn eller e-post">
+            <span id="member-search-count" role="status" aria-live="polite"></span>
+          </div>
           <div id="members-list" class="members-list"></div>
         </section>
         <section id="bans" class="admin-section" aria-labelledby="bans-title">
@@ -114,13 +121,16 @@
           <div class="support-layout">
             <div id="conversations-list" class="conversations-list" aria-label="Supportärenden"></div>
             <div id="conversation-panel" class="conversation-panel">
+              <div class="conversation-toolbar">
+                <p id="conversation-state" role="status" aria-live="polite">Inga meddelanden ännu.</p>
+                <button id="conversation-delete" class="danger" type="button" hidden>Ta bort chatten</button>
+              </div>
               <div id="conversation-messages" class="conversation-messages" role="log" aria-live="polite"></div>
               <form id="conversation-form" hidden>
                 <label for="conversation-input">Svara</label>
                 <textarea id="conversation-input" maxlength="2000" rows="3" required></textarea>
                 <button class="primary" type="submit">Skicka svar</button>
               </form>
-              <p id="conversation-state" role="status">Inga meddelanden ännu.</p>
             </div>
           </div>
         </section>
@@ -156,7 +166,7 @@
       </section>
     </main>
   </div>
-  <script src="admin.js?v=20261020.3" defer></script>
+  <script src="admin.js?v=20261020.4" defer></script>
   <script src="online.js" defer></script>
 </body>
 </html>

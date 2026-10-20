@@ -119,11 +119,50 @@ function createApp(options = {}) {
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported service URL');
     return url;
   }
+  const ADMIN_COOKIE = 'tros-admin-session';
+  const ADMIN_REMEMBER_MS = 30 * 24 * 60 * 60 * 1000;
+  const ADMIN_SHORT_SESSION_MS = 12 * 60 * 60 * 1000;
+  function adminCookieSecure(req) {
+    const forwarded = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+    return forwarded === 'https' || env.VERCEL === '1' || env.RENDER === 'true' || env.NODE_ENV === 'production';
+  }
+  function adminCookieSignature(expires) {
+    return crypto.createHmac('sha256', String(env.ADMIN_PASSWORD || '')).update('tr-os-admin-v1:' + expires).digest('base64url');
+  }
+  function adminCookieValid(req) {
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) return false;
+    let value = '';
+    for (const part of String(req.headers.cookie || '').split(';')) {
+      const index = part.indexOf('=');
+      if (index >= 0 && part.slice(0, index).trim() === ADMIN_COOKIE) { value = part.slice(index + 1).trim(); break; }
+    }
+    const match = value.match(/^(\d{13})\.([A-Za-z0-9_-]{43})$/);
+    if (!match) return false;
+    const expires = Number(match[1]);
+    if (!Number.isSafeInteger(expires) || expires <= Date.now() || expires > Date.now() + ADMIN_REMEMBER_MS + 60_000) return false;
+    const supplied = Buffer.from(match[2]);
+    const expected = Buffer.from(adminCookieSignature(match[1]));
+    return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
+  }
+  function setAdminCookie(res, req, rememberDevice) {
+    const maxAge = rememberDevice ? ADMIN_REMEMBER_MS : ADMIN_SHORT_SESSION_MS;
+    const expires = String(Date.now() + maxAge);
+    appendCookie(res, ADMIN_COOKIE + '=' + expires + '.' + adminCookieSignature(expires) + '; Path=/; Max-Age=' + Math.floor(maxAge / 1000) + '; HttpOnly; SameSite=Strict' + (adminCookieSecure(req) ? '; Secure' : ''));
+  }
+  function clearAdminCookie(res, req) {
+    appendCookie(res, ADMIN_COOKIE + '=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict' + (adminCookieSecure(req) ? '; Secure' : ''));
+  }
+  function adminPasswordMatches(password) {
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8 || typeof password !== 'string') return false;
+    const digest = value => crypto.createHash('sha256').update(value).digest();
+    return crypto.timingSafeEqual(digest(password), digest(env.ADMIN_PASSWORD));
+  }
   function adminAuthorized(req, res) {
     if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) {
       json(res, 503, { error: 'Admin är låst. Sätt ADMIN_PASSWORD (minst 8 tecken) som Sensitive i Vercel och publicera igen.' });
       return false;
     }
+    if (adminCookieValid(req)) return true;
     const expected = 'Basic ' + Buffer.from('admin:' + env.ADMIN_PASSWORD).toString('base64');
     const digest = value => crypto.createHash('sha256').update(value).digest();
     if (crypto.timingSafeEqual(digest(req.headers.authorization || ''), digest(expected))) return true;
@@ -199,6 +238,22 @@ function createApp(options = {}) {
       }
       return json(res, 404, { error: 'Not found' });
     }
+    if (route === '/api/admin/login') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 8) return json(res, 503, { error: 'Admin är låst. Kontrollera serverns ADMIN_PASSWORD.' });
+      if (!allowed(req, 'admin-login', 5)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
+      let data;
+      try { data = await body(req, 4000); } catch (error) { return json(res, error.status || 400, { error: error.message || 'Inloggningen kunde inte läsas.' }); }
+      if (!adminPasswordMatches(data.password)) return json(res, 401, { error: 'Fel adminlösenord.' });
+      const rememberDevice = data.rememberDevice !== false;
+      setAdminCookie(res, req, rememberDevice);
+      return json(res, 200, { ok: true, rememberUntil: Date.now() + (rememberDevice ? ADMIN_REMEMBER_MS : ADMIN_SHORT_SESSION_MS) });
+    }
+    if (route === '/api/admin/logout') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
+      clearAdminCookie(res, req);
+      return json(res, 200, { ok: true });
+    }
     if (route === '/api/moderation/status') {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
       return json(res, 200, { banned: false, storage: moderation.configured ? 'redis' : 'memory' });
@@ -267,6 +322,14 @@ function createApp(options = {}) {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
       if (!adminAuthorized(req, res)) return;
       return json(res, 200, await moderation.listConversations());
+    }
+    const conversationDeleteMatch = route.match(/^\/api\/admin\/moderation\/conversations\/([a-f0-9]{64})$/i);
+    if (conversationDeleteMatch) {
+      if (req.method !== 'DELETE') return json(res, 405, { error: 'Use DELETE' });
+      if (!adminAuthorized(req, res)) return;
+      const result = await moderation.deleteConversation(conversationDeleteMatch[1].toLowerCase());
+      if (result.source === 'unavailable') return json(res, 503, { error: 'Chatten kunde inte tas bort just nu. Försök igen senare.' });
+      return json(res, 200, result);
     }
     if (route === '/api/admin/members/grant-time') {
       if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
