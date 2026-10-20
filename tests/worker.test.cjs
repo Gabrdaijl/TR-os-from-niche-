@@ -49,7 +49,7 @@ test('unresolved proxy configuration produces a bounded error instead of a blank
 });
 test('controller and worker use the same database after repairing the mirrored library', () => {
   const source = fs.readFileSync(require.resolve('../scram/scramjet.all.js'), 'utf8');
-  assert.ok(source.includes('indexedDB.open("$scramjet",3)'));
+  assert.ok(source.includes('indexedDB.open("$scramjet",4)'));
   assert.ok(!source.includes('indexedDB.open("%24scramjet.html"'));
 });
 
