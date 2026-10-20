@@ -1,4 +1,6 @@
- (() => {
+ tab: 62, Title: "raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/nm.js", URL: "https://raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/nm.js".
+1 AXWebArea raw.githubusercontent.com/Gabrdaijl/TR-os-from-niche-/main/nm.js
+	2 text  (() => {
   'use strict';
 
   const KEY  = '3a73619bbb8fc6d47742d1b5b2b707b5';
@@ -44,17 +46,8 @@
   const __scramjetClientPromises = new WeakMap();
 
   function movieHostWindow() {
-    let host = window;
-    while (host.parent !== host) {
-      try {
-        const parent = host.parent;
-        if (parent.location.origin !== window.location.origin) break;
-        host = parent;
-      } catch (_) { break; }
-    }
-    try {
-      if (host.TR_OS) return host;
-    } catch (_) {}
+    // The Movies page defers its popup guard until the proxy has initialized.
+    // Keep Scramjet in this frame; the outer app locks window.open on startup.
     return window;
   }
 
