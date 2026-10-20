@@ -403,7 +403,7 @@
       if (!doc?.documentElement || doc.documentElement.dataset.trosMovieAdBlock === '1') return;
       doc.documentElement.dataset.trosMovieAdBlock = '1';
       const script = doc.createElement('script');
-      script.src = new URL('/game-adblock.js?v=20261020.4', location.origin).href;
+      script.src = new URL('/frame-controls.js?v=20261020.4', location.origin).href;
       script.async = false;
       (doc.head || doc.documentElement).appendChild(script);
     } catch (_) {

@@ -529,7 +529,7 @@
           if (doc?.documentElement && doc.documentElement.dataset.trOsPopupGuard !== '1') {
             doc.documentElement.dataset.trOsPopupGuard = '1';
             const blocker = doc.createElement('script');
-            blocker.src = new URL('/game-adblock.js?v=20261020.4', location.origin).href;
+            blocker.src = new URL('/frame-controls.js?v=20261020.4', location.origin).href;
             blocker.async = false;
             (doc.head || doc.documentElement).appendChild(blocker);
           }
