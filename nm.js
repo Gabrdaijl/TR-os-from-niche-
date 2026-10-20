@@ -41,8 +41,16 @@
   let __sjPlay = null, __sjPlayReady = false, __sjPlayPromise = null, __sjPlayError = null, __sjPlayStage = '', __barePlay = null, __barePlayWorker = null, __scramjetLoadPromise = null;
 
   function movieHostWindow() {
+    let host = window;
+    while (host.parent !== host) {
+      try {
+        const parent = host.parent;
+        if (parent.location.origin !== window.location.origin) break;
+        host = parent;
+      } catch (_) { break; }
+    }
     try {
-      if (window.parent !== window && window.parent.location.origin === window.location.origin && window.parent.TR_OS && typeof window.parent.BareMux?.BareMuxConnection === 'function') return window.parent;
+      if (host.TR_OS) return host;
     } catch (_) {}
     return window;
   }
