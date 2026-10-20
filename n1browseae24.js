@@ -183,7 +183,7 @@
         };
         await loadScript(window.TR_OS.assetUrl('baremux/index.js'));
         await loadScript(window.TR_OS.assetUrl('scram/scramjet.all.js'));
-        await withTimeout(import('epoxy/index.mjs'), 20000, 'Webbproxyns anslutning kunde inte laddas.');
+        await withTimeout(import(window.TR_OS.assetUrl('epoxy/index.mjs')), 20000, 'Webbproxyns anslutning kunde inte laddas.');
         const { ScramjetController } = $scramjetLoadController();
         const client = new ScramjetController({
           files: {
