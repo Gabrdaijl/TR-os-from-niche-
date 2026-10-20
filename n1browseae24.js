@@ -129,7 +129,7 @@
     return WISP_ROUTES.mullvad;
   }
 
-  let __bareConn = null, __bareProxyWorker = null;
+  let __bareProxyWorker = null;
   async function createBrowserMuxConnection() {
     const sharedWorkerUrl = window.TR_OS.assetUrl('baremux/worker.js');
     if (typeof Worker === 'function' && typeof MessageChannel === 'function') {
@@ -192,7 +192,7 @@
             sync: window.TR_OS.assetUrl('scram/scramjet.sync.js'),
           },
         });
-        await withTimeout(client.init(), 45000, 'Webbproxyn tog för lång tid att starta.');
+        await withTimeout(window.TR_OS.ensureServiceWorker(), 20000, 'Webbproxyns service worker kunde inte starta.'); await withTimeout(client.init(), 45000, 'Webbproxyn tog för lång tid att starta.');
 
         let shellRuntime = window.TR_OS;
         try {
