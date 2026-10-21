@@ -18,6 +18,36 @@
       (quality === undefined || (typeof quality === 'number' && quality >= 0.9));
     const retryQualities = quality => [0.85, 0.7, 0.55, 0.4, 0.25].filter(value =>
       typeof quality !== 'number' || value < quality);
+    const exportSmallerCopy = (source, type, callback, exporter) => {
+      const maxDimension = Math.max(Number(source?.width) || 0, Number(source?.height) || 0);
+      if (!maxDimension) { callback(null); return; }
+      const targets = [...new Set([
+        ...[2048, 1280, 960].filter(size => size < maxDimension),
+        Math.floor(maxDimension * 0.75), Math.floor(maxDimension * 0.5), Math.floor(maxDimension * 0.25)
+      ])].filter(size => size > 0 && size <= 2048 && size < maxDimension).sort((a, b) => b - a);
+      const makeCanvas = () => {
+        try { return scope.document?.createElement?.('canvas') || null; } catch { return null; }
+      };
+      const attempt = index => {
+        if (index >= targets.length) { callback(null); return; }
+        const scale = targets[index] / maxDimension;
+        const canvas = makeCanvas();
+        if (!canvas) { callback(null); return; }
+        canvas.width = Math.max(1, Math.round((Number(source.width) || 1) * scale));
+        canvas.height = Math.max(1, Math.round((Number(source.height) || 1) * scale));
+        try {
+          const context = canvas.getContext('2d');
+          if (!context) { attempt(index + 1); return; }
+          context.drawImage(source, 0, 0, canvas.width, canvas.height);
+          if (typeof exporter !== 'function') { callback(null); return; }
+          exporter.call(canvas, blob => {
+            if (blob && blob.size > 0 && blob.size <= maxSnapBytes) callback(blob);
+            else attempt(index + 1);
+          }, type, 0.75);
+        } catch { attempt(index + 1); }
+      };
+      attempt(0);
+    };
 
     try {
       const prototype = scope.HTMLCanvasElement?.prototype;
@@ -32,17 +62,23 @@
           let finished = false;
           const finishOrRetry = blob => {
             if (finished) return;
-            if (!needsRetry(blob) || index >= levels.length) {
+            if (!needsRetry(blob)) {
               finished = true;
               callback(blob);
-            } else attempt();
+            } else if (index < levels.length) attempt();
+            else {
+              finished = true;
+              exportSmallerCopy(this, type || 'image/jpeg', callback, original);
+            }
           };
           const attempt = () => {
             const level = levels[index++];
-            original.call(this, finishOrRetry, type, level);
+            try { original.call(this, finishOrRetry, type, level); }
+            catch { finishOrRetry(null); }
           };
           const initialArgs = Array.from(arguments);
           initialArgs[0] = finishOrRetry;
+          // Keep native synchronous errors (including a tainted canvas) intact.
           original.apply(this, initialArgs);
         }
         Object.defineProperty(toBlob, marker, { value: true });

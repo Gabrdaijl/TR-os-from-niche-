@@ -13,7 +13,7 @@ test('independent monitor opens one GitHub outage alert when the health endpoint
   process.env.GITHUB_REPOSITORY = 'owner/TR-os'; process.env.GITHUB_TOKEN = 'test-token';
   global.fetch = async (url, init = {}) => {
     calls.push({ url: String(url), method: init.method || 'GET', body: init.body });
-    if (String(url) === 'https://tr-os.me/api/health') return jsonResponse(503, {});
+    if (String(url) === 'https://tr-os.me/api/ready') return jsonResponse(503, { ok: false, services: { membership: 'unavailable' } });
     if (String(url).endsWith('/issues?state=open&per_page=100')) return jsonResponse(200, []);
     return jsonResponse(201, { number: 7 });
   };
@@ -31,7 +31,7 @@ test('independent monitor closes the existing alert after service recovery', asy
   process.env.GITHUB_REPOSITORY = 'owner/TR-os'; process.env.GITHUB_TOKEN = 'test-token';
   global.fetch = async (url, init = {}) => {
     calls.push({ url: String(url), method: init.method || 'GET', body: init.body });
-    if (String(url) === 'https://tr-os.me/api/health') return jsonResponse(200, { ok: true });
+    if (String(url) === 'https://tr-os.me/api/ready') return jsonResponse(200, { ok: true });
     if (String(url).endsWith('/issues?state=open&per_page=100')) return jsonResponse(200, [{ number: 42, title: '[TR-os] Webbplatsen svarar inte', body: '<!-- tr-os-uptime-monitor -->' }]);
     return jsonResponse(200, { ok: true });
   };

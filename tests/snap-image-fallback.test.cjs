@@ -56,7 +56,45 @@ test('returns the original null result after bounded JPEG retries fail', async (
   const result = await new Promise(resolve => new Canvas().toBlob(blob => { callbacks++; resolve(blob); }, 'image/jpeg', 0.95));
   assert.equal(result, null);
   assert.equal(callbacks, 1);
-  assert.deepEqual(qualities, [0.95, 0.85, 0.7, 0.55]);
+  assert.deepEqual(qualities, [0.95, 0.85, 0.7, 0.55, 0.4, 0.25]);
+});
+
+test('recovers a null JPEG result using a smaller copy without changing the original canvas', async () => {
+  const draws = [];
+  class Canvas {
+    constructor(width = 2400, height = 1200) { this.width = width; this.height = height; }
+    getContext() { return { drawImage: source => draws.push([source, this.width, this.height]) }; }
+    toBlob(callback, type) {
+      queueMicrotask(() => callback(this.width < 2400 ? { type, size: 1024 } : null));
+    }
+  }
+  install({ HTMLCanvasElement: Canvas, document: { createElement: () => new Canvas(1, 1) } });
+  const canvas = new Canvas();
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+  assert.equal(blob.type, 'image/jpeg');
+  assert.equal(blob.size, 1024);
+  assert.deepEqual([canvas.width, canvas.height], [2400, 1200]);
+  assert.equal(draws[0][0], canvas);
+  assert.equal(draws[0][1], 2048);
+  assert.equal(draws[0][2], 1024);
+});
+
+test('bounded smaller copies fail once and native canvas security errors still throw', async () => {
+  let copies = 0, callbacks = 0;
+  class Canvas {
+    constructor() { this.width = 640; this.height = 480; }
+    getContext() { return { drawImage() {} }; }
+    toBlob(callback) { queueMicrotask(() => callback(null)); }
+  }
+  install({ HTMLCanvasElement: Canvas, document: { createElement: () => { copies++; return new Canvas(); } } });
+  const result = await new Promise(resolve => new Canvas().toBlob(blob => { callbacks++; resolve(blob); }, 'image/jpeg', 0.95));
+  assert.equal(result, null);
+  assert.equal(callbacks, 1);
+  assert.equal(copies, 3);
+  const securityError = Object.assign(new Error('Tainted canvas'), { name: 'SecurityError' });
+  class TaintedCanvas { toBlob() { throw securityError; } }
+  install({ HTMLCanvasElement: TaintedCanvas });
+  assert.throws(() => new TaintedCanvas().toBlob(() => {}, 'image/jpeg', 0.95), error => error === securityError);
 });
 
 test('retries rejected OffscreenCanvas JPEG conversions at lower quality', async () => {

@@ -26,7 +26,7 @@ async function run() {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(REPOSITORY) || !TOKEN) throw new Error('GitHub Actions context is missing.');
   let healthy = false, detail = 'TR-os did not return a healthy response.';
   try {
-    const response = await fetch('https://tr-os.me/api/health', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    const response = await fetch('https://tr-os.me/api/ready', { cache: 'no-store', signal: AbortSignal.timeout(65000) });
     const data = await response.json().catch(() => ({}));
     healthy = response.ok && data.ok === true;
     if (!healthy) detail = 'Health endpoint returned HTTP ' + response.status + '.';

@@ -185,7 +185,7 @@ function createApp(options = {}) {
     const currentDevice = suppliedDevice || deviceCookie(req, res, env);
     const adminRoute = route === '/admin.html' || route.startsWith('/api/admin/');
     const documentRequest = ['GET', 'HEAD'].includes(req.method) && (route === '/' || route === '/join' || route === '/join/' || route.endsWith('.html'));
-    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && route !== '/api/health' && !route.startsWith('/api/membership/') && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/moderation/status', '/api/moderation/flag', '/api/push/vapid-public'].includes(route);
+    const protectedApi = (apiRequest || route === '/suggest') && !adminRoute && !['/api/health', '/api/ready'].includes(route) && !route.startsWith('/api/membership/') && !['/api/moderation/messages', '/api/moderation/push/subscription', '/api/moderation/status', '/api/moderation/flag', '/api/push/vapid-public'].includes(route);
     if (suppliedDevice && !adminRoute && (documentRequest || protectedApi) && await moderation.isBanned(currentDevice)) {
       if (documentRequest) {
         res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -459,6 +459,12 @@ function createApp(options = {}) {
       const image=await reports.image(match[1]);
       res.writeHead(200,{'content-type':'image/jpeg','cache-control':'no-store','content-length':image.length,'content-disposition':'inline; filename="report.jpg"'});
       return res.end(image);
+    }
+    if (route === '/api/ready') {
+      if (!['GET', 'HEAD'].includes(req.method)) return json(res, 405, { error: 'Use GET' });
+      const membership = await memberships.health();
+      const ok = membership === 'ready';
+      return json(res, ok ? 200 : 503, { ok, name: 'TR-os', services: { membership } });
     }
     if (route === '/api/health') return json(res, 200, {
       ok: true, name: 'TR-os', services: {

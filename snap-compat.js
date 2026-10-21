@@ -2,7 +2,7 @@
 // TR-os service-worker control to upstream pages. Missing optional support must
 // not crash the whole chat. No authentication or verification code is changed.
 (() => {
-  const release = '20261021.1';
+  const release = '20261021.2';
   const sourcePath = '/dw/127ca002fe3599f56576.js';
   const sourceHash = 'd68750cc94dde81cd3d6daabf39b913381b2ff4c4d3a5bc6aad8451edb2d2a4b';
   const add = 'navigator.serviceWorker.addEventListener("message",n)';

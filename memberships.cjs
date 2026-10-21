@@ -99,6 +99,21 @@ function createMemberships(env = process.env, request = fetch) {
       fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
     }
   }
+  // Read-only dependency probe. Coalesce public health checks so monitoring
+  // cannot multiply Redis traffic or read any customer records.
+  let healthResult = 'unconfigured', healthUntil = 0, healthPending;
+  function health() {
+    if (!endpoint) return Promise.resolve('unconfigured');
+    if (healthPending) return healthPending;
+    if (Date.now() < healthUntil) return Promise.resolve(healthResult);
+    healthPending = (async () => {
+      try { healthResult = await command(['PING']) === 'PONG' ? 'ready' : 'unavailable'; }
+      catch { healthResult = 'unavailable'; }
+      healthUntil = Date.now() + 10000;
+      return healthResult;
+    })().finally(() => { healthPending = null; });
+    return healthPending;
+  }
   const keyUser = id => PREFIX + 'user:' + id;
   const keyEmail = email => PREFIX + 'email:' + hash(email);
   const keySession = value => PREFIX + 'session:' + hash(value);
@@ -452,6 +467,7 @@ return 1`;
 
   return Object.freeze({
     configured: !!endpoint,
+    health,
     swishNumber: swish.number,
     authenticate: getSession,
     register,

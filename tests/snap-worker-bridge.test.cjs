@@ -148,7 +148,7 @@ test('actual generated worker gets owner cookies and real parent-mediated transp
   assert.equal(h.client.context.cookieJar.getCookies(new URL('https://www.snapchat.com/'), false), 'session=newer-fixture');
   const response = await h.client.bare.transport.request(new URL('https://example.invalid/controlled'), 'GET', null, [['x-fixture', 'yes']]);
   assert.equal(response.status, 200);
-  assert.equal(new TextDecoder().decode(response.body), 'fixture');
+  assert.equal(await response.text(), 'fixture');
   assert.equal(h.requests.length, 1);
   assert.equal(h.requests[0].url, 'https://example.invalid/controlled');
 });
