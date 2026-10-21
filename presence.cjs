@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
 const WINDOW_SECONDS = 90;
 // Redis time and the count are evaluated atomically, across all app instances.
 const SCRIPT = `local t=redis.call('TIME')
@@ -11,13 +12,15 @@ if ARGV[1]~='' then
  redis.call('EXPIRE',KEYS[1],3600)
 end
 return {redis.call('ZCOUNT',KEYS[1],'('..(now-tonumber(ARGV[2])),'+inf'),redis.call('ZCARD',KEYS[1])}`;
-function createPresence(env, localCount, request = fetch) {
+function createPresence(env, localCount, request = fetch, redisCircuit = createRedisCircuit()) {
   const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   const configured = !!(url && token);
   async function snapshot(visitorId) {
     const common = { windowSeconds: WINDOW_SECONDS, historyMinutes: 30, configured };
     if (!configured) return { online: env.VERCEL ? null : localCount(), recentVisitors: null, presence: { ...common, source: env.VERCEL ? 'unconfigured' : 'memory' } };
+    if (redisCircuit.isOpen()) return { online: null, recentVisitors: null, presence: { ...common, source: 'unavailable' } };
+    let failureReason = 'upstream_unavailable';
     try {
       const endpoint = new URL(url);
       if (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(endpoint.hostname))) throw Error('Invalid Redis URL');
@@ -26,11 +29,29 @@ function createPresence(env, localCount, request = fetch) {
         method: 'POST', redirect: 'error', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
         body: JSON.stringify(['EVAL', SCRIPT, 1, 'tros:presence:browsers:v1', id, WINDOW_SECONDS * 1000]), signal: AbortSignal.timeout(4500)
       });
-      if (!response.ok) throw Error('Redis unavailable');
+      if (!response.ok) {
+        let message = '';
+        try { message = (await response.text()).slice(0, 2048); } catch {}
+        failureReason = classifyFailure(message);
+        if (failureReason === 'upstream_error') failureReason = 'upstream_unavailable';
+        if (Number.isInteger(response.status)) failureReason += '_http_' + response.status;
+        throw Error('Redis unavailable');
+      }
       const data = await response.json();
-      if (data.error || !Array.isArray(data.result) || data.result.length !== 2 || data.result.some(n => !Number.isSafeInteger(n) || n < 0)) throw Error('Invalid Redis result');
+      if (data.error) {
+        failureReason = classifyFailure(data.error);
+        if (failureReason === 'upstream_error') failureReason = 'redis_command_error';
+        throw Error('Redis command failed');
+      }
+      if (!Array.isArray(data.result) || data.result.length !== 2 || data.result.some(n => !Number.isSafeInteger(n) || n < 0)) {
+        failureReason = 'invalid_response';
+        throw Error('Invalid Redis result');
+      }
+      redisCircuit.recordSuccess();
       return { online: data.result[0], recentVisitors: data.result[1], presence: { ...common, source: 'redis' } };
     } catch {
+      redisCircuit.recordFailure(failureReason);
+      console.warn('[presence-storage] Redis REST failure', { reason: failureReason });
       return { online: null, recentVisitors: null, presence: { ...common, source: 'unavailable' } };
     }
   }

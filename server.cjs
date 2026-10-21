@@ -7,6 +7,7 @@ const { isIP } = require('node:net');
 const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
+const { createRedisCircuit } = require('./redis-circuit.cjs');
 const { createPresence } = require('./presence.cjs');
 const { createTraffic } = require('./traffic.cjs');
 const { createReports } = require('./reports.cjs');
@@ -52,10 +53,11 @@ function createApp(options = {}) {
   let requestCount = 0, serverErrors = 0;
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
-  const presence = createPresence(env, activeCount);
-  const traffic = createTraffic(env);
+  const redisCircuit = createRedisCircuit();
+  const presence = createPresence(env, activeCount, fetch, redisCircuit);
+  const traffic = createTraffic(env, fetch, redisCircuit);
   const moderation = createModeration(env);
-  const memberships = options.memberships || createMemberships(env);
+  const memberships = options.memberships || createMemberships(env, fetch, redisCircuit);
   const reports = createReports(env);
   const push = options.push || createPushNotifications(env);
   function notify(promise) { Promise.resolve(promise).catch(error => console.warn('Push delivery failed:', error.message)); }
@@ -430,6 +432,7 @@ function createApp(options = {}) {
         activeSessions: livePresence.presence.source === 'redis' ? livePresence.online : null, recentVisitors: livePresence.recentVisitors, localSessions: activeCount(), presence: livePresence.presence, websocketConnections: sockets.size,
         requests: requestCount, serverErrors, memoryMB: Math.round(process.memoryUsage().rss / 1048576),
         traffic: trafficStats,
+        databaseDiagnostic: redisCircuit.diagnostics(),
         scope: livePresence.presence.source === 'redis' ? 'Aktiva webbläsare räknas gemensamt i Redis över alla serverinstanser. Flera flikar i samma webbläsare räknas en gång. Aktiv = livssignal under de senaste 90 sekunderna. Övriga driftvärden gäller denna serverinstans.' : 'Gemensam besöksräkning är inte tillgänglig. Ingen lokal siffra visas som globalt antal. Övriga driftvärden gäller denna serverinstans.',
         services: {
           server: 'Tillgänglig', database: livePresence.presence.source === 'redis' ? 'Redis ansluten · gemensam närvaro' : livePresence.presence.source === 'unavailable' ? 'Databasen svarar inte' : 'Gemensam databas inte ansluten', proxy: 'Egen Wisp-server aktiverad; externa mål kan neka åtkomst',
@@ -504,8 +507,12 @@ function createApp(options = {}) {
       user.name = member.user.firstName + ' ' + member.user.lastName;
       user.seen = Date.now();
       broadcast();
-      const [livePresence, trafficStats] = await Promise.all([presence.snapshot(data.visitorId), traffic.snapshot(data.visitorId, data.viewId)]);
-      return json(res, 200, { token: user.token, secret: user.secret, ...livePresence, trafficRecorded: trafficStats.source === 'redis', banned: false });
+      const shouldRecordTraffic = !!data.viewId || data.trafficRefresh === true;
+      const [livePresence, trafficStats] = await Promise.all([
+        presence.snapshot(data.visitorId),
+        shouldRecordTraffic ? traffic.snapshot(data.visitorId, data.viewId) : Promise.resolve(null)
+      ]);
+      return json(res, 200, { token: user.token, secret: user.secret, ...livePresence, trafficRecorded: trafficStats ? trafficStats.source === 'redis' : true, banned: false });
     }
     if (route === '/chat/room' && req.method === 'GET') return json(res, 200, { messages: messages.filter(m => m.to === 'all' && m.ts > Number(url.searchParams.get('since') || 0)).slice(-100) });
     if (route === '/chat/inbox' && req.method === 'GET') {

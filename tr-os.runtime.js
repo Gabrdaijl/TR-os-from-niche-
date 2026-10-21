@@ -145,6 +145,7 @@
   function apiUrl(path) { return new URL(String(path).replace(/^\//, ''), apiBase + '/').href; }
   function watchMembership() {
     if (['/admin.html', '/account.html', '/support.html'].includes(location.pathname)) return;
+    if (typeof setInterval !== 'function') return;
     if (window.top !== window) {
       try { if (window.top.location.origin === location.origin && window.top.TR_OS) return; } catch (_) {}
     }
@@ -159,7 +160,7 @@
         if (!account.user) location.replace('/account.html?status=login');
         else if (!account.active) location.replace('/account.html?status=expired');
       } catch {} finally { checking = false; }
-    }, 30000);
+    }, 300000);
   }
   watchMembership();
   window.TR_OS = Object.freeze({

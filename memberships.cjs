@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { createSwish } = require('./swish.cjs');
+const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
 
 const SESSION_COOKIE = 'tros-session';
 const PREFIX = 'tros:membership:v1:';
@@ -13,18 +14,6 @@ const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{32,64}$/;
 function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 function hash(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
 function safeJson(value) { try { return typeof value === 'string' ? JSON.parse(value) : value; } catch { return null; } }
-function storageFailureReason(value) {
-  const message = String(value || '').toLowerCase();
-  if (/wrongpass|invalid password|unauthori[sz]ed|invalid token/.test(message)) return 'credential_rejected';
-  if (/noperm|permissions?|read.?only|not permitted/.test(message)) return 'permission_denied';
-  if (/wrong number of arguments|syntax error|invalid argument|invalid key/.test(message)) return 'command_rejected';
-  if (/unknown command|unsupported command/.test(message)) return 'unsupported_command';
-  if (/max daily request limit|daily request limit|daily limit exceeded/.test(message)) return 'daily_request_limit';
-  if (/rate.?limit|too many requests|commands per second|throttl/.test(message)) return 'rate_limited';
-  if (/quota|limit exceeded|billing/.test(message)) return 'provider_limit';
-  if (/database.*(disabled|suspended|not found)|unknown database/.test(message)) return 'database_unavailable';
-  return 'upstream_error';
-}
 function normalizeEmail(value) { return typeof value === 'string' ? value.trim().toLowerCase() : ''; }
 function sessionToken(req) {
   for (const part of String(req.headers.cookie || '').split(';')) {
@@ -81,7 +70,7 @@ function publicPayment(payment) {
   return visible;
 }
 
-function createMemberships(env = process.env, request = fetch) {
+function createMemberships(env = process.env, request = fetch, redisCircuit = createRedisCircuit()) {
   const swish = createSwish(env);
   const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
@@ -94,17 +83,21 @@ function createMemberships(env = process.env, request = fetch) {
   } catch {}
 
   function failStorage(reason, upstreamStatus) {
-    console.warn('[membership-storage] Redis REST failure', {
-      host: endpoint?.host || null,
-      reason,
-      ...(upstreamStatus ? { status: upstreamStatus } : {})
-    });
     const safeReason = upstreamStatus ? `${reason}_http_${upstreamStatus}` : reason;
+    if (reason !== 'circuit_open' && reason !== 'not_configured') {
+      console.warn('[membership-storage] Redis REST failure', {
+        host: endpoint?.host || null,
+        reason,
+        ...(upstreamStatus ? { status: upstreamStatus } : {})
+      });
+      redisCircuit.recordFailure(safeReason);
+    }
     throw Object.assign(new Error('Medlemskapsdatabasen svarar inte. Försök igen senare.'), { status: 503, storageReason: safeReason });
   }
 
   async function command(parts) {
     if (!endpoint || !token) failStorage('not_configured');
+    if (redisCircuit.isOpen()) failStorage('circuit_open');
     // Only repeat read-only commands: a lost response to a write could otherwise
     // apply the same membership change twice.
     const retryable = parts[0] === 'GET' || parts[0] === 'PING';
@@ -140,7 +133,7 @@ function createMemberships(env = process.env, request = fetch) {
         }
         let message = '';
         try { message = (await response.text()).slice(0, 2048); } catch {}
-        failStorage(storageFailureReason(message), status);
+        failStorage(classifyFailure(message), status);
       }
 
       let data;
@@ -149,9 +142,10 @@ function createMemberships(env = process.env, request = fetch) {
         failStorage('invalid_response');
       }
       if (data.error) {
-        const reason = storageFailureReason(data.error);
+        const reason = classifyFailure(data.error);
         failStorage(reason === 'upstream_error' ? 'redis_command_error' : reason);
       }
+      redisCircuit.recordSuccess();
       return data.result;
     }
     failStorage('upstream_unavailable');
@@ -161,6 +155,11 @@ function createMemberships(env = process.env, request = fetch) {
   let healthResult = 'unconfigured', healthReason = 'not_configured', healthUntil = 0, healthPending;
   function health() {
     if (!endpoint) { healthReason = 'not_configured'; return Promise.resolve('unconfigured'); }
+    if (redisCircuit.isOpen()) {
+      healthResult = 'unavailable';
+      healthReason = redisCircuit.diagnostics().lastFailure || 'upstream_unavailable';
+      return Promise.resolve(healthResult);
+    }
     if (healthPending) return healthPending;
     if (Date.now() < healthUntil) return Promise.resolve(healthResult);
     healthPending = (async () => {
@@ -176,7 +175,7 @@ function createMemberships(env = process.env, request = fetch) {
         healthResult = 'unavailable';
         healthReason = error.storageReason || 'upstream_unavailable';
       }
-      healthUntil = Date.now() + 10000;
+      healthUntil = Date.now() + 60000;
       return healthResult;
     })().finally(() => { healthPending = null; });
     return healthPending;
@@ -273,10 +272,17 @@ return 'ok'`;
   async function getSession(req) {
     const tokenValue = sessionToken(req);
     if (!tokenValue) return null;
-    const value = await command(['GET', keySession(tokenValue)]);
-    const session = safeJson(value);
+    const values = await command(['EVAL', `local raw=redis.call('GET',KEYS[1])
+if not raw then return nil end
+local ok,session=pcall(cjson.decode,raw)
+if not ok or type(session)~='table' or type(session.userId)~='string' then return nil end
+local user=redis.call('GET',ARGV[1]..session.userId)
+if not user then return nil end
+return {raw,user}`, 1, keySession(tokenValue), PREFIX + 'user:']);
+    if (!Array.isArray(values) || values.length !== 2) return null;
+    const session = safeJson(values[0]);
     if (!session || !['computer', 'mobile'].includes(session.deviceType)) return null;
-    const user = await getUser(session.userId);
+    const user = safeJson(values[1]);
     if (!user || user.enabled === false) return null;
     const slot = user.devices?.[session.deviceType];
     if (!slot || slot.sessionHash !== hash(tokenValue) || slot.deviceId !== session.deviceId) return null;

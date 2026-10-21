@@ -502,6 +502,22 @@
         if (name === 'database') { pill.textContent = connected ? 'Ansluten' : 'Saknas'; pill.classList.add(connected ? 'ok' : 'warn'); }
         if (name === 'server') { pill.textContent = 'Tillgänglig'; pill.classList.add('ok'); }
         const description = document.createElement('p'); description.textContent = status;
+        if (name === 'database' && !connected && data.databaseDiagnostic?.lastFailure) {
+          const reason = data.databaseDiagnostic.lastFailure.replace(/_http_\d{3}$/, '');
+          const explanations = {
+            provider_limit: 'Redis-leverantörens kvot eller gräns har nåtts.',
+            daily_request_limit: 'Dagens Redis-anropsgräns har nåtts.',
+            rate_limited: 'Redis begränsar anropsfrekvensen.',
+            database_unavailable: 'Redis-databasen är avstängd eller saknas.',
+            credential_rejected: 'Redis avvisar serverns autentisering.',
+            permission_denied: 'Redis-token saknar behörighet.',
+            network_timeout: 'Anslutningen till Redis tog för lång tid.',
+            upstream_unavailable: 'Redis svarade inte på serverns anrop.'
+          };
+          description.textContent += ' ' + (explanations[reason] || 'Redis-fel: ' + reason + '.');
+          const waitSeconds = Math.ceil(Number(data.databaseDiagnostic.retryAfterMs) / 1000);
+          if (waitSeconds > 0) description.textContent += ' Nytt försök om cirka ' + waitSeconds + ' sekunder.';
+        }
         top.append(title, pill); card.append(top, description); return card;
       }));
       $('scope').textContent = data.scope;

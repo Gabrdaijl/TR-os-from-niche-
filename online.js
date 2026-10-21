@@ -11,10 +11,10 @@
     // Embedded pages share their parent heartbeat rather than creating sessions.
     if (runtime !== window.TR_OS || runtime.presence.started) return;
     runtime.presence.started = true;
-    let pending = false, viewRecorded = false;
+    let pending = false, viewRecorded = false, lastTrafficAt = 0;
     const viewId = crypto.randomUUID();
     async function heartbeat() {
-      if (pending) return;
+      if (pending || document.visibilityState === 'hidden') return;
       pending = true;
       try {
         let cached;
@@ -23,10 +23,14 @@
         await runtime.identity();
         let token, secret;
         try { token = localStorage.getItem('tros-online-id'); secret = localStorage.getItem('tros-online-secret'); } catch {}
-        const response = await runtime.fetch('/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret, visitorId: await runtime.visitorId(), viewId: viewRecorded ? undefined : viewId }), signal: AbortSignal.timeout(10000) });
+        const shouldRecordTraffic = !viewRecorded || Date.now() - lastTrafficAt >= 5 * 60 * 1000;
+        const response = await runtime.fetch('/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, secret, visitorId: await runtime.visitorId(), viewId: viewRecorded ? undefined : viewId, trafficRefresh: viewRecorded && shouldRecordTraffic }), signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw Error('Presence unavailable');
         const data = await response.json();
-        viewRecorded = data.trafficRecorded === true;
+        if (shouldRecordTraffic) {
+          viewRecorded = data.trafficRecorded === true;
+          if (viewRecorded) lastTrafficAt = Date.now();
+        }
         try {
           if (data.token) localStorage.setItem('tros-online-id', data.token);
           if (data.secret) localStorage.setItem('tros-online-secret', data.secret);
@@ -38,8 +42,9 @@
       finally { pending = false; }
     }
     heartbeat();
-    const timer = setInterval(heartbeat, 30000);
+    const timer = setInterval(heartbeat, 60000);
     window.addEventListener('pagehide', () => clearInterval(timer));
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') heartbeat(); });
     window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
     window.addEventListener('storage', event => {
       if (event.key === 'tros-presence-cache' && event.newValue) { try { runtime.presence.publish(JSON.parse(event.newValue).data); } catch {} }
