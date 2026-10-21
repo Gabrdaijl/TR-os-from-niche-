@@ -19,7 +19,9 @@ function storageFailureReason(value) {
   if (/noperm|permissions?|read.?only|not permitted/.test(message)) return 'permission_denied';
   if (/wrong number of arguments|syntax error|invalid argument|invalid key/.test(message)) return 'command_rejected';
   if (/unknown command|unsupported command/.test(message)) return 'unsupported_command';
-  if (/quota|rate limit|limit exceeded|billing/.test(message)) return 'provider_limit';
+  if (/max daily request limit|daily request limit|daily limit exceeded/.test(message)) return 'daily_request_limit';
+  if (/rate.?limit|too many requests|commands per second|throttl/.test(message)) return 'rate_limited';
+  if (/quota|limit exceeded|billing/.test(message)) return 'provider_limit';
   if (/database.*(disabled|suspended|not found)|unknown database/.test(message)) return 'database_unavailable';
   return 'upstream_error';
 }

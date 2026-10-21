@@ -505,7 +505,7 @@
         top.append(title, pill); card.append(top, description); return card;
       }));
       $('scope').textContent = data.scope;
-      $('updated').textContent = 'Senast kontrollerad ' + new Date(data.checkedAt).toLocaleTimeString('sv-SE') + ' · uppdateras var 15:e sekund';
+      $('updated').textContent = 'Senast kontrollerad ' + new Date(data.checkedAt).toLocaleTimeString('sv-SE') + ' · uppdateras varje minut';
       await refreshMembership();
       await refreshBans();
       await refreshReports();
@@ -523,7 +523,7 @@
       const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Admininloggningen misslyckades.');
       authorization='Session';expires=Number(data.rememberUntil)||Date.now()+(rememberDevice?30:0.5)*24*60*60*1000;
       $('password').value='';clearInterval(timer);await refresh();
-      if(authorization&&$('login').hidden){timer=setInterval(refresh,15000);await syncAdminSubscription();}
+      if(authorization&&$('login').hidden){timer=setInterval(()=>{if(!document.hidden)refresh();},60000);await syncAdminSubscription();}
     }catch(error){authorization='';expires=0;$('message').textContent=error.message||'Admininloggningen misslyckades.';}
     finally{button.disabled=false;button.textContent='Öppna admin';}
   });
@@ -548,7 +548,7 @@
   (async()=>{
     authorization='Session';expires=Date.now()+30*24*60*60*1000;
     await refresh();
-    if(authorization&&$('login').hidden){timer=setInterval(refresh,15000);await syncAdminSubscription();}
+    if(authorization&&$('login').hidden){timer=setInterval(()=>{if(!document.hidden)refresh();},60000);await syncAdminSubscription();}
     else $('message').textContent='';
   })();
 })();
