@@ -83,21 +83,53 @@ function createMemberships(env = process.env, request = fetch) {
 
   async function command(parts) {
     if (!endpoint || !token) fail(503, 'Medlemskap kräver att Redis är anslutet på servern.');
-    let response;
-    try {
-      response = await request(endpoint, {
-        method: 'POST', redirect: 'error',
-        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
-        body: JSON.stringify(parts), signal: AbortSignal.timeout(5000)
-      });
-      if (!response.ok) throw new Error('Membership storage is unavailable');
-      const data = await response.json();
-      if (data.error) throw new Error('Membership storage is unavailable');
+    // Only repeat read-only commands: a lost response to a write could otherwise
+    // apply the same membership change twice.
+    const retryable = parts[0] === 'GET' || parts[0] === 'PING';
+    const attempts = retryable ? 2 : 1;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      let response;
+      try {
+        response = await request(endpoint, {
+          method: 'POST', redirect: 'error',
+          headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+          body: JSON.stringify(parts), signal: AbortSignal.timeout(attempt ? 2000 : 5000)
+        });
+      } catch (error) {
+        if (attempt + 1 < attempts) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+          continue;
+        }
+        const code = error?.cause?.code || error?.code || error?.name || 'network_error';
+        const reason = /^[A-Za-z0-9_-]{1,40}$/.test(String(code)) ? String(code) : 'network_error';
+        console.warn('[membership-storage] Redis REST request failed', { host: endpoint.host, reason });
+        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+      }
+
+      if (!response.ok) {
+        const status = response.status;
+        if (retryable && attempt === 0 && (status === 408 || status === 425 || status === 429 || status >= 500)) {
+          await response.body?.cancel().catch(() => {});
+          await new Promise(resolve => setTimeout(resolve, 150));
+          continue;
+        }
+        console.warn('[membership-storage] Redis REST returned an error', { host: endpoint.host, status });
+        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+      }
+
+      let data;
+      try { data = await response.json(); }
+      catch {
+        console.warn('[membership-storage] Redis REST returned invalid JSON', { host: endpoint.host });
+        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+      }
+      if (data.error) {
+        console.warn('[membership-storage] Redis rejected a command', { host: endpoint.host });
+        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+      }
       return data.result;
-    } catch (error) {
-      if (error.status) throw error;
-      fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
     }
+    fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
   }
   // Read-only dependency probe. Coalesce public health checks so monitoring
   // cannot multiply Redis traffic or read any customer records.
