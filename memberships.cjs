@@ -13,6 +13,16 @@ const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{32,64}$/;
 function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 function hash(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
 function safeJson(value) { try { return typeof value === 'string' ? JSON.parse(value) : value; } catch { return null; } }
+function storageFailureReason(value) {
+  const message = String(value || '').toLowerCase();
+  if (/wrongpass|invalid password|unauthori[sz]ed|invalid token/.test(message)) return 'credential_rejected';
+  if (/noperm|permissions?|read.?only|not permitted/.test(message)) return 'permission_denied';
+  if (/wrong number of arguments|syntax error|invalid argument|invalid key/.test(message)) return 'command_rejected';
+  if (/unknown command|unsupported command/.test(message)) return 'unsupported_command';
+  if (/quota|rate limit|limit exceeded|billing/.test(message)) return 'provider_limit';
+  if (/database.*(disabled|suspended|not found)|unknown database/.test(message)) return 'database_unavailable';
+  return 'upstream_error';
+}
 function normalizeEmail(value) { return typeof value === 'string' ? value.trim().toLowerCase() : ''; }
 function sessionToken(req) {
   for (const part of String(req.headers.cookie || '').split(';')) {
@@ -87,7 +97,7 @@ function createMemberships(env = process.env, request = fetch) {
       reason,
       ...(upstreamStatus ? { status: upstreamStatus } : {})
     });
-    const safeReason = upstreamStatus ? `upstream_http_${upstreamStatus}` : reason;
+    const safeReason = upstreamStatus ? `${reason}_http_${upstreamStatus}` : reason;
     throw Object.assign(new Error('Medlemskapsdatabasen svarar inte. Försök igen senare.'), { status: 503, storageReason: safeReason });
   }
 
@@ -126,7 +136,9 @@ function createMemberships(env = process.env, request = fetch) {
           await new Promise(resolve => setTimeout(resolve, 150));
           continue;
         }
-        failStorage('upstream_http_error', status);
+        let message = '';
+        try { message = (await response.text()).slice(0, 2048); } catch {}
+        failStorage(storageFailureReason(message), status);
       }
 
       let data;
@@ -135,7 +147,8 @@ function createMemberships(env = process.env, request = fetch) {
         failStorage('invalid_response');
       }
       if (data.error) {
-        failStorage('redis_command_error');
+        const reason = storageFailureReason(data.error);
+        failStorage(reason === 'upstream_error' ? 'redis_command_error' : reason);
       }
       return data.result;
     }
