@@ -81,8 +81,18 @@ function createMemberships(env = process.env, request = fetch) {
     }
   } catch {}
 
+  function failStorage(reason, upstreamStatus) {
+    console.warn('[membership-storage] Redis REST failure', {
+      host: endpoint?.host || null,
+      reason,
+      ...(upstreamStatus ? { status: upstreamStatus } : {})
+    });
+    const safeReason = upstreamStatus ? `upstream_http_${upstreamStatus}` : reason;
+    throw Object.assign(new Error('Medlemskapsdatabasen svarar inte. Försök igen senare.'), { status: 503, storageReason: safeReason });
+  }
+
   async function command(parts) {
-    if (!endpoint || !token) fail(503, 'Medlemskap kräver att Redis är anslutet på servern.');
+    if (!endpoint || !token) failStorage('not_configured');
     // Only repeat read-only commands: a lost response to a write could otherwise
     // apply the same membership change twice.
     const retryable = parts[0] === 'GET' || parts[0] === 'PING';
@@ -100,10 +110,13 @@ function createMemberships(env = process.env, request = fetch) {
           await new Promise(resolve => setTimeout(resolve, 150));
           continue;
         }
-        const code = error?.cause?.code || error?.code || error?.name || 'network_error';
-        const reason = /^[A-Za-z0-9_-]{1,40}$/.test(String(code)) ? String(code) : 'network_error';
-        console.warn('[membership-storage] Redis REST request failed', { host: endpoint.host, reason });
-        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+        const code = String(error?.cause?.code || error?.code || error?.name || '').toUpperCase();
+        const reasons = {
+          ECONNRESET: 'network_reset', ETIMEDOUT: 'network_timeout', TIMEOUTERROR: 'network_timeout',
+          ABORT_ERR: 'network_timeout', ENOTFOUND: 'network_dns', EAI_AGAIN: 'network_dns_temporary',
+          ECONNREFUSED: 'network_refused'
+        };
+        failStorage(reasons[code] || 'network_error');
       }
 
       if (!response.ok) {
@@ -113,38 +126,44 @@ function createMemberships(env = process.env, request = fetch) {
           await new Promise(resolve => setTimeout(resolve, 150));
           continue;
         }
-        console.warn('[membership-storage] Redis REST returned an error', { host: endpoint.host, status });
-        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+        failStorage('upstream_http_error', status);
       }
 
       let data;
       try { data = await response.json(); }
       catch {
-        console.warn('[membership-storage] Redis REST returned invalid JSON', { host: endpoint.host });
-        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+        failStorage('invalid_response');
       }
       if (data.error) {
-        console.warn('[membership-storage] Redis rejected a command', { host: endpoint.host });
-        fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+        failStorage('redis_command_error');
       }
       return data.result;
     }
-    fail(503, 'Medlemskapsdatabasen svarar inte. Försök igen senare.');
+    failStorage('upstream_unavailable');
   }
   // Read-only dependency probe. Coalesce public health checks so monitoring
   // cannot multiply Redis traffic or read any customer records.
-  let healthResult = 'unconfigured', healthUntil = 0, healthPending;
+  let healthResult = 'unconfigured', healthReason = 'not_configured', healthUntil = 0, healthPending;
   function health() {
-    if (!endpoint) return Promise.resolve('unconfigured');
+    if (!endpoint) { healthReason = 'not_configured'; return Promise.resolve('unconfigured'); }
     if (healthPending) return healthPending;
     if (Date.now() < healthUntil) return Promise.resolve(healthResult);
     healthPending = (async () => {
-      try { healthResult = await command(['PING']) === 'PONG' ? 'ready' : 'unavailable'; }
-      catch { healthResult = 'unavailable'; }
+      try {
+        healthResult = await command(['PING']) === 'PONG' ? 'ready' : 'unavailable';
+        healthReason = healthResult === 'ready' ? 'ok' : 'unexpected_response';
+      } catch (error) {
+        healthResult = 'unavailable';
+        healthReason = error.storageReason || 'upstream_unavailable';
+      }
       healthUntil = Date.now() + 10000;
       return healthResult;
     })().finally(() => { healthPending = null; });
     return healthPending;
+  }
+  async function healthDetails() {
+    const status = await health();
+    return { status, reason: healthReason };
   }
   const keyUser = id => PREFIX + 'user:' + id;
   const keyEmail = email => PREFIX + 'email:' + hash(email);
@@ -500,6 +519,7 @@ return 1`;
   return Object.freeze({
     configured: !!endpoint,
     health,
+    healthDetails,
     swishNumber: swish.number,
     authenticate: getSession,
     register,

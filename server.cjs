@@ -468,9 +468,12 @@ function createApp(options = {}) {
     }
     if (route === '/api/ready') {
       if (!['GET', 'HEAD'].includes(req.method)) return json(res, 405, { error: 'Use GET' });
-      const membership = await memberships.health();
-      const ok = membership === 'ready';
-      return json(res, ok ? 200 : 503, { ok, name: 'TR-os', services: { membership } });
+      const membership = await memberships.healthDetails();
+      const ok = membership.status === 'ready';
+      return json(res, ok ? 200 : 503, {
+        ok, name: 'TR-os', services: { membership: membership.status },
+        diagnostics: { membership: membership.reason }
+      });
     }
     if (route === '/api/health') return json(res, 200, {
       ok: true, name: 'TR-os', services: {
