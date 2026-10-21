@@ -150,8 +150,13 @@ function createMemberships(env = process.env, request = fetch) {
     if (Date.now() < healthUntil) return Promise.resolve(healthResult);
     healthPending = (async () => {
       try {
-        healthResult = await command(['PING']) === 'PONG' ? 'ready' : 'unavailable';
-        healthReason = healthResult === 'ready' ? 'ok' : 'unexpected_response';
+        const pong = await command(['PING']);
+        if (pong !== 'PONG') throw Object.assign(new Error('Unexpected Redis health response'), { storageReason: 'unexpected_ping_response' });
+        // Membership lookups use GET. Probe it too: PING can succeed even when
+        // the configured Redis credential cannot read membership keys.
+        await command(['GET', PREFIX + 'health:probe']);
+        healthResult = 'ready';
+        healthReason = 'ok';
       } catch (error) {
         healthResult = 'unavailable';
         healthReason = error.storageReason || 'upstream_unavailable';

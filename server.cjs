@@ -627,7 +627,10 @@ function createApp(options = {}) {
   }
   const server = http.createServer((req, res) => handler(req, res).catch(error => {
     if (res.headersSent) return res.destroy();
-    json(res, error.status || 502, { error: error.status ? error.message : 'The connected service could not be reached.' });
+    json(res, error.status || 502, {
+      error: error.status ? error.message : 'The connected service could not be reached.',
+      ...(typeof error.storageReason === 'string' ? { code: 'membership_storage_' + error.storageReason } : {})
+    });
   }));
   const chatWs = new WebSocketServer({ noServer: true, maxPayload: 4096 });
   const proxyWs = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 * 1024 });
