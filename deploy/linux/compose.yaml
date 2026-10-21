@@ -1,0 +1,49 @@
+# Linux VM deployment. Uses the existing external Redis database.
+name: tr-os
+services:
+  app:
+    build:
+      context: ../..
+    restart: unless-stopped
+    init: true
+    network_mode: host
+    env_file:
+      - ${TR_OS_ENV_FILE:-/etc/tr-os/app.env}
+    environment:
+      HOST: 127.0.0.1
+      PORT: "8173"
+      NODE_ENV: production
+      RENDER: "false"
+      TR_OS_TRUSTED_PROXY_IP: 127.0.0.1
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8173/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TR_OS_DOMAIN: ${TR_OS_DOMAIN:-tr-os.me}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  caddy-data:
+  caddy-config:

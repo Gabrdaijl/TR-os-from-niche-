@@ -91,8 +91,14 @@ function createApp(options = {}) {
     // Render's public ingress overwrites CF-Connecting-IP. X-Forwarded-For
     // can contain caller-supplied entries, so never use it for rate limits.
     const forwarded = req.headers['cf-connecting-ip'];
-    const clientIp = env.RENDER === 'true' && typeof forwarded === 'string' && isIP(forwarded)
+    let clientIp = env.RENDER === 'true' && typeof forwarded === 'string' && isIP(forwarded)
       ? forwarded : req.socket.remoteAddress;
+    // A self-hosted reverse proxy must overwrite this header. Trust it only
+    // from the one configured TCP peer, never from an arbitrary internet client.
+    const proxyIp = env.TR_OS_TRUSTED_PROXY_IP;
+    const proxyClient = req.headers['x-tros-client-ip'];
+    if (proxyIp && isIP(proxyIp) && req.socket.remoteAddress === proxyIp &&
+        typeof proxyClient === 'string' && isIP(proxyClient)) clientIp = proxyClient;
     const key = bucket + ':' + clientIp;
     let limit = limits.get(key);
     if (!limit || limit.until < Date.now()) limits.set(key, limit = { n: 0, until: Date.now() + 60000 });

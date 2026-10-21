@@ -1,0 +1,11 @@
+{
+    admin off
+}
+
+{$TR_OS_DOMAIN:tr-os.me} {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8173 {
+        # Override caller input; the app trusts only this loopback TCP peer.
+        header_up X-Tros-Client-IP {remote_host}
+    }
+}

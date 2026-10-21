@@ -44,3 +44,22 @@ test('direct hosting never trusts caller-supplied proxy headers', async t => {
     assert.equal(await request({ 'cf-connecting-ip': '2001:db8::2', 'x-forwarded-for': '198.51.100.20' }), 429);
   }
 });
+
+test('a configured reverse proxy preserves separate limits for each actual client', async t => {
+  const request = await fixture(t, { TR_OS_TRUSTED_PROXY_IP: '127.0.0.1' });
+  for (let i = 0; i < 5; i++) assert.equal(await request({ 'x-tros-client-ip': '203.0.113.1' }), 401);
+  assert.equal(await request({ 'x-tros-client-ip': '203.0.113.1' }), 429);
+  assert.equal(await request({ 'x-tros-client-ip': '203.0.113.2' }), 401);
+  assert.equal(await request({ 'x-tros-client-ip': '2001:db8::1' }), 401);
+});
+
+test('custom forwarding headers from untrusted peers or malformed values cannot reset limits', async t => {
+  for (const proxyIp of ['', 'not-an-ip', '192.0.2.10']) {
+    const request = await fixture(t, { TR_OS_TRUSTED_PROXY_IP: proxyIp });
+    for (let i = 0; i < 5; i++) assert.equal(await request({ 'x-tros-client-ip': '203.0.113.' + i }), 401);
+    assert.equal(await request({ 'x-tros-client-ip': '2001:db8::1' }), 429);
+  }
+  const request = await fixture(t, { TR_OS_TRUSTED_PROXY_IP: '127.0.0.1' });
+  for (let i = 0; i < 5; i++) assert.equal(await request({ 'x-tros-client-ip': 'invalid-' + i }), 401);
+  assert.equal(await request({ 'x-tros-client-ip': '203.0.113.1, 203.0.113.2' }), 429);
+});
