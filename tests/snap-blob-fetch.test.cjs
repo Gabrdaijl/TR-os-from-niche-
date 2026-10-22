@@ -67,3 +67,19 @@ test('cross-realm response streams are included in the controller transfer list'
   const crossRealmStream = { getReader() {} };
   assert.equal(transferList(crossRealmStream)[0], crossRealmStream);
 });
+
+test('the Snapchat worker relay transfers cross-realm streams and ArrayBuffers', () => {
+  assert.equal((bridge.match(/typeof body\?\.getReader === 'function'/g) || []).length, 2,
+    'both worker-to-window and window-to-worker bridges recognize streams from another realm');
+  assert.equal((bridge.match(/Object\.prototype\.toString\.call\(body\) === '\[object ArrayBuffer\]'/g) || []).length, 2,
+    'both bridge directions recognize ArrayBuffers from another realm');
+  const transferList = vm.runInNewContext(
+    `body => body instanceof ArrayBuffer || Object.prototype.toString.call(body) === '[object ArrayBuffer]' ||
+      (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) || typeof body?.getReader === 'function' ? [body] : []`,
+    { ArrayBuffer, ReadableStream }
+  );
+  const foreignStream = { getReader() {} };
+  const foreignBuffer = vm.runInNewContext('new ArrayBuffer(2)');
+  assert.equal(transferList(foreignStream)[0], foreignStream);
+  assert.equal(transferList(foreignBuffer)[0], foreignBuffer);
+});

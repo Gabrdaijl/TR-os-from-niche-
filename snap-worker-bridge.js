@@ -161,7 +161,9 @@
     const serviceWorker = scope.navigator.serviceWorker;
     const post = (port, data, transfer = []) => portPost.call(port, data, transfer);
     const bodyTransfer = body => body instanceof ArrayBuffer ||
-      (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) ? [body] : [];
+      Object.prototype.toString.call(body) === '[object ArrayBuffer]' ||
+      (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) ||
+      typeof body?.getReader === 'function' ? [body] : [];
 
     function close(state) {
       if (state.closed) return;
@@ -309,7 +311,9 @@
     ready.catch(() => {});
     const timer = setTimeout(() => rejectReady(new Error('Worker transport channel was not supplied by its owning frame')), 20000);
     const transfers = body => body instanceof ArrayBuffer ||
-      (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) ? [body] : [];
+      Object.prototype.toString.call(body) === '[object ArrayBuffer]' ||
+      (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) ||
+      typeof body?.getReader === 'function' ? [body] : [];
     const send = (value, transfer = []) => nativePost.call(port, value, transfer);
     function applyCookies(entries, clear) {
       if (clear) cookieJar.clear();
