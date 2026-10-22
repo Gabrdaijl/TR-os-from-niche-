@@ -6,9 +6,9 @@
     { id: 'green', name: 'Moss', dots: ['#070a07', '#0c110b', '#a3b18a'] },
     { id: 'white', name: 'White', dots: ['#f4f1ea', '#ffffff', '#2f5d8a'] },
     { id: 'ocean', name: 'Ocean Blue', dots: ['#060b10', '#0a1218', '#5aa9e6'] },
-    { id: 'miami', name: 'Miami', dots: ['#171017', '#291a24', '#e9a088'] },
-    { id: 'sunset', name: 'Sunset', dots: ['#160f0b', '#2a1b15', '#edbd83'] },
-    { id: 'aurora', name: 'Aurora', dots: ['#151119', '#261f2b', '#d1aed5'] }
+    { id: 'miami', name: 'Miami', dots: ['#150e13', '#241820', '#e0a17c'] },
+    { id: 'sunset', name: 'Sunset', dots: ['#17100e', '#271a19', '#d99a72'] },
+    { id: 'aurora', name: 'Aurora', dots: ['#140f14', '#241a22', '#c9a6c4'] }
   ];
   var CLOAKS = [
     { id: 'classroom', name: 'Google Classroom', title: 'Home - Classroom', icon: 'https://www.gstatic.com/classroom/ic_product_classroom_32.png' },

@@ -40,3 +40,5 @@ button{font:inherit}
 @media(max-width:370px){.topbar{padding-right:8px;padding-left:8px}.brand{gap:6px;font-size:16px}.brand-mark{width:31px;height:31px}.topbar-actions{gap:5px}#app-title{max-width:28vw;font-size:12px}.install-mini,.more-button{width:35px;height:35px}.nav-item{font-size:9px}.nav-item svg{width:20px;height:20px}}
 @media(max-height:480px) and (orientation:landscape){.mobile-shell{grid-template-rows:calc(44px + var(--safe-top)) minmax(0,1fr) calc(54px + var(--safe-bottom))}.brand-mark{width:29px;height:29px}.nav-item{min-height:48px;flex-direction:row;gap:5px;font-size:11px}.nav-item svg{width:19px;height:19px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+html,body,.mobile-shell{background-image:var(--shell-image,none);background-attachment:fixed;background-size:cover}

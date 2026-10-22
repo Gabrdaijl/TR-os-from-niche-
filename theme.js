@@ -48,9 +48,9 @@
     green:     { ACCENT: '#a3b18a', CARD_BG: '#0c110b', BORDER: '#232b20', BG: '#070a07', TEXT: '#e3e8d8', NAV_BTN: '#151a13', STAR: '163,177,138', ICON: '#ffffff', ONACC: '#0a0a0a', HOV: '#2a2a2a' },
     white:     { ACCENT: '#2f5d8a', CARD_BG: '#ffffff', BORDER: '#e3ddd0', BG: '#f4f1ea', TEXT: '#211d16', NAV_BTN: '#ebe6da', STAR: '120,110,95', ICON: '#211d16', ONACC: '#ffffff', HOV: '#e7e1d3' },
     ocean:     { ACCENT: '#5aa9e6', CARD_BG: '#0a1218', BORDER: '#1e3a4d', BG: '#060b10', TEXT: '#d8ecf5', NAV_BTN: '#10202c', STAR: '140,190,220', ICON: '#ffffff', ONACC: '#06121a', HOV: '#1a2f3d' },
-    miami:     { ACCENT: '#e9a088', CARD_BG: '#291a24', BORDER: '#694252', BG: '#171017', TEXT: '#f7e7ea', NAV_BTN: '#392330', STAR: '233,160,136', ICON: '#ffffff', ONACC: '#24131d', HOV: '#4b3140' },
-    sunset:    { ACCENT: '#edbd83', CARD_BG: '#2a1b15', BORDER: '#5c3d2e', BG: '#160f0b', TEXT: '#f7e8d5', NAV_BTN: '#3b281e', STAR: '223,154,101', ICON: '#ffffff', ONACC: '#2a1910', HOV: '#51382a' },
-    aurora:    { ACCENT: '#d1aed5', CARD_BG: '#261f2b', BORDER: '#5a4a60', BG: '#151119', TEXT: '#f1e9f3', NAV_BTN: '#362a3b', STAR: '205,164,207', ICON: '#f7f0fa', ONACC: '#261b2a', HOV: '#46384d' }
+    miami:     { ACCENT: '#e0a17c', CARD_BG: '#241820', BORDER: '#7d565b', BG: '#150e13', TEXT: '#f2e4d8', NAV_BTN: '#32222a', STAR: '224,161,124', ICON: '#e0a17c', ONACC: '#1a0f0c', HOV: '#412b33' },
+    sunset:    { ACCENT: '#d99a72', CARD_BG: '#271a19', BORDER: '#7f5a4a', BG: '#17100e', TEXT: '#f5e6d8', NAV_BTN: '#332220', STAR: '217,154,114', ICON: '#d99a72', ONACC: '#1a0e09', HOV: '#432c27' },
+    aurora:    { ACCENT: '#c9a6c4', CARD_BG: '#241a22', BORDER: '#6f566e', BG: '#140f14', TEXT: '#f0e4ed', NAV_BTN: '#302230', STAR: '201,166,196', ICON: '#c9a6c4', ONACC: '#160f15', HOV: '#3e2c3e' }
   };
   let ACCENT  = '#ffffff';
   let CARD_BG = '#111111';
@@ -134,6 +134,24 @@
       html, body {
         background-color: ${BG} !important;
       }
+      html[data-tros-theme="miami"]:not(.has-wallpaper),
+      html[data-tros-theme="miami"]:not(.has-wallpaper) body {
+        background: linear-gradient(135deg,#150e13 0%,#2a1a20 30%,#5a3038 58%,#9a5a58 80%,#e0a17c 100%) fixed !important;
+      }
+      html[data-tros-theme="sunset"]:not(.has-wallpaper),
+      html[data-tros-theme="sunset"]:not(.has-wallpaper) body {
+        background: linear-gradient(135deg,#17100e 0%,#2e1d1a 30%,#6a3a30 60%,#b06a4e 85%,#e3b184 100%) fixed !important;
+      }
+      html[data-tros-theme="aurora"]:not(.has-wallpaper),
+      html[data-tros-theme="aurora"]:not(.has-wallpaper) body {
+        background: linear-gradient(135deg,#140f14 0%,#241a26 30%,#4a3048 55%,#8a5a66 78%,#d8a58e 100%) fixed !important;
+      }
+      html[data-tros-theme="miami"] h1.hop,
+      html[data-tros-theme="miami"] .agbalumo { background: linear-gradient(90deg,#d98f7e 0%,#e0a17c 50%,#f0c9a8 100%); -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
+      html[data-tros-theme="sunset"] h1.hop,
+      html[data-tros-theme="sunset"] .agbalumo { background: linear-gradient(90deg,#d98a6a 0%,#e3b184 50%,#f0d2a8 100%); -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
+      html[data-tros-theme="aurora"] h1.hop,
+      html[data-tros-theme="aurora"] .agbalumo { background: linear-gradient(90deg,#b98fbd 0%,#d8a5b4 50%,#e8bfa0 100%); -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important; color: transparent !important; }
       html {
         height: 100%;
       }

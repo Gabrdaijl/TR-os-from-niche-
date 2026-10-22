@@ -29,9 +29,9 @@
     green: { bg: '#070a07', card: '#0c110b', border: '#232b20', text: '#e3e8d8', nav: '#151a13', accent: '#a3b18a', onAccent: '#0a0a0a' },
     white: { bg: '#f4f1ea', card: '#ffffff', border: '#e3ddd0', text: '#211d16', nav: '#ebe6da', accent: '#2f5d8a', onAccent: '#ffffff' },
     ocean: { bg: '#060b10', card: '#0a1218', border: '#1e3a4d', text: '#d8ecf5', nav: '#10202c', accent: '#5aa9e6', onAccent: '#06121a' },
-    miami: { bg: '#171017', card: '#291a24', border: '#694252', text: '#f7e7ea', nav: '#392330', accent: '#e9a088', onAccent: '#24131d' },
-    sunset: { bg: '#160f0b', card: '#2a1b15', border: '#5c3d2e', text: '#f7e8d5', nav: '#3b281e', accent: '#edbd83', onAccent: '#2a1910' },
-    aurora: { bg: '#151119', card: '#261f2b', border: '#5a4a60', text: '#f1e9f3', nav: '#362a3b', accent: '#d1aed5', onAccent: '#261b2a' }
+    miami: { bg: '#150e13', card: '#241820', border: '#7d565b', text: '#f2e4d8', nav: '#32222a', accent: '#e0a17c', onAccent: '#1a0f0c', shellImage: 'linear-gradient(135deg,#150e13 0%,#2a1a20 30%,#5a3038 58%,#9a5a58 80%,#e0a17c 100%)' },
+    sunset: { bg: '#17100e', card: '#271a19', border: '#7f5a4a', text: '#f5e6d8', nav: '#332220', accent: '#d99a72', onAccent: '#1a0e09', shellImage: 'linear-gradient(135deg,#17100e 0%,#2e1d1a 30%,#6a3a30 60%,#b06a4e 85%,#e3b184 100%)' },
+    aurora: { bg: '#140f14', card: '#241a22', border: '#6f566e', text: '#f0e4ed', nav: '#302230', accent: '#c9a6c4', onAccent: '#160f15', shellImage: 'linear-gradient(135deg,#140f14 0%,#241a26 30%,#4a3048 55%,#8a5a66 78%,#d8a58e 100%)' }
   };
   const hasTheme = name => Object.prototype.hasOwnProperty.call(themes, name);
 
@@ -43,6 +43,7 @@
     root.dataset.trosTheme = themeName;
     root.style.colorScheme = themeName === 'white' ? 'light' : 'dark';
     root.style.setProperty('--shell', theme.bg);
+    root.style.setProperty('--shell-image', theme.shellImage || 'none');
     root.style.setProperty('--stage', theme.bg);
     root.style.setProperty('--bar', theme.card);
     root.style.setProperty('--bar-border', theme.border);
