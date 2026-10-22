@@ -2,11 +2,11 @@
 
 (() => {
   const apps = {
-    home: { title: 'Home', src: '/n1browser27d.html?v=20261022.8' },
+    home: { title: 'Home', src: '/n1browser27d.html?v=20261022.9' },
     games: { title: 'Games', src: '/n1chetesting2.html' },
     movies: { title: 'Movies', src: '/nm.html?v=20261021.5' },
     ai: { title: 'AI', src: '/nai.html' },
-    snapchat: { title: 'Snapchat', src: '/snapchat.html?v=20261022.8' },
+    snapchat: { title: 'Snapchat', src: '/snapchat.html?v=20261022.9' },
     cheats: { title: 'Cheats', src: '/join' },
     cloud: { title: 'Cloud', src: '/launcher.html' },
     settings: { title: 'Settings', src: '/settings.html' }
