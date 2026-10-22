@@ -8,7 +8,8 @@ const root = path.resolve(__dirname, '..');
 const bridge = fs.readFileSync(path.join(root, 'snap-worker-bridge.js'), 'utf8');
 const controller = fs.readFileSync(path.join(root, 'snap-controller.api.js'), 'utf8');
 const start = bridge.indexOf('  async function fetchBlobFromOwningFrame(');
-const end = bridge.indexOf('\n\n  // Snapchat', start);
+const nextSection = bridge.indexOf("// Snapchat's own capture scripts", start);
+const end = bridge.lastIndexOf('\n', nextSection);
 assert.ok(start >= 0 && end > start, 'the frame-scoped blob fetch helper is present');
 const fetchBlobFromOwningFrame = vm.runInNewContext(`(${bridge.slice(start, end).trim()})`, { Promise });
 
