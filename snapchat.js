@@ -1,5 +1,5 @@
 (async () => {
-  const release = '20261022.4';
+  const release = '20261022.5';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';

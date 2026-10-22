@@ -55,3 +55,15 @@ test('the captured browser fetch runs before the proxy-patched frame fetch', asy
   assert.match(bridge, /controlledFrames\.has\(owner\)/,
     'only a frame controlled by this Snapchat proxy can register a fetch function');
 });
+
+test('cross-realm response streams are included in the controller transfer list', () => {
+  assert.match(controller,
+    /s\.body instanceof ReadableStream\|\|typeof s\.body\?\.getReader==="function"\|\|s\.body instanceof ArrayBuffer\?\[s\.body\]:\[\]/,
+    'response bodies from another frame are transferred instead of cloned');
+  const transferList = vm.runInNewContext(
+    'body => body instanceof ReadableStream || typeof body?.getReader === "function" || body instanceof ArrayBuffer ? [body] : []',
+    { ReadableStream }
+  );
+  const crossRealmStream = { getReader() {} };
+  assert.equal(transferList(crossRealmStream)[0], crossRealmStream);
+});
