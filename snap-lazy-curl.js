@@ -1,7 +1,7 @@
 // Instantiate the 16 MiB socket WASM only when Snapchat actually opens a socket.
 // Scramjet rejects application send() while CONNECTING; no payload queue is used.
 (() => {
-  const release = '20261022.1';
+  const release = '20261022.2';
   function create(initialize) {
     let initializing;
     const client = () => {

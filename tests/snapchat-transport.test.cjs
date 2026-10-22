@@ -214,6 +214,26 @@ test('normal Snapchat entry loads curl sockets and keeps HTTP on initialized Epo
   assert.equal(h.curlRequests.length, 0);
 });
 
+test('Snapchat CDN media PUT uses libcurl while API and asset requests stay on Epoxy', async () => {
+  const h = await startup(false, { actualDefault: true });
+  const image = new Uint8Array([1, 2, 3]);
+  const headers = [['Content-Type', 'image/jpeg']];
+  const upload = new URL('https://cf-st.sc-cdn.net/upload/signed-media');
+
+  await h.transport.request(upload, 'PUT', image, headers);
+
+  assert.equal(h.curlRequests.length, 1);
+  assert.deepEqual(h.curlRequests[0], [upload, 'PUT', image, headers]);
+  assert.equal(h.requests.length, 0, 'The Epoxy HTTP method must not receive the media upload');
+  assert.equal(h.scripts.length, 1, 'The alternate transport loads only when a media PUT occurs');
+
+  await h.transport.request(new URL('https://cf-st.sc-cdn.net/dw/fixture.js'), 'GET', null, []);
+  await h.transport.request(new URL('https://api.snapchat.com/upload'), 'PUT', image, headers);
+
+  assert.equal(h.requests.length, 2, 'GET assets and other hosts keep the existing Epoxy path');
+  assert.equal(h.curlRequests.length, 1, 'Only the exact CDN PUT is routed through libcurl');
+});
+
 test('curl sockets preserve original WS URL and auth while HTTP stays on initialized Epoxy', async () => {
   const h = await startup(true, { curl: true });
   assert.equal(h.scripts.length, 0);
