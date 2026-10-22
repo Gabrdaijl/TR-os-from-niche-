@@ -5,7 +5,7 @@ const { createMemberships } = require('../memberships.cjs');
 const { createApp } = require('../server.cjs');
 const env = { UPSTASH_REDIS_REST_URL: 'https://storage.invalid', UPSTASH_REDIS_REST_TOKEN: 'test-only-token' };
 
-test('membership health checks PING and GET and coalesces concurrent checks', async () => {
+test('membership health checks PING and read-only script access and coalesces concurrent checks', async () => {
   const commands = [];
   const memberships = createMemberships(env, async (_url, init) => {
     const command = JSON.parse(init.body);
@@ -14,7 +14,7 @@ test('membership health checks PING and GET and coalesces concurrent checks', as
   });
   assert.deepEqual(await Promise.all([memberships.health(), memberships.health()]), ['ready', 'ready']);
   assert.equal(await memberships.health(), 'ready');
-  assert.deepEqual(commands, [['PING'], ['GET', 'tros:membership:v1:health:probe']]);
+  assert.deepEqual(commands, [['PING'], ['EVAL_RO', "return redis.call('GET',KEYS[1])", 1, 'tros:membership:v1:health:probe']]);
 });
 
 test('membership health reports missing credentials, rejected requests and malformed responses', async () => {

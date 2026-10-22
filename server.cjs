@@ -48,15 +48,16 @@ function createApp(options = {}) {
   const env = options.env || process.env;
   const sessions = new Map(), messages = [], limits = new Map();
   const sockets = new Set();
+  const chatSockets = new Set();
   let lastStamp = Date.now();
   const startedAt = Date.now();
   let requestCount = 0, serverErrors = 0;
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
-  const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 45000).length;
+  const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 90000).length;
   const redisCircuit = createRedisCircuit();
   const presence = createPresence(env, activeCount, fetch, redisCircuit);
   const traffic = createTraffic(env, fetch, redisCircuit);
-  const moderation = createModeration(env);
+  const moderation = createModeration(env, fetch, redisCircuit);
   const memberships = options.memberships || createMemberships(env, fetch, redisCircuit);
   const reports = createReports(env);
   const push = options.push || createPushNotifications(env);
@@ -108,7 +109,14 @@ function createApp(options = {}) {
   }
   function broadcast() {
     const message = JSON.stringify({ online: activeCount() });
-    for (const socket of sockets) if (socket.readyState === WebSocket.OPEN) socket.send(message);
+    for (const socket of chatSockets) if (socket.readyState === WebSocket.OPEN) socket.send(message);
+  }
+  function notifyChat(message) {
+    const notification = JSON.stringify({ type: 'chat-update' });
+    for (const socket of chatSockets) {
+      if (socket.readyState === WebSocket.OPEN && socket.chatToken &&
+          (message.to === 'all' || socket.chatToken === message.to || socket.chatToken === message.from)) socket.send(notification);
+    }
   }
   async function relay(res, url, init = {}) {
     const upstream = await fetch(url, { ...init, signal: AbortSignal.timeout(90000), redirect: 'error' });
@@ -185,6 +193,8 @@ function createApp(options = {}) {
     res.setHeader('referrer-policy', 'same-origin');
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname;
+    let membershipPending;
+    const requestMembership = () => membershipPending || (membershipPending = Promise.resolve().then(() => memberships.authenticate(req)));
     const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
     if (mutating && req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return json(res, 403, { error: 'Origin is not allowed' });
     const apiRequest = /^\/(?:api\/|chat\/|cloud\/|online(?:$|\/))/.test(route);
@@ -204,7 +214,7 @@ function createApp(options = {}) {
     const publicDocument = route === '/account.html' || route === '/support.html';
     if (documentRequest && !adminRoute && !publicDocument) {
       let account;
-      try { account = await memberships.authenticate(req); }
+      try { account = await requestMembership(); }
       catch (error) { return json(res, error.status || 503, { error: error.message || 'Medlemskapet kunde inte kontrolleras.' }); }
       if (!account || !memberships.hasAccess(account.user)) {
         res.writeHead(302, { location: '/account.html?status=' + (account ? 'expired' : 'login'), 'cache-control': 'no-store' });
@@ -213,7 +223,7 @@ function createApp(options = {}) {
     }
     if (protectedApi) {
       let account;
-      try { account = await memberships.authenticate(req); }
+      try { account = await requestMembership(); }
       catch (error) { return json(res, error.status || 503, { error: error.message || 'Medlemskapet kunde inte kontrolleras.' }); }
       if (!account) return json(res, 401, { error: 'Logga in för att använda TR-os.', code: 'membership_login' });
       if (!memberships.hasAccess(account.user)) return json(res, 402, { error: 'Åtkomsttiden har gått ut. Kontakta administratören om du behöver mer tid.', code: 'membership_expired' });
@@ -425,17 +435,18 @@ function createApp(options = {}) {
     if (route === '/api/admin/status') {
       if (req.method !== 'GET') return json(res, 405, { error: 'Use GET' });
       if (!adminAuthorized(req, res)) return;
-      const [livePresence, trafficStats] = await Promise.all([presence.snapshot(), traffic.snapshot()]);
+      const [database, livePresence, trafficStats] = await Promise.all([memberships.healthDetails(), presence.snapshot(), traffic.snapshot()]);
       return json(res, 200, {
         checkedAt: new Date().toISOString(), startedAt: new Date(startedAt).toISOString(),
         uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
         activeSessions: livePresence.presence.source === 'redis' ? livePresence.online : null, recentVisitors: livePresence.recentVisitors, localSessions: activeCount(), presence: livePresence.presence, websocketConnections: sockets.size,
         requests: requestCount, serverErrors, memoryMB: Math.round(process.memoryUsage().rss / 1048576),
         traffic: trafficStats,
-        databaseDiagnostic: redisCircuit.diagnostics(),
+        database,
+        databaseDiagnostic: { ...redisCircuit.diagnostics(), ...(database.status !== 'ready' ? { lastFailure: database.reason } : {}) },
         scope: livePresence.presence.source === 'redis' ? 'Aktiva webbläsare räknas gemensamt i Redis över alla serverinstanser. Flera flikar i samma webbläsare räknas en gång. Aktiv = livssignal under de senaste 90 sekunderna. Övriga driftvärden gäller denna serverinstans.' : 'Gemensam besöksräkning är inte tillgänglig. Ingen lokal siffra visas som globalt antal. Övriga driftvärden gäller denna serverinstans.',
         services: {
-          server: 'Tillgänglig', database: livePresence.presence.source === 'redis' ? 'Redis ansluten · gemensam närvaro' : livePresence.presence.source === 'unavailable' ? 'Databasen svarar inte' : 'Gemensam databas inte ansluten', proxy: 'Egen Wisp-server aktiverad; externa mål kan neka åtkomst',
+          server: 'Tillgänglig', database: database.status === 'ready' ? 'Redis ansluten · medlemsdata kan läsas' : database.status === 'unconfigured' ? 'Databasanslutning saknas på servern' : 'Databasen avvisar eller svarar inte på medlemsanrop', proxy: 'Egen Wisp-server aktiverad; externa mål kan neka åtkomst',
           ai: env.AI_URL ? 'Eget server-API konfigurerat; svar inte verifierat här' : 'Lokal AI och offentligt externt AI-alternativ i chatten',
           vpn: env.VPN_API_URL && env.VPN_WISP_URL ? 'VPN-backend konfigurerad; tunnel inte verifierad här' : 'Ingen egen VPN-tunnel ansluten',
           movies: env.TMDB_KEY ? 'Filmmetadata konfigurerad; uppspelning beror på extern källa' : 'Ingen egen TMDB-nyckel konfigurerad',
@@ -492,7 +503,7 @@ function createApp(options = {}) {
     if (route === '/online') {
       if (req.method === 'GET') return json(res, 200, await presence.snapshot());
       if (req.method !== 'POST') return json(res, 405, { error: 'Use GET or POST' });
-      const member = await memberships.authenticate(req);
+      const member = await requestMembership();
       if (!member || !memberships.hasAccess(member.user)) return json(res, 402, { error: 'Aktivt medlemskap krävs.', code: 'membership_expired' });
       const data = await body(req);
       let user = authenticated(data.token, data.secret);
@@ -514,6 +525,14 @@ function createApp(options = {}) {
       ]);
       return json(res, 200, { token: user.token, secret: user.secret, ...livePresence, trafficRecorded: trafficStats ? trafficStats.source === 'redis' : true, banned: false });
     }
+    if (route === '/chat/updates' && req.method === 'GET') {
+      const user = authenticated(url.searchParams.get('token'), url.searchParams.get('secret'));
+      if (!user) return json(res, 401, { error: 'Session expired; reload the page' });
+      return json(res, 200, {
+        room: messages.filter(m => m.to === 'all' && m.ts > Number(url.searchParams.get('roomSince') || 0)).slice(-100),
+        inbox: messages.filter(m => m.to === user.token && m.ts > Number(url.searchParams.get('inboxSince') || 0)).slice(-100)
+      });
+    }
     if (route === '/chat/room' && req.method === 'GET') return json(res, 200, { messages: messages.filter(m => m.to === 'all' && m.ts > Number(url.searchParams.get('since') || 0)).slice(-100) });
     if (route === '/chat/inbox' && req.method === 'GET') {
       const user = authenticated(url.searchParams.get('token'), url.searchParams.get('secret'));
@@ -529,6 +548,7 @@ function createApp(options = {}) {
       const message = { id: crypto.randomUUID(), from: user.token, fromName: user.name, to: data.to, text, ts: nowStamp() };
       messages.push(message);
       if (messages.length > 1000) messages.shift();
+      notifyChat(message);
       return json(res, 200, { ok: true, id: message.id });
     }
     if (route === '/party') return json(res, 200, { disco: false, track: null, bg: null });
@@ -643,11 +663,19 @@ function createApp(options = {}) {
   const proxyWs = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 * 1024 });
   chatWs.on('connection', socket => {
     sockets.add(socket);
+    chatSockets.add(socket);
     socket.on('error', () => {});
-    socket.on('close', () => sockets.delete(socket));
+    socket.on('close', () => { sockets.delete(socket); chatSockets.delete(socket); });
     socket.send(JSON.stringify({ online: activeCount() }));
     socket.on('message', message => {
-      if (message.toString() === 'ping') socket.send(JSON.stringify({ online: activeCount() }));
+      if (message.toString() === 'ping') return socket.send(JSON.stringify({ online: activeCount() }));
+      let data;
+      try { data = JSON.parse(message.toString()); } catch { return; }
+      if (data?.type !== 'subscribe-chat') return;
+      const user = authenticated(data.token, data.secret);
+      if (!user) return socket.close(1008, 'Session expired');
+      socket.chatToken = user.token;
+      socket.send(JSON.stringify({ type: 'chat-ready' }));
     });
   });
   wisp.options.allow_private_ips = false;

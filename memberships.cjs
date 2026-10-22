@@ -100,7 +100,7 @@ function createMemberships(env = process.env, request = fetch, redisCircuit = cr
     if (redisCircuit.isOpen()) failStorage('circuit_open');
     // Only repeat read-only commands: a lost response to a write could otherwise
     // apply the same membership change twice.
-    const retryable = parts[0] === 'GET' || parts[0] === 'PING';
+    const retryable = ['GET', 'PING', 'EVAL_RO'].includes(parts[0]);
     const attempts = retryable ? 2 : 1;
     for (let attempt = 0; attempt < attempts; attempt++) {
       let response;
@@ -166,9 +166,9 @@ function createMemberships(env = process.env, request = fetch, redisCircuit = cr
       try {
         const pong = await command(['PING']);
         if (pong !== 'PONG') throw Object.assign(new Error('Unexpected Redis health response'), { storageReason: 'unexpected_ping_response' });
-        // Membership lookups use GET. Probe it too: PING can succeed even when
-        // the configured Redis credential cannot read membership keys.
-        await command(['GET', PREFIX + 'health:probe']);
+        // Exercise the same read-only script permission used by session lookups.
+        // The probe key contains no member data and this script never writes.
+        await command(['EVAL_RO', "return redis.call('GET',KEYS[1])", 1, PREFIX + 'health:probe']);
         healthResult = 'ready';
         healthReason = 'ok';
       } catch (error) {
@@ -272,7 +272,7 @@ return 'ok'`;
   async function getSession(req) {
     const tokenValue = sessionToken(req);
     if (!tokenValue) return null;
-    const values = await command(['EVAL', `local raw=redis.call('GET',KEYS[1])
+    const values = await command(['EVAL_RO', `local raw=redis.call('GET',KEYS[1])
 if not raw then return nil end
 local ok,session=pcall(cjson.decode,raw)
 if not ok or type(session)~='table' or type(session.userId)~='string' then return nil end
@@ -456,7 +456,7 @@ return updated`;
 local out={}
 for _,id in ipairs(ids) do local v=redis.call('GET',ARGV[1]..id); if v then table.insert(out,v) end end
 return out`;
-    const values = await command(['EVAL', script, 1, PREFIX + 'payments', PREFIX + 'payment:']);
+    const values = await command(['EVAL_RO', script, 1, PREFIX + 'payments', PREFIX + 'payment:']);
     if (!Array.isArray(values)) fail(503, 'Betalningslistan kunde inte läsas.');
     return values.map(safeJson).filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(payment => publicPayment(payment));
   }
@@ -465,7 +465,7 @@ return out`;
 local out={}
 for _,id in ipairs(ids) do local v=redis.call('GET',ARGV[1]..id); if v then table.insert(out,v) end end
 return out`;
-    const values = await command(['EVAL', script, 1, USERS_KEY, PREFIX + 'user:']);
+    const values = await command(['EVAL_RO', script, 1, USERS_KEY, PREFIX + 'user:']);
     if (!Array.isArray(values)) fail(503, 'Medlemslistan kunde inte läsas.');
     return values.map(safeJson).filter(Boolean).map(user => publicUser(user));
   }

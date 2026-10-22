@@ -481,9 +481,10 @@
       $('login').hidden = true; $('dashboard').hidden = false; $('logout').hidden = false;
       $('active-count').textContent = typeof data.activeSessions === 'number' ? data.activeSessions : '—';
       $('recent-count').textContent = typeof data.recentVisitors === 'number' ? data.recentVisitors : '—';
-      const connected = data.presence?.source === 'redis';
+      const presenceConnected = data.presence?.source === 'redis';
+      const connected = data.database ? data.database.status === 'ready' : presenceConnected;
       databaseConnected=connected;
-      $('traffic-state').textContent = connected ? '● LIVE' : 'VÄNTAR';
+      $('traffic-state').textContent = presenceConnected ? '● LIVE' : 'VÄNTAR';
       $('db-state').textContent = connected ? '● Live · Redis' : 'Databasen inte tillgänglig';
       $('db-state').className = connected ? 'state' : 'state warning';
       const metrics = [['WebSocket-anslutningar', data.websocketConnections], ['Drifttid', Math.floor(data.uptimeSeconds / 60) + ' min'], ['Anrop', data.requests], ['Serverfel (5xx)', data.serverErrors], ['Minne', data.memoryMB + ' MB']];
@@ -506,7 +507,13 @@
           const reason = data.databaseDiagnostic.lastFailure.replace(/_http_\d{3}$/, '');
           const explanations = {
             provider_limit: 'Redis-leverantörens kvot eller gräns har nåtts.',
+            monthly_request_limit: 'Månadens Redis-anropsgräns har nåtts.',
             daily_request_limit: 'Dagens Redis-anropsgräns har nåtts.',
+            storage_capacity_limit: 'Databasens lagringsutrymme är fullt. Läsningar kan fortfarande fungera.',
+            bandwidth_limit: 'Databasens gräns för dataöverföring har nåtts.',
+            budget_limit: 'Databasleverantörens kostnadsgräns har nåtts.',
+            record_size_limit: 'En databaspost överskrider storleksgränsen.',
+            request_size_limit: 'Ett databasanrop överskrider storleksgränsen.',
             rate_limited: 'Redis begränsar anropsfrekvensen.',
             database_unavailable: 'Redis-databasen är avstängd eller saknas.',
             credential_rejected: 'Redis avvisar serverns autentisering.',

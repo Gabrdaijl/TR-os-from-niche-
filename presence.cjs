@@ -6,12 +6,12 @@ const WINDOW_SECONDS = 90;
 const SCRIPT = `local t=redis.call('TIME')
 local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
 local cutoff=now-1800000
-redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',cutoff)
 if ARGV[1]~='' then
+ redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',cutoff)
  redis.call('ZADD',KEYS[1],now,ARGV[1])
  redis.call('EXPIRE',KEYS[1],3600)
 end
-return {redis.call('ZCOUNT',KEYS[1],'('..(now-tonumber(ARGV[2])),'+inf'),redis.call('ZCARD',KEYS[1])}`;
+return {redis.call('ZCOUNT',KEYS[1],'('..(now-tonumber(ARGV[2])),'+inf'),redis.call('ZCOUNT',KEYS[1],'('..cutoff,'+inf')}`;
 function createPresence(env, localCount, request = fetch, redisCircuit = createRedisCircuit()) {
   const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
@@ -27,7 +27,7 @@ function createPresence(env, localCount, request = fetch, redisCircuit = createR
       const id = typeof visitorId === 'string' && /^[a-f0-9-]{36}$/i.test(visitorId) ? crypto.createHash('sha256').update(visitorId).digest('hex') : '';
       const response = await request(endpoint, {
         method: 'POST', redirect: 'error', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
-        body: JSON.stringify(['EVAL', SCRIPT, 1, 'tros:presence:browsers:v1', id, WINDOW_SECONDS * 1000]), signal: AbortSignal.timeout(4500)
+        body: JSON.stringify([id ? 'EVAL' : 'EVAL_RO', SCRIPT, 1, 'tros:presence:browsers:v1', id, WINDOW_SECONDS * 1000]), signal: AbortSignal.timeout(4500)
       });
       if (!response.ok) {
         let message = '';

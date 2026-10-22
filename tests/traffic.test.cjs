@@ -33,9 +33,12 @@ test('traffic is unknown on missing configuration, rejected HTTP or malformed Re
 test('read-only empty lifetime remains zero without inventing a collection start date',async()=>{
  let command;
  const traffic=createTraffic({KV_REST_API_URL:'https://redis.example',KV_REST_API_TOKEN:'private'},async(url,init)=>{
-  command=JSON.parse(init.body);return {ok:true,json:async()=>({result:Array(13).fill(0)})};
+  command=JSON.parse(init.body);assert.equal(new URL(url).pathname,'/pipeline');
+  return {ok:true,json:async()=>([{result:Array(10).fill(0)},{result:0},{result:0}])};
  });
  const data=await traffic.snapshot('invalid','invalid');
- assert.deepEqual(command.slice(9,11),['','']);
+ assert.equal(command[0][0],'EVAL_RO');assert.equal(command[0][2],4);
+ assert.ok(!command[0][1].includes('PFCOUNT'));
+ assert.deepEqual(command.slice(1),[['PFCOUNT','tros:traffic:lifetime:browsers:v1'],['PFCOUNT','tros:traffic:lifetime:views:v1']]);
  assert.deepEqual(data.allTime,{visitors:0,pageViews:0,newBrowsers:0,approximate:true,startedAt:null});
 });

@@ -7,10 +7,10 @@ const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
 const SCRIPT = `local t=redis.call('TIME')
 local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
 local day=86400000
+if ARGV[1]~='' then
 redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',now-30*day)
 redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',now-30*day)
 redis.call('ZREMRANGEBYSCORE',KEYS[3],'-inf',now-30*day)
-if ARGV[1]~='' then
  redis.call('SET',KEYS[6],now,'NX')
  redis.call('PFADD',KEYS[4],ARGV[1])
  if not redis.call('ZSCORE',KEYS[1],ARGV[1]) then redis.call('ZADD',KEYS[3],now,ARGV[1]) end
@@ -32,6 +32,16 @@ table.insert(result,redis.call('PFCOUNT',KEYS[5]))
 table.insert(result,browsers)
 table.insert(result,tonumber(redis.call('GET',KEYS[6])) or 0)
 return result`;
+// PFCOUNT may update Redis's internal cardinality cache, so Redis forbids it
+// inside EVAL_RO. Keep the period snapshot read-only and run PFCOUNT separately.
+const READ_SCRIPT = `local t=redis.call('TIME')
+local now=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
+local result={}
+for _,cutoff in ipairs({tonumber(ARGV[1]),now-604800000,now-2592000000}) do
+ for i=1,3 do table.insert(result,redis.call('ZCOUNT',KEYS[i],'('..cutoff,'+inf')) end
+end
+table.insert(result,tonumber(redis.call('GET',KEYS[4])) or 0)
+return result`;
 function midnightStockholm(now = new Date()) {
   const date = new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Stockholm',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
   const utc = Date.parse(date+'T00:00:00Z');
@@ -51,9 +61,23 @@ function createTraffic(env, request = fetch, redisCircuit = createRedisCircuit()
       if(endpoint.protocol!=='https:' && !(endpoint.protocol==='http:' && ['localhost','127.0.0.1'].includes(endpoint.hostname)))return empty;
       const valid=value=>typeof value==='string' && /^[a-f0-9-]{36}$/i.test(value);
       const id=valid(visitorId)?crypto.createHash('sha256').update(visitorId).digest('hex'):'';
-      const response=await request(endpoint,{method:'POST',redirect:'error',headers:{authorization:'Bearer '+token,'content-type':'application/json'},signal:AbortSignal.timeout(4500),body:JSON.stringify(['EVAL',SCRIPT,6,'tros:traffic:last:v1','tros:traffic:views:v1','tros:traffic:new:v1','tros:traffic:lifetime:browsers:v1','tros:traffic:lifetime:views:v1','tros:traffic:lifetime:since:v1',id,valid(viewId)?viewId:'',midnightStockholm()])});
+      const keys=['tros:traffic:last:v1','tros:traffic:views:v1','tros:traffic:new:v1','tros:traffic:lifetime:browsers:v1','tros:traffic:lifetime:views:v1','tros:traffic:lifetime:since:v1'];
+      const commands=id?['EVAL',SCRIPT,6,...keys,id,valid(viewId)?viewId:'',midnightStockholm()]:[
+        ['EVAL_RO',READ_SCRIPT,4,...keys.slice(0,3),keys[5],midnightStockholm()],
+        ['PFCOUNT',keys[3]],['PFCOUNT',keys[4]]
+      ];
+      if(!id)endpoint.pathname=endpoint.pathname.replace(/\/$/,'')+'/pipeline';
+      const response=await request(endpoint,{method:'POST',redirect:'error',headers:{authorization:'Bearer '+token,'content-type':'application/json'},signal:AbortSignal.timeout(4500),body:JSON.stringify(commands)});
       if(!response.ok){let message='';try{message=(await response.text()).slice(0,2048)}catch{}failureReason=classifyFailure(message);if(failureReason==='upstream_error')failureReason='upstream_unavailable';if(Number.isInteger(response.status))failureReason+='_http_'+response.status;throw Error('Redis unavailable');}
-      const data=await response.json();
+      let data=await response.json();
+      if(!id){
+        if(!Array.isArray(data)||data.length!==3){failureReason='invalid_response';throw Error('Invalid Redis pipeline');}
+        const error=data.find(item=>item?.error);
+        if(error){failureReason=classifyFailure(error.error);if(failureReason==='upstream_error')failureReason='redis_command_error';throw Error('Redis command failed');}
+        const periods=data[0]?.result;
+        if(!Array.isArray(periods)||periods.length!==10){failureReason='invalid_response';throw Error('Invalid Redis periods');}
+        data={result:[...periods.slice(0,9),data[1]?.result,data[2]?.result,data[1]?.result,periods[9]]};
+      }
       if(data.error){failureReason=classifyFailure(data.error);if(failureReason==='upstream_error')failureReason='redis_command_error';throw Error('Redis command failed');}
       if(!Array.isArray(data.result) || data.result.length!==13 || data.result.some(n=>!Number.isSafeInteger(n)||n<0)){failureReason='invalid_response';throw Error('Invalid Redis result');}
       redisCircuit.recordSuccess();

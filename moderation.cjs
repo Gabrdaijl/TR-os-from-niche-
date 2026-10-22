@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
 
 const COOKIE = 'tros-device';
 const REDIS_KEY = 'tros:moderation:bans:v1';
@@ -24,7 +25,7 @@ function hashDeviceId(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-function createModeration(env = process.env, request = fetch) {
+function createModeration(env = process.env, request = fetch, redisCircuit = createRedisCircuit()) {
   const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
   const memory = new Map();
@@ -39,15 +40,35 @@ function createModeration(env = process.env, request = fetch) {
 
   async function command(parts) {
     if (!endpoint || !token) throw new Error('Moderation storage is not configured');
-    const response = await request(endpoint, {
-      method: 'POST', redirect: 'error',
-      headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
-      body: JSON.stringify(parts), signal: AbortSignal.timeout(4500)
-    });
-    if (!response.ok) throw new Error('Moderation storage is unavailable');
-    const data = await response.json();
-    if (data.error) throw new Error('Moderation storage is unavailable');
-    return data.result;
+    if (redisCircuit.isOpen()) throw new Error('Moderation storage is unavailable');
+    let reason = 'upstream_unavailable';
+    try {
+      const response = await request(endpoint, {
+        method: 'POST', redirect: 'error',
+        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+        body: JSON.stringify(parts), signal: AbortSignal.timeout(4500)
+      });
+      if (!response.ok) {
+        let message = '';
+        try { message = (await response.text()).slice(0, 2048); } catch {}
+        reason = classifyFailure(message);
+        if (reason === 'upstream_error') reason = 'upstream_unavailable';
+        if (Number.isInteger(response.status)) reason += '_http_' + response.status;
+        throw new Error('Moderation storage is unavailable');
+      }
+      const data = await response.json();
+      if (data.error) {
+        reason = classifyFailure(data.error);
+        if (reason === 'upstream_error') reason = 'redis_command_error';
+        throw new Error('Moderation storage is unavailable');
+      }
+      redisCircuit.recordSuccess();
+      return data.result;
+    } catch {
+      redisCircuit.recordFailure(reason);
+      console.warn('[moderation-storage] Redis REST failure', { reason });
+      throw new Error('Moderation storage is unavailable');
+    }
   }
 
   function publicRecord(id, value) {
