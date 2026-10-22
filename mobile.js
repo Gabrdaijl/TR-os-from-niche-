@@ -28,7 +28,10 @@
     red: { bg: '#0d0807', card: '#150c0a', border: '#332019', text: '#f3e2d8', nav: '#211210', accent: '#d67f6d', onAccent: '#0a0a0a' },
     green: { bg: '#070a07', card: '#0c110b', border: '#232b20', text: '#e3e8d8', nav: '#151a13', accent: '#a3b18a', onAccent: '#0a0a0a' },
     white: { bg: '#f4f1ea', card: '#ffffff', border: '#e3ddd0', text: '#211d16', nav: '#ebe6da', accent: '#2f5d8a', onAccent: '#ffffff' },
-    ocean: { bg: '#060b10', card: '#0a1218', border: '#1e3a4d', text: '#d8ecf5', nav: '#10202c', accent: '#5aa9e6', onAccent: '#06121a' }
+    ocean: { bg: '#060b10', card: '#0a1218', border: '#1e3a4d', text: '#d8ecf5', nav: '#10202c', accent: '#5aa9e6', onAccent: '#06121a' },
+    miami: { bg: '#171017', card: '#291a24', border: '#694252', text: '#f7e7ea', nav: '#392330', accent: '#e9a088', onAccent: '#24131d' },
+    sunset: { bg: '#160f0b', card: '#2a1b15', border: '#5c3d2e', text: '#f7e8d5', nav: '#3b281e', accent: '#edbd83', onAccent: '#2a1910' },
+    aurora: { bg: '#151119', card: '#261f2b', border: '#5a4a60', text: '#f1e9f3', nav: '#362a3b', accent: '#d1aed5', onAccent: '#261b2a' }
   };
   const hasTheme = name => Object.prototype.hasOwnProperty.call(themes, name);
 

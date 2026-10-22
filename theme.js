@@ -47,7 +47,10 @@
     red:       { ACCENT: '#d67f6d', CARD_BG: '#150c0a', BORDER: '#332019', BG: '#0d0807', TEXT: '#f3e2d8', NAV_BTN: '#211210', STAR: '214,127,109', ICON: '#ffffff', ONACC: '#0a0a0a', HOV: '#2a2a2a' },
     green:     { ACCENT: '#a3b18a', CARD_BG: '#0c110b', BORDER: '#232b20', BG: '#070a07', TEXT: '#e3e8d8', NAV_BTN: '#151a13', STAR: '163,177,138', ICON: '#ffffff', ONACC: '#0a0a0a', HOV: '#2a2a2a' },
     white:     { ACCENT: '#2f5d8a', CARD_BG: '#ffffff', BORDER: '#e3ddd0', BG: '#f4f1ea', TEXT: '#211d16', NAV_BTN: '#ebe6da', STAR: '120,110,95', ICON: '#211d16', ONACC: '#ffffff', HOV: '#e7e1d3' },
-    ocean:     { ACCENT: '#5aa9e6', CARD_BG: '#0a1218', BORDER: '#1e3a4d', BG: '#060b10', TEXT: '#d8ecf5', NAV_BTN: '#10202c', STAR: '140,190,220', ICON: '#ffffff', ONACC: '#06121a', HOV: '#1a2f3d' }
+    ocean:     { ACCENT: '#5aa9e6', CARD_BG: '#0a1218', BORDER: '#1e3a4d', BG: '#060b10', TEXT: '#d8ecf5', NAV_BTN: '#10202c', STAR: '140,190,220', ICON: '#ffffff', ONACC: '#06121a', HOV: '#1a2f3d' },
+    miami:     { ACCENT: '#e9a088', CARD_BG: '#291a24', BORDER: '#694252', BG: '#171017', TEXT: '#f7e7ea', NAV_BTN: '#392330', STAR: '233,160,136', ICON: '#ffffff', ONACC: '#24131d', HOV: '#4b3140' },
+    sunset:    { ACCENT: '#edbd83', CARD_BG: '#2a1b15', BORDER: '#5c3d2e', BG: '#160f0b', TEXT: '#f7e8d5', NAV_BTN: '#3b281e', STAR: '223,154,101', ICON: '#ffffff', ONACC: '#2a1910', HOV: '#51382a' },
+    aurora:    { ACCENT: '#d1aed5', CARD_BG: '#261f2b', BORDER: '#5a4a60', BG: '#151119', TEXT: '#f1e9f3', NAV_BTN: '#362a3b', STAR: '205,164,207', ICON: '#f7f0fa', ONACC: '#261b2a', HOV: '#46384d' }
   };
   let ACCENT  = '#ffffff';
   let CARD_BG = '#111111';
