@@ -1,5 +1,5 @@
 (async () => {
-  const release = '20261022.7';
+  const release = '20261022.8';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -61,15 +61,17 @@
         console.info('TR-os Snapchat TLS check: untrusted certificate rejected; valid HTTPS accepted');
       }
       transport.connect = lazy.connect;
-      // Live diagnostics recorded HTTP 501 for Snapchat's signed media PUT
-      // on cf-st.sc-cdn.net through Epoxy. Route only that upload method and
-      // host through libcurl over the same Wisp connection; leave API calls
-      // and all other hosts on Epoxy.
+      // Keep the signed media PUT and the failing Snapchat GCP API POST on
+      // the alternate HTTP implementation. Preserve each request and send it
+      // exactly once; never retry a possibly completed Snapchat mutation.
       const epoxyRequest = transport.request.bind(transport);
       transport.request = async (...args) => {
         const remote = args[0];
         const method = typeof args[1] === 'string' ? args[1].toUpperCase() : '';
-        if (remote?.protocol === 'https:' && remote.hostname === 'cf-st.sc-cdn.net' && method === 'PUT') {
+        const host = remote?.protocol === 'https:' ? remote.hostname.toLowerCase() : '';
+        const mediaUpload = host === 'cf-st.sc-cdn.net' && method === 'PUT';
+        const apiPost = host === 'gcp.api.snapchat.com' && method === 'POST';
+        if (mediaUpload || apiPost) {
           const curl = await lazy.client();
           return curl.request(...args);
         }
