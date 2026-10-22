@@ -3,7 +3,7 @@
 // addresses are read or recorded.
 (function (global) {
   'use strict';
-  const release = '20261022.2';
+  const release = '20261022.3';
   const frames = new WeakSet(), windows = new WeakSet();
   const errors = new Set(['NotAllowedError', 'NotFoundError', 'NotReadableError',
     'OverconstrainedError', 'AbortError', 'InvalidStateError', 'SecurityError',

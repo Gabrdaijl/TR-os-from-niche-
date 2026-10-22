@@ -6,6 +6,22 @@
   const dataScript = text => 'data:text/javascript;charset=utf-8;base64,' +
     btoa(Array.from(new TextEncoder().encode(text), byte => String.fromCharCode(byte)).join(''));
 
+  // Blob URLs belong to the proxied document's origin. Read them from that
+  // frame's fetch context; fetching from the TR-os parent fails origin checks.
+  async function fetchBlobFromOwningFrame(frame, url, fallbackFetch) {
+    let owner, ownerFetch;
+    try { owner = frame?.contentWindow; ownerFetch = owner?.fetch; } catch {}
+    if (typeof ownerFetch === 'function') {
+      try { return await ownerFetch.call(owner, url); }
+      catch (ownerError) {
+        if (typeof fallbackFetch !== 'function') throw ownerError;
+        try { return await fallbackFetch(url); } catch { throw ownerError; }
+      }
+    }
+    if (typeof fallbackFetch !== 'function') throw new Error('Blob URL owner is unavailable');
+    return fallbackFetch(url);
+  }
+
   // Snapchat's own capture scripts may encode a JPEG before the document's
   // load event. Install this before page scripts so a failed or oversized
   // high-quality export can retry at lower quality before upload.
@@ -408,5 +424,5 @@
     });
     installed.add(controller);
   }
-  global.TR_OS_SNAP_WORKER = Object.freeze({ install });
+  global.TR_OS_SNAP_WORKER = Object.freeze({ install, fetchBlobFromOwningFrame });
 })(globalThis);
