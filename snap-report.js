@@ -1,7 +1,7 @@
 // Device-local, opt-in support report. No requests, storage, account data or
 // raw errors enter this report. It never inspects the Snapchat document.
 (() => {
-  const release = '20261021.2';
+  const release = '20261022.1';
   const outcomes = new Set(['applied', 'skipped-status', 'skipped-body', 'oversize', 'idle-timeout', 'total-timeout', 'hash-mismatch', 'source-mismatch', 'read-error', 'hash-error', 'decode-error', 'source-error', 'encode-error']);
   const stages = new Set(['starting', 'service-worker', 'transport', 'engine', 'page-loaded', 'startup-failed']);
   const categories = new Set(['structured-clone', 'cross-origin', 'storage', 'missing-api', 'null-property', 'wasm', 'socket', 'url', 'worker', 'unknown']);
@@ -29,7 +29,7 @@
       capabilities: { streams: typeof ReadableStream === 'function', digest: typeof crypto !== 'undefined' && typeof crypto.subtle?.digest === 'function',
         wasm: typeof WebAssembly === 'object', worker: typeof Worker === 'function' },
       stage: 'starting', compatibilityReady: !!compatibilityReady, compatibilityEnabled: options.compatibilityEnabled !== false,
-      socketMode: options.socketMode === 'epoxy' ? 'epoxy' : 'curl', compatibility: 'not-observed', socket: 'not-observed', scripts: [], crashes: [], calls: [] };
+      socketMode: options.socketMode === 'epoxy' ? 'epoxy' : 'curl', compatibility: 'not-observed', socket: 'not-observed', scripts: [], uploads: [], crashes: [], calls: [] };
     const output = document.getElementById('support-output');
     const text = () => 'TR-os Snapchat\n' + JSON.stringify(state, null, 2);
     const render = () => { if (output) output.value = text(); };
@@ -71,6 +71,14 @@
         const previous = state.scripts.find(item => item.asset === asset);
         if (previous) previous.status = status;
         else { state.scripts.push({ asset, status }); if (state.scripts.length > 16) state.scripts.shift(); }
+      }),
+      upload: (host, method, status) => update(() => {
+        if (typeof host !== 'string' || !/(^|\.)(snapchat\.com|sc-cdn\.net|sc-prod\.net)$/i.test(host)) return;
+        const requestMethod = typeof method === 'string' ? method.toUpperCase() : '';
+        if (!['POST', 'PUT', 'PATCH'].includes(requestMethod)) return;
+        if (status !== 'network-error' && (!Number.isInteger(status) || status < 100 || status > 599)) return;
+        state.uploads.push({ host: host.toLowerCase(), method: requestMethod, status });
+        if (state.uploads.length > 8) state.uploads.shift();
       }),
       crash: value => update(() => {
         if (!value || !types.has(value.type) || !categories.has(value.category)) return;

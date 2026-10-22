@@ -1,5 +1,5 @@
 (async () => {
-  const release = '20261021.2';
+  const release = '20261022.1';
   const query = new URL(location.href).searchParams;
   const compatibilityEnabled = query.get('optionalNotifications') !== '0';
   const diagnostics = query.get('diagnostics') === '1';
@@ -77,14 +77,24 @@
     if (diagnostics) {
       const request = transport.request.bind(transport);
       transport.request = async (...args) => {
+        const host = args[0]?.hostname;
+        const method = typeof args[1] === 'string' ? args[1].toUpperCase() : '';
+        const isUpload = ['POST', 'PUT', 'PATCH'].includes(method) &&
+          typeof host === 'string' && /(^|\.)(snapchat\.com|sc-cdn\.net|sc-prod\.net)$/i.test(host);
         if (args[0].hostname === 'sentry.sc-prod.net' && window.TR_OS_SNAP_DIAGNOSTICS) {
           args[2] = window.TR_OS_SNAP_DIAGNOSTICS.observe(args[2], value => {
             support?.crash(value);
             console.info('TR-os Snapchat crash location', JSON.stringify(value));
           });
         }
-        const response = await request(...args);
+        let response;
+        try { response = await request(...args); }
+        catch (error) {
+          if (isUpload) support?.upload(host, method, 'network-error');
+          throw error;
+        }
         if (args[1] === 'GET') support?.asset(args[0].href, response.status);
+        if (isUpload) support?.upload(host, method, response.status);
         if (response.status >= 400) console.info('TR-os Snapchat HTTP', JSON.stringify({
           host: args[0].hostname, status: response.status
         }));

@@ -520,7 +520,7 @@
     tab.lastUrl = 'https://web.snapchat.com/';
     tab.favicon = new URL('snapchat.svg', location.href).href;
     tab.frame.setAttribute('allow', "camera 'self'; microphone 'self'; autoplay 'self'; fullscreen 'self'; clipboard-write 'self'");
-    tab.frame.src = 'snapchat.html?v=20261021.2';
+    tab.frame.src = 'snapchat.html?v=20261022.1';
     renderTabs();
     syncAddress(true);
   };
