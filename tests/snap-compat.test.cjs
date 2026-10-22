@@ -5,8 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../snap-compat.js'), 'utf8');
-const expectedHash = 'd68750cc94dde81cd3d6daabf39b913381b2ff4c4d3a5bc6aad8451edb2d2a4b';
-const target = new URL('https://cf-st.sc-cdn.net/dw/127ca002fe3599f56576.js');
+const expectedHash = 'e9efda14663f23e5af437fe6b2001ea67fbc83ec176fc7e7d8ae51a41443a03c';
+const target = new URL('https://cf-st.sc-cdn.net/dw/14a374cb957e6774b9f0.js');
 // Exact optional-effect expression in the pinned public Snapchat asset.
 const effect = 'function effect(n){return navigator.serviceWorker.addEventListener("message",n),()=>navigator.serviceWorker.removeEventListener("message",n)}';
 function setup({ wrongHash = false, clock, code = source, encoder = TextEncoder, digest } = {}) {
