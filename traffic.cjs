@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
+const { createRedisStorage } = require('./redis-storage.cjs');
 // One atomic operation: heartbeat, deduplicated document view and rolling counts.
 // Lifetime HyperLogLogs retain deduplication after the rolling keys expire,
 // without storing an unbounded set of browser/document IDs. Counts are estimates.
@@ -49,16 +50,15 @@ function midnightStockholm(now = new Date()) {
   return utc-hour*3600000;
 }
 function createTraffic(env, request = fetch, redisCircuit = createRedisCircuit()) {
-  const url=env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token=env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+  const storage=createRedisStorage(env,request);
+  const {token,configured}=storage;
   async function snapshot(visitorId, viewId) {
-    const empty={source:url&&token?'unavailable':'unconfigured',today:null,week:null,month:null,allTime:null};
-    if(!url || !token)return empty;
+    const empty={source:configured?'unavailable':'unconfigured',today:null,week:null,month:null,allTime:null};
+    if(!configured)return empty;
     if(redisCircuit.isOpen())return empty;
     let failureReason='upstream_unavailable';
     try {
-      const endpoint=new URL(url);
-      if(endpoint.protocol!=='https:' && !(endpoint.protocol==='http:' && ['localhost','127.0.0.1'].includes(endpoint.hostname)))return empty;
+      const endpoint=new URL(storage.endpoint);
       const valid=value=>typeof value==='string' && /^[a-f0-9-]{36}$/i.test(value);
       const id=valid(visitorId)?crypto.createHash('sha256').update(visitorId).digest('hex'):'';
       const keys=['tros:traffic:last:v1','tros:traffic:views:v1','tros:traffic:new:v1','tros:traffic:lifetime:browsers:v1','tros:traffic:lifetime:views:v1','tros:traffic:lifetime:since:v1'];
@@ -67,7 +67,7 @@ function createTraffic(env, request = fetch, redisCircuit = createRedisCircuit()
         ['PFCOUNT',keys[3]],['PFCOUNT',keys[4]]
       ];
       if(!id)endpoint.pathname=endpoint.pathname.replace(/\/$/,'')+'/pipeline';
-      const response=await request(endpoint,{method:'POST',redirect:'error',headers:{authorization:'Bearer '+token,'content-type':'application/json'},signal:AbortSignal.timeout(4500),body:JSON.stringify(commands)});
+      const response=await storage.request(endpoint,{method:'POST',redirect:'error',headers:{authorization:'Bearer '+token,'content-type':'application/json'},signal:AbortSignal.timeout(4500),body:JSON.stringify(commands)});
       if(!response.ok){let message='';try{message=(await response.text()).slice(0,2048)}catch{}failureReason=classifyFailure(message);if(failureReason==='upstream_error')failureReason='upstream_unavailable';if(Number.isInteger(response.status))failureReason+='_http_'+response.status;throw Error('Redis unavailable');}
       let data=await response.json();
       if(!id){

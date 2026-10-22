@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const { createRedisStorage } = require('./redis-storage.cjs');
 const RETENTION = 7 * 24 * 60 * 60;
 const PREFIX = '{tros:reports}:v1:';
 const ARCHIVE_RETENTION = 30 * 24 * 60 * 60;
@@ -63,14 +64,12 @@ local extra=redis.call('ZCARD',KEYS[2])-1000
 if extra>0 then local old=redis.call('ZRANGE',KEYS[2],0,extra-1); for _,entry in ipairs(old) do redis.call('DEL',entry..'meta',entry..'image'); redis.call('ZREM',KEYS[2],entry) end end
 return 1`;
 function createReports(env, request = fetch) {
-  const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+  const storage = createRedisStorage(env, request);
+  const { endpoint, token } = storage;
   async function redis(command) {
-    if (!url || !token) throw fail(503, 'Felrapporteringen är inte ansluten till databasen ännu.');
+    if (!storage.configured) throw fail(503, 'Felrapporteringen är inte ansluten till databasen ännu.');
     try {
-      const endpoint = new URL(url);
-      if (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(endpoint.hostname))) throw Error();
-      const response = await request(endpoint, {method:'POST',redirect:'error',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(command),signal:AbortSignal.timeout(5000)});
+      const response = await storage.request(endpoint, {method:'POST',redirect:'error',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(command),signal:AbortSignal.timeout(5000)});
       if (!response.ok) throw Error();
       const data = await response.json(); if (data.error) throw Error(); return data.result;
     } catch { throw fail(503, 'Rapporten kunde inte sparas just nu. Försök igen senare.'); }

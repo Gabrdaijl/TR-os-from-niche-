@@ -3,6 +3,7 @@
 const crypto = require('node:crypto');
 const { createSwish } = require('./swish.cjs');
 const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
+const { createRedisStorage } = require('./redis-storage.cjs');
 
 const SESSION_COOKIE = 'tros-session';
 const PREFIX = 'tros:membership:v1:';
@@ -72,15 +73,8 @@ function publicPayment(payment) {
 
 function createMemberships(env = process.env, request = fetch, redisCircuit = createRedisCircuit()) {
   const swish = createSwish(env);
-  const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
-  let endpoint = null;
-  try {
-    if (endpointValue && token) {
-      const parsed = new URL(endpointValue);
-      if (parsed.protocol === 'https:' || (parsed.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(parsed.hostname))) endpoint = parsed;
-    }
-  } catch {}
+  const storage = createRedisStorage(env, request);
+  const { endpoint, token } = storage;
 
   function failStorage(reason, upstreamStatus) {
     const safeReason = upstreamStatus ? `${reason}_http_${upstreamStatus}` : reason;
@@ -96,7 +90,7 @@ function createMemberships(env = process.env, request = fetch, redisCircuit = cr
   }
 
   async function command(parts) {
-    if (!endpoint || !token) failStorage('not_configured');
+    if (!storage.configured) failStorage('not_configured');
     if (redisCircuit.isOpen()) failStorage('circuit_open');
     // Only repeat read-only commands: a lost response to a write could otherwise
     // apply the same membership change twice.
@@ -105,7 +99,7 @@ function createMemberships(env = process.env, request = fetch, redisCircuit = cr
     for (let attempt = 0; attempt < attempts; attempt++) {
       let response;
       try {
-        response = await request(endpoint, {
+        response = await storage.request(endpoint, {
           method: 'POST', redirect: 'error',
           headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
           body: JSON.stringify(parts), signal: AbortSignal.timeout(attempt ? 2000 : 5000)
@@ -154,7 +148,7 @@ function createMemberships(env = process.env, request = fetch, redisCircuit = cr
   // cannot multiply Redis traffic or read any customer records.
   let healthResult = 'unconfigured', healthReason = 'not_configured', healthUntil = 0, healthPending;
   function health() {
-    if (!endpoint) { healthReason = 'not_configured'; return Promise.resolve('unconfigured'); }
+    if (!storage.configured) { healthReason = 'not_configured'; return Promise.resolve('unconfigured'); }
     if (redisCircuit.isOpen()) {
       healthResult = 'unavailable';
       healthReason = redisCircuit.diagnostics().lastFailure || 'upstream_unavailable';
@@ -543,7 +537,7 @@ return 1`;
   }
 
   return Object.freeze({
-    configured: !!endpoint,
+    configured: storage.configured,
     health,
     healthDetails,
     swishNumber: swish.number,

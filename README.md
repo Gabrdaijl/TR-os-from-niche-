@@ -72,11 +72,25 @@ TR-os kräver ett konto för hemsidans sidor och API. Kunden kan skapa ett konto
 
 I adminpanelen kan du skapa ett kundkonto med valfritt antal åtkomstdagar, söka kunder på namn eller e-post, ändra namn och slutdatum, återställa enhetsinloggningar, pausa eller ta bort kontot samt lägga till tid till en eller flera kunder. Admininloggningen kan sparas på enheten i 30 dagar, eller i 12 timmar om rutan avmarkeras. När du tar bort ett konto raderas kundens inloggning och betalningshistorik. Kunden kan anmäla en Swishbetalning på 40 kr för 30 dagars åtkomst från kontosidan. Admin kontrollerar och godkänner betalningen innan åtkomst läggs till; nya anmälningar visas överst i adminens kundöversikt. Pushnotiser kräver att admin har aktiverat notiser i webbläsaren.
 
-Konton kan vara inloggade på en dator och en mobil. Medlemsdata sparas i Upstash Redis. Ange `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` som miljövariabler på servern. Utan dessa är medlems-API:t avstängt. Lösenord lagras som scrypt-hashar och sessionscookies är HttpOnly.
+Konton kan vara inloggade på en dator och en mobil. Medlemsdata sparas i den anslutna Redis-/Valkey-databasen. Databasanslutningen väljs på servern enligt avsnittet nedan; utan en giltig anslutning är medlems-API:t avstängt. Lösenord lagras som scrypt-hashar och sessionscookies är HttpOnly.
+
+## Databasanslutning och säker flytt
+
+Standardläget `REDIS_BACKEND=rest` behåller Upstash REST. Ange `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` på servern. Aliasen `KV_REST_API_URL` och `KV_REST_API_TOKEN` stöds; respektive `UPSTASH_*`-värde har företräde. URL och token måste höra till samma databas. Undvik motstridiga alias.
+
+För en befintlig Aiven Valkey-instans väljer du uttryckligen `REDIS_BACKEND=valkey` och anger dess TLS-anslutning i `VALKEY_URL` (`rediss://...`). `REDIS_URL` är ett alternativt namn, men `VALKEY_URL` har företräde. Anslutningen delas av serverns lagringsmoduler och stängs när servern stängs. REST-uppgifter används inte som reserv när Valkey valts. Lägg databaslösenord, REST-token och anslutningsadresser som innehåller lösenord i hostens hemliga miljövariabler; de ska aldrig hamna i GitHub, klientkod eller loggar. Byte av miljövariabler kräver en ny driftsättning eller omstart.
+
+Om leverantörens TLS-certifikat kräver en egen CA anger du PEM-certifikatet i `VALKEY_CA_CERT`. Fler-radig PEM eller text med bokstavliga `\n` stöds. Certifikatkontroll är fortsatt aktiverad; stäng inte av verifieringen för att kringgå anslutningsfel.
+
+En ny anslutning kopierar ingen data automatiskt. Behåll källanslutningen tills en fullständig kopia har kontrollerats. Flytta alla nycklar med oförändrade namn, datatyper, värden och återstående TTL: medlemskonton, lösenordshashar, åtkomsttid, betalningar, inloggningssessioner, support, spärrar, rapporter, pushnycklar och statistik. Måldatabasen ska vara tom eller kontrolleras för konflikter; skriv aldrig över befintliga målposter automatiskt. En kopiering som avbryts eller saknar nycklar är inte klar för drift.
+
+Om Upstashs kvot redan blockerar läsningar går det inte att exportera all data genom att bara byta nycklar eller host. Återställ läsåtkomsten, använd en verifierad fullständig export/backup eller få hjälp från leverantören. Byt först efter att kopians innehåll och TTL har verifierats, källan kontrollerats för nya ändringar under kopieringen och befintliga medlemssessioner samt adminens medlems- och betalningslistor fungerar mot målet. `/api/ready` testar anslutningen men bevisar inte att rätt medlemmar finns. Behåll källan för återställning och radera inga uppgifter vid publiceringen.
+
+[Instruktioner för export, import och verifiering](docs/database-migration.md) finns för `scripts/migrate-redis.cjs`. Verktyget kopierar bara till en tom isolerad databas och behåller nycklarnas absoluta sluttider. Det körs separat från serverns start och byter ingen driftsanslutning automatiskt.
 
 ## Gemensam besöksräkning
 
-Närvaro lagras i Upstash Redis via serverns KV_REST_API_URL och KV_REST_API_TOKEN (eller UPSTASH_REDIS_REST_URL/TOKEN). Webbläsaren skickar ett anonymt ID var 30:e sekund. Redis räknar gemensamt över alla instanser: aktiva under 90 sekunder och unika webbläsare under ett rullande 30-minutersfönster. Flera flikar delar ID. Närvaronycklarna sparar bara en hash av ID och senaste tidsstämpeln, inga IP-adresser. Gamla poster rensas och nyckeln löper ut efter en timme utan livssignaler. Vid databasfel visas okänt, inte falskt noll eller lokala sessionsantal.
+Närvaro lagras i samma Redis-/Valkey-anslutning som medlemsdata. Webbläsaren skickar ett anonymt ID var 60:e sekund. Databasen räknar gemensamt över alla instanser: aktiva under 90 sekunder och unika webbläsare under ett rullande 30-minutersfönster. Flera flikar delar ID. Närvaronycklarna sparar bara en hash av ID och senaste tidsstämpeln, inga IP-adresser. Gamla poster rensas och nyckeln löper ut efter en timme utan livssignaler. Vid databasfel visas okänt, inte falskt noll eller lokala sessionsantal.
 
 Adminens servervärden gäller fortfarande den aktuella serverinstansen. Chattmeddelanden och sessionsautentisering använder befintlig serverlagring och omfattas inte av närvarodatabasen. Production har databasanslutning; Preview delar inte besöksdata.
 

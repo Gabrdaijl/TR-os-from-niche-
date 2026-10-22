@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const webpush = require('web-push');
+const { createRedisStorage } = require('./redis-storage.cjs');
 
 const VAPID_KEY = '{tros:push}:vapid:v1';
 const ADMIN_KEY = '{tros:push}:admins:v1';
@@ -9,17 +10,12 @@ const USER_PREFIX = '{tros:push}:browser:v1:';
 const MAX_SUBSCRIPTIONS = 30;
 
 function createPushNotifications(env = process.env, request = fetch, webPush = webpush) {
-  const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
-  let endpoint = null;
-  try {
-    const url = new URL(endpointValue);
-    if (url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) endpoint = url;
-  } catch {}
+  const storage = createRedisStorage(env, request);
+  const { endpoint, token } = storage;
 
   async function redis(parts) {
-    if (!endpoint || !token) throw new Error('Push notifications require Redis storage');
-    const response = await request(endpoint, {
+    if (!storage.configured) throw new Error('Push notifications require Redis storage');
+    const response = await storage.request(endpoint, {
       method: 'POST', redirect: 'error',
       headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
       body: JSON.stringify(parts), signal: AbortSignal.timeout(5000)
@@ -138,7 +134,7 @@ function createPushNotifications(env = process.env, request = fetch, webPush = w
     return key ? deliver(key, { title, body, url, tag }) : Promise.resolve({ ok: false, sent: 0 });
   }
 
-  return Object.freeze({ publicKey: async () => (await vapidKeys())?.publicKey || '', registerAdmin: subscription => register('admin', '', subscription), removeAdmin: subscription => remove('admin', '', subscription), registerBrowser: (deviceId, subscription) => register('browser', deviceId, subscription), removeBrowser: (deviceId, subscription) => remove('browser', deviceId, subscription), notifyAdmins, notifyBrowser, configured: !!endpoint && !!token });
+  return Object.freeze({ publicKey: async () => (await vapidKeys())?.publicKey || '', registerAdmin: subscription => register('admin', '', subscription), removeAdmin: subscription => remove('admin', '', subscription), registerBrowser: (deviceId, subscription) => register('browser', deviceId, subscription), removeBrowser: (deviceId, subscription) => remove('browser', deviceId, subscription), notifyAdmins, notifyBrowser, configured: storage.configured });
 }
 
 module.exports = { ADMIN_KEY, USER_PREFIX, VAPID_KEY, createPushNotifications };

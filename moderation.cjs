@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
+const { createRedisStorage } = require('./redis-storage.cjs');
 
 const COOKIE = 'tros-device';
 const REDIS_KEY = 'tros:moderation:bans:v1';
@@ -26,24 +27,17 @@ function hashDeviceId(value) {
 }
 
 function createModeration(env = process.env, request = fetch, redisCircuit = createRedisCircuit()) {
-  const endpointValue = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+  const storage = createRedisStorage(env, request);
+  const { endpoint, token } = storage;
   const memory = new Map();
   const conversations = new Map();
-  let endpoint = null;
-  try {
-    if (endpointValue && token) {
-      const url = new URL(endpointValue);
-      if (url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) endpoint = url;
-    }
-  } catch {}
 
   async function command(parts) {
-    if (!endpoint || !token) throw new Error('Moderation storage is not configured');
+    if (!storage.configured) throw new Error('Moderation storage is not configured');
     if (redisCircuit.isOpen()) throw new Error('Moderation storage is unavailable');
     let reason = 'upstream_unavailable';
     try {
-      const response = await request(endpoint, {
+      const response = await storage.request(endpoint, {
         method: 'POST', redirect: 'error',
         headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
         body: JSON.stringify(parts), signal: AbortSignal.timeout(4500)
@@ -208,7 +202,7 @@ return removed`;
     }
   }
 
-  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, hasConversation, deleteConversation, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: !!endpoint, cookieName: COOKIE });
+  return Object.freeze({ isBanned, ban, list, unban, messagesForDevice, hasConversation, deleteConversation, sendBrowserMessage: (deviceId, text) => send(hashDeviceId(deviceId), 'browser', text), sendAdminMessage: (id, text) => send(id, 'admin', text), listConversations, configured: storage.configured, cookieName: COOKIE });
 }
 
 module.exports = { COOKIE, REDIS_KEY, CONVERSATIONS_KEY, CONVERSATION_INDEX_KEY, cookieDeviceId, createModeration, hashDeviceId };

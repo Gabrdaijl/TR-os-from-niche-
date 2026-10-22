@@ -8,6 +8,7 @@ const { Readable } = require('node:stream');
 const { WebSocketServer, WebSocket } = require('ws');
 const { server: wisp } = require('@mercuryworkshop/wisp-js/server');
 const { createRedisCircuit } = require('./redis-circuit.cjs');
+const { createRedisStorage } = require('./redis-storage.cjs');
 const { createPresence } = require('./presence.cjs');
 const { createTraffic } = require('./traffic.cjs');
 const { createReports } = require('./reports.cjs');
@@ -55,6 +56,7 @@ function createApp(options = {}) {
   const nowStamp = () => lastStamp = Math.max(Date.now(), lastStamp + 1);
   const activeCount = () => [...sessions.values()].filter(s => Date.now() - s.seen < 90000).length;
   const redisCircuit = createRedisCircuit();
+  const redisStorage = createRedisStorage(env);
   const presence = createPresence(env, activeCount, fetch, redisCircuit);
   const traffic = createTraffic(env, fetch, redisCircuit);
   const moderation = createModeration(env, fetch, redisCircuit);
@@ -733,8 +735,20 @@ function createApp(options = {}) {
     while (messages.length && messages[0].ts < cutoff) messages.shift();
   }, 60000);
   cleanup.unref();
-  server.on('close', () => { clearInterval(cleanup); chatWs.close(); proxyWs.close(); });
-  return { server, close: () => { for (const socket of sockets) socket.terminate(); server.closeAllConnections(); return new Promise(resolve => server.close(resolve)); } };
+  let storageClosing;
+  const closeStorage = () => storageClosing ||= Promise.resolve().then(() => redisStorage.close());
+  server.on('close', () => {
+    clearInterval(cleanup);
+    chatWs.close();
+    proxyWs.close();
+    void closeStorage().catch(() => {});
+  });
+  return { server, close: async () => {
+    for (const socket of sockets) socket.terminate();
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+    await closeStorage();
+  } };
 }
 
 function start() {

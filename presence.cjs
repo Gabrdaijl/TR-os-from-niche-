@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const { createRedisCircuit, classifyFailure } = require('./redis-circuit.cjs');
+const { createRedisStorage } = require('./redis-storage.cjs');
 const WINDOW_SECONDS = 90;
 // Redis time and the count are evaluated atomically, across all app instances.
 const SCRIPT = `local t=redis.call('TIME')
@@ -13,19 +14,16 @@ if ARGV[1]~='' then
 end
 return {redis.call('ZCOUNT',KEYS[1],'('..(now-tonumber(ARGV[2])),'+inf'),redis.call('ZCOUNT',KEYS[1],'('..cutoff,'+inf')}`;
 function createPresence(env, localCount, request = fetch, redisCircuit = createRedisCircuit()) {
-  const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
-  const configured = !!(url && token);
+  const storage = createRedisStorage(env, request);
+  const { endpoint, token, configured } = storage;
   async function snapshot(visitorId) {
     const common = { windowSeconds: WINDOW_SECONDS, historyMinutes: 30, configured };
     if (!configured) return { online: env.VERCEL ? null : localCount(), recentVisitors: null, presence: { ...common, source: env.VERCEL ? 'unconfigured' : 'memory' } };
     if (redisCircuit.isOpen()) return { online: null, recentVisitors: null, presence: { ...common, source: 'unavailable' } };
     let failureReason = 'upstream_unavailable';
     try {
-      const endpoint = new URL(url);
-      if (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(endpoint.hostname))) throw Error('Invalid Redis URL');
       const id = typeof visitorId === 'string' && /^[a-f0-9-]{36}$/i.test(visitorId) ? crypto.createHash('sha256').update(visitorId).digest('hex') : '';
-      const response = await request(endpoint, {
+      const response = await storage.request(endpoint, {
         method: 'POST', redirect: 'error', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
         body: JSON.stringify([id ? 'EVAL' : 'EVAL_RO', SCRIPT, 1, 'tros:presence:browsers:v1', id, WINDOW_SECONDS * 1000]), signal: AbortSignal.timeout(4500)
       });
