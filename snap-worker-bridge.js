@@ -3,14 +3,27 @@
 (function (global) {
   'use strict';
   const installed = new WeakSet();
+  const nativeFetches = new WeakMap();
+  const controlledFrames = new WeakSet();
   const dataScript = text => 'data:text/javascript;charset=utf-8;base64,' +
     btoa(Array.from(new TextEncoder().encode(text), byte => String.fromCharCode(byte)).join(''));
 
   // Blob URLs belong to the proxied document's origin. Read them from that
-  // frame's fetch context; fetching from the TR-os parent fails origin checks.
+  // frame's original fetch context; proxy-patched fetch can recurse through
+  // the service worker and reject the blob as a same-origin request.
   async function fetchBlobFromOwningFrame(frame, url, fallbackFetch) {
-    let owner, ownerFetch;
-    try { owner = frame?.contentWindow; ownerFetch = owner?.fetch; } catch {}
+    let owner, ownerFetch, nativeOwnerFetch;
+    try {
+      owner = frame?.contentWindow;
+      nativeOwnerFetch = owner && nativeFetches.get(owner);
+      ownerFetch = owner?.fetch;
+    } catch {}
+    if (typeof nativeOwnerFetch === 'function') {
+      try { return await nativeOwnerFetch.call(owner, url); }
+      catch (nativeError) {
+        if (typeof ownerFetch !== 'function' && typeof fallbackFetch !== 'function') throw nativeError;
+      }
+    }
     if (typeof ownerFetch === 'function') {
       try { return await ownerFetch.call(owner, url); }
       catch (ownerError) {
@@ -20,6 +33,12 @@
     }
     if (typeof fallbackFetch !== 'function') throw new Error('Blob URL owner is unavailable');
     return fallbackFetch(url);
+  }
+
+  function registerNativeFetch(owner, fetchFunction) {
+    if (!owner || !controlledFrames.has(owner) || nativeFetches.has(owner) || typeof fetchFunction !== 'function') return false;
+    nativeFetches.set(owner, fetchFunction);
+    return true;
   }
 
   // Snapchat's own capture scripts may encode a JPEG before the document's
@@ -397,14 +416,19 @@
       ...original,
       get() {
         const context = original.get.call(this);
+        try { if (this.element?.contentWindow) controlledFrames.add(this.element.contentWindow); } catch {}
         if (!keys.has(this)) keys.set(this, 'tros-snap-worker-' + crypto.randomUUID());
         const key = keys.get(this), frame = this;
         const originalScripts = context.interface.getInjectScripts;
         context.interface.getInjectScripts = function (meta, handler, html, script) {
           const scripts = originalScripts.call(this, meta, handler, html, script);
           if (!Array.isArray(scripts)) throw new Error('Unsupported Snapchat controller script list');
+          const nativeFetchCapture = script(dataScript("try { globalThis.parent.TR_OS_SNAP_WORKER?.registerNativeFetch(globalThis, globalThis.fetch.bind(globalThis)); } catch (_) {}"));
           const relay = script(dataScript('(' + windowRelay.toString() + ')(' + JSON.stringify(key) + ');'));
           const jpegFallback = script(dataScript('(' + installSnapImageEncodingFallback.toString() + ')(globalThis);'));
+          // Preserve browser fetch before Scramjet hooks window.fetch, so blob
+          // rewrites do not recurse through the proxy URL parser.
+          scripts.unshift(nativeFetchCapture);
           // Run our capture recovery and worker relay before the final upstream
           // loader and before Snapchat's own application scripts execute.
           scripts.splice(Math.max(0, scripts.length - 1), 0, jpegFallback, relay);
@@ -424,5 +448,5 @@
     });
     installed.add(controller);
   }
-  global.TR_OS_SNAP_WORKER = Object.freeze({ install, fetchBlobFromOwningFrame });
+  global.TR_OS_SNAP_WORKER = Object.freeze({ install, fetchBlobFromOwningFrame, registerNativeFetch });
 })(globalThis);
